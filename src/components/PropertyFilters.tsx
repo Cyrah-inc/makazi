@@ -57,14 +57,14 @@ const PropertyFilters = ({ filters, onChange, purpose }: PropertyFiltersProps) =
       <div className="space-y-2">
         <label className="text-sm font-medium">County</label>
         <Select 
-          value={filters.county || ''} 
-          onValueChange={(v) => updateFilter('county', v || undefined)}
+          value={filters.county || 'all'} 
+          onValueChange={(v) => updateFilter('county', v === 'all' ? undefined : v)}
         >
           <SelectTrigger>
             <SelectValue placeholder="All Counties" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Counties</SelectItem>
+            <SelectItem value="all">All Counties</SelectItem>
             {KENYA_COUNTIES.map((county) => (
               <SelectItem key={county} value={county}>{county}</SelectItem>
             ))}
@@ -77,14 +77,14 @@ const PropertyFilters = ({ filters, onChange, purpose }: PropertyFiltersProps) =
         <div className="space-y-2">
           <label className="text-sm font-medium">Town / Area</label>
           <Select 
-            value={filters.town || ''} 
-            onValueChange={(v) => updateFilter('town', v || undefined)}
+            value={filters.town || 'all'} 
+            onValueChange={(v) => updateFilter('town', v === 'all' ? undefined : v)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All Areas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Areas</SelectItem>
+              <SelectItem value="all">All Areas</SelectItem>
               {towns.map((town) => (
                 <SelectItem key={town} value={town}>{town}</SelectItem>
               ))}
@@ -97,14 +97,14 @@ const PropertyFilters = ({ filters, onChange, purpose }: PropertyFiltersProps) =
       <div className="space-y-2">
         <label className="text-sm font-medium">Property Type</label>
         <Select 
-          value={filters.propertyType || ''} 
-          onValueChange={(v) => updateFilter('propertyType', v as any || undefined)}
+          value={filters.propertyType || 'all'} 
+          onValueChange={(v) => updateFilter('propertyType', v === 'all' ? undefined : v as any)}
         >
           <SelectTrigger>
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Types</SelectItem>
+            <SelectItem value="all">All Types</SelectItem>
             {PROPERTY_TYPES.map((type) => (
               <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
             ))}
@@ -188,14 +188,14 @@ const PropertyFilters = ({ filters, onChange, purpose }: PropertyFiltersProps) =
       <div className="space-y-2 pt-4 border-t border-border">
         <label className="text-sm font-medium">Sort By</label>
         <Select 
-          value={filters.sortBy || ''} 
-          onValueChange={(v) => updateFilter('sortBy', v as any || undefined)}
+          value={filters.sortBy || 'recommended'} 
+          onValueChange={(v) => updateFilter('sortBy', v === 'recommended' ? undefined : v as any)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Recommended" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Recommended</SelectItem>
+            <SelectItem value="recommended">Recommended</SelectItem>
             <SelectItem value="price-asc">Price: Low to High</SelectItem>
             <SelectItem value="price-desc">Price: High to Low</SelectItem>
             <SelectItem value="newest">Newest First</SelectItem>
