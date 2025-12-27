@@ -12,6 +12,11 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        buy: "border-transparent bg-buy/10 text-buy",
+        rent: "border-transparent bg-rent/10 text-rent",
+        airbnb: "border-transparent bg-airbnb/10 text-airbnb",
+        featured: "border-transparent bg-gold/20 text-gold-foreground",
+        new: "border-transparent bg-accent/20 text-accent",
       },
     },
     defaultVariants: {
