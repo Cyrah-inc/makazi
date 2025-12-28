@@ -1,12 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Building, Key, Palmtree, Heart, User, Menu, X } from 'lucide-react';
+import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, isAdmin, isLandlord, signOut } = useAuth();
 
   const navLinks = [
     { to: '/', label: 'Home', icon: Home },
@@ -16,6 +18,11 @@ const Navbar = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -56,23 +63,45 @@ const Navbar = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/favorites">
-            <Button variant="ghost" size="icon" className="relative">
-              <Heart className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-accent text-[10px] text-accent-foreground flex items-center justify-center font-bold">
-                3
-              </span>
+          {user && (
+            <Link to="/favorites">
+              <Button variant="ghost" size="icon" className="relative">
+                <Heart className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-accent text-[10px] text-accent-foreground flex items-center justify-center font-bold">
+                  3
+                </span>
+              </Button>
+            </Link>
+          )}
+          
+          {isAdmin && (
+            <Link to="/admin">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Shield className="h-4 w-4" />
+                Admin
+              </Button>
+            </Link>
+          )}
+          
+          {(isLandlord || isAdmin) && (
+            <Button variant="outline" size="sm">
+              List Property
             </Button>
-          </Link>
-          <Button variant="outline" size="sm">
-            List Property
-          </Button>
-          <Link to="/login">
-            <Button size="sm" className="gap-2">
-              <User className="h-4 w-4" />
-              Sign In
+          )}
+          
+          {user ? (
+            <Button size="sm" variant="ghost" className="gap-2" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4" />
+              Sign Out
             </Button>
-          </Link>
+          ) : (
+            <Link to="/auth">
+              <Button size="sm" className="gap-2">
+                <User className="h-4 w-4" />
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -106,22 +135,45 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="h-px bg-border my-3" />
-            <Link to="/favorites" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <Heart className="h-5 w-5" />
-                Favorites
+            
+            {user && (
+              <Link to="/favorites" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start gap-3">
+                  <Heart className="h-5 w-5" />
+                  Favorites
+                </Button>
+              </Link>
+            )}
+            
+            {isAdmin && (
+              <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="outline" className="w-full justify-start gap-3">
+                  <Shield className="h-5 w-5" />
+                  Admin Dashboard
+                </Button>
+              </Link>
+            )}
+            
+            {(isLandlord || isAdmin) && (
+              <Button variant="outline" className="w-full justify-start gap-3">
+                <Building className="h-5 w-5" />
+                List Property
               </Button>
-            </Link>
-            <Button variant="outline" className="w-full justify-start gap-3">
-              <Building className="h-5 w-5" />
-              List Property
-            </Button>
-            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button className="w-full justify-start gap-3">
-                <User className="h-5 w-5" />
-                Sign In
+            )}
+            
+            {user ? (
+              <Button className="w-full justify-start gap-3" onClick={handleSignOut}>
+                <LogOut className="h-5 w-5" />
+                Sign Out
               </Button>
-            </Link>
+            ) : (
+              <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="w-full justify-start gap-3">
+                  <User className="h-5 w-5" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       )}
