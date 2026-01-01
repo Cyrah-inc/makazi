@@ -14,6 +14,10 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminLandlordsPage from "./pages/admin/AdminLandlordsPage";
 import AdminPropertiesPage from "./pages/admin/AdminPropertiesPage";
+import LandlordDashboard from "./pages/landlord/LandlordDashboard";
+import LandlordPropertiesPage from "./pages/landlord/LandlordPropertiesPage";
+import AddPropertyPage from "./pages/landlord/AddPropertyPage";
+import LandlordInquiriesPage from "./pages/landlord/LandlordInquiriesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +40,10 @@ const App = () => (
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/landlords" element={<AdminLandlordsPage />} />
             <Route path="/admin/properties" element={<AdminPropertiesPage />} />
+            <Route path="/landlord" element={<LandlordDashboard />} />
+            <Route path="/landlord/properties" element={<LandlordPropertiesPage />} />
+            <Route path="/landlord/add-property" element={<AddPropertyPage />} />
+            <Route path="/landlord/inquiries" element={<LandlordInquiriesPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
