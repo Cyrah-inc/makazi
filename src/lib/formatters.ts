@@ -10,6 +10,10 @@ export const formatPrice = (price: number): string => {
   return `KES ${price.toLocaleString()}`;
 };
 
+export const formatCurrency = (price: number): string => {
+  return `KES ${price.toLocaleString()}`;
+};
+
 export const formatFullPrice = (price: number): string => {
   return `KES ${price.toLocaleString()}`;
 };
