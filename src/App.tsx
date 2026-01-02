@@ -18,6 +18,9 @@ import LandlordDashboard from "./pages/landlord/LandlordDashboard";
 import LandlordPropertiesPage from "./pages/landlord/LandlordPropertiesPage";
 import AddPropertyPage from "./pages/landlord/AddPropertyPage";
 import LandlordInquiriesPage from "./pages/landlord/LandlordInquiriesPage";
+import UserDashboard from "./pages/user/UserDashboard";
+import UserInquiriesPage from "./pages/user/UserInquiriesPage";
+import UserFavoritesPage from "./pages/user/UserFavoritesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +47,9 @@ const App = () => (
             <Route path="/landlord/properties" element={<LandlordPropertiesPage />} />
             <Route path="/landlord/add-property" element={<AddPropertyPage />} />
             <Route path="/landlord/inquiries" element={<LandlordInquiriesPage />} />
+            <Route path="/dashboard" element={<UserDashboard />} />
+            <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
+            <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
