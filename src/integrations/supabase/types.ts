@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      inquiries: {
+        Row: {
+          created_at: string
+          id: string
+          landlord_id: string
+          message: string
+          property_id: string
+          replied_at: string | null
+          reply: string | null
+          sender_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          landlord_id: string
+          message: string
+          property_id: string
+          replied_at?: string | null
+          reply?: string | null
+          sender_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          landlord_id?: string
+          message?: string
+          property_id?: string
+          replied_at?: string | null
+          reply?: string | null
+          sender_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiries_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

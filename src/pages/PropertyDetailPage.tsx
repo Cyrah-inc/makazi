@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { InquiryForm } from '@/components/InquiryForm';
 import { mockProperties } from '@/data/mockProperties';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   MapPin, Bed, Bath, Car, Maximize, Heart, Share2, Phone, 
-  MessageCircle, Calendar, ChevronLeft, ChevronRight, Star,
-  Shield, Eye, Home, CheckCircle2
+  Calendar, ChevronLeft, ChevronRight, Star,
+  Shield, Eye, Home, CheckCircle2, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +22,65 @@ const PropertyDetailPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
 
-  const property = mockProperties.find(p => p.id === id);
+  // Try to fetch from Supabase first
+  const { data: dbProperty, isLoading } = useQuery({
+    queryKey: ['property', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', id)
+        .eq('status', 'approved')
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fallback to mock data
+  const mockProperty = mockProperties.find(p => p.id === id);
+  
+  // Use DB property if available, otherwise use mock
+  const property = dbProperty ? {
+    id: dbProperty.id,
+    title: dbProperty.title,
+    description: dbProperty.description || '',
+    address: `${dbProperty.address}, ${dbProperty.city}`,
+    county: dbProperty.state || '',
+    town: dbProperty.city,
+    images: dbProperty.images || ['/placeholder.svg'],
+    bedrooms: dbProperty.bedrooms,
+    bathrooms: dbProperty.bathrooms,
+    parkingSpaces: 0,
+    size: dbProperty.area_sqft || 0,
+    purposes: [dbProperty.property_type] as ('buy' | 'rent' | 'airbnb')[],
+    salePrice: dbProperty.property_type === 'sale' ? dbProperty.price : undefined,
+    monthlyRent: dbProperty.property_type === 'rent' ? dbProperty.price : undefined,
+    nightlyRate: dbProperty.property_type === 'airbnb' ? dbProperty.price : undefined,
+    amenities: dbProperty.amenities || [],
+    views: dbProperty.views_count,
+    createdAt: dbProperty.created_at,
+    verified: true,
+    propertyType: 'apartment',
+    yearBuilt: undefined,
+    furnished: false,
+    landlordId: dbProperty.landlord_id,
+    landlordName: 'Property Owner',
+  } : mockProperty;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!property) {
     return (
@@ -265,10 +326,17 @@ const PropertyDetailPage = () => {
                       )}
 
                       <div className="space-y-3">
-                        <Button variant="hero" size="lg" className="w-full gap-2">
-                          <MessageCircle className="h-5 w-5" />
-                          Contact Landlord
-                        </Button>
+                        {property.landlordId ? (
+                          <InquiryForm
+                            propertyId={property.id}
+                            landlordId={property.landlordId}
+                            propertyTitle={property.title}
+                          />
+                        ) : (
+                          <Button variant="hero" size="lg" className="w-full gap-2">
+                            Contact Landlord
+                          </Button>
+                        )}
                         <Button variant="outline" size="lg" className="w-full gap-2">
                           <Phone className="h-5 w-5" />
                           Call Now
