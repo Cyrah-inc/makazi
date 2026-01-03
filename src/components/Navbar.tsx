@@ -72,12 +72,9 @@ const Navbar = () => {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
           {user && (
-            <Link to="/favorites">
+            <Link to="/dashboard/favorites">
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-accent text-[10px] text-accent-foreground flex items-center justify-center font-bold">
-                  3
-                </span>
               </Button>
             </Link>
           )}
@@ -187,7 +184,7 @@ const Navbar = () => {
             <div className="h-px bg-border my-3" />
             
             {user && (
-              <Link to="/favorites" onClick={() => setMobileMenuOpen(false)}>
+              <Link to="/dashboard/favorites" onClick={() => setMobileMenuOpen(false)}>
                 <Button variant="ghost" className="w-full justify-start gap-3">
                   <Heart className="h-5 w-5" />
                   Favorites
