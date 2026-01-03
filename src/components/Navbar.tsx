@@ -1,9 +1,17 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut } from 'lucide-react';
+import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut, LayoutDashboard, UserCircle } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -74,26 +82,68 @@ const Navbar = () => {
             </Link>
           )}
           
-          {isAdmin && (
-            <Link to="/admin">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Shield className="h-4 w-4" />
-                Admin
-              </Button>
-            </Link>
-          )}
-          
-          {(isLandlord || isAdmin) && (
-            <Button variant="outline" size="sm">
-              List Property
-            </Button>
-          )}
-          
           {user ? (
-            <Button size="sm" variant="ghost" className="gap-2" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-background border border-border shadow-lg z-50">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-medium text-foreground">{user.email}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{isAdmin ? 'Admin' : isLandlord ? 'Landlord' : 'User'}</p>
+                </div>
+                <DropdownMenuSeparator />
+                
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                      <Shield className="h-4 w-4" />
+                      Admin Panel
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
+                {(isLandlord || isAdmin) && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/landlord" className="flex items-center gap-2 cursor-pointer">
+                      <Building className="h-4 w-4" />
+                      Landlord Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                    <LayoutDashboard className="h-4 w-4" />
+                    User Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                
+                {(isLandlord || isAdmin) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/landlord/add-property" className="flex items-center gap-2 cursor-pointer">
+                        <UserCircle className="h-4 w-4" />
+                        List Property
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Link to="/auth">
               <Button size="sm" className="gap-2">
