@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useFavoritesContext } from '@/contexts/FavoritesContext';
 
 interface PropertyCardProps {
   property: Property;
@@ -13,8 +14,9 @@ interface PropertyCardProps {
 }
 
 const PropertyCard = ({ property, variant = 'default' }: PropertyCardProps) => {
-  const [isFavorited, setIsFavorited] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavoritesContext();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const favorited = isFavorite(property.id);
 
   const getPrice = () => {
     if (property.purposes.includes('buy') && property.salePrice) {
@@ -72,14 +74,14 @@ const PropertyCard = ({ property, variant = 'default' }: PropertyCardProps) => {
             size="icon"
             className={cn(
               "absolute top-3 right-3 h-9 w-9 rounded-full bg-card/80 backdrop-blur-sm hover:bg-card shadow-md",
-              isFavorited && "text-airbnb"
+              favorited && "text-airbnb"
             )}
             onClick={(e) => {
               e.preventDefault();
-              setIsFavorited(!isFavorited);
+              toggleFavorite(property.id);
             }}
           >
-            <Heart className={cn("h-4 w-4", isFavorited && "fill-current")} />
+            <Heart className={cn("h-4 w-4", favorited && "fill-current")} />
           </Button>
 
           {/* Views */}
