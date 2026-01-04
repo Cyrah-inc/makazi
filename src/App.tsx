@@ -19,6 +19,7 @@ import AdminListingsPage from "./pages/admin/AdminListingsPage";
 import LandlordDashboard from "./pages/landlord/LandlordDashboard";
 import LandlordPropertiesPage from "./pages/landlord/LandlordPropertiesPage";
 import AddPropertyPage from "./pages/landlord/AddPropertyPage";
+import EditPropertyPage from "./pages/landlord/EditPropertyPage";
 import LandlordInquiriesPage from "./pages/landlord/LandlordInquiriesPage";
 import UserDashboard from "./pages/user/UserDashboard";
 import UserInquiriesPage from "./pages/user/UserInquiriesPage";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/landlord" element={<LandlordDashboard />} />
             <Route path="/landlord/properties" element={<LandlordPropertiesPage />} />
             <Route path="/landlord/add-property" element={<AddPropertyPage />} />
+            <Route path="/landlord/edit-property/:id" element={<EditPropertyPage />} />
             <Route path="/landlord/inquiries" element={<LandlordInquiriesPage />} />
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
