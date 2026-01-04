@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 
 const amenitiesList = [
   'Parking', 'Swimming Pool', 'Gym', 'Security', 'Garden', 
@@ -37,6 +38,7 @@ export default function AddPropertyPage() {
     city: '',
     state: '',
     amenities: [] as string[],
+    images: [] as string[],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,6 +68,7 @@ export default function AddPropertyPage() {
       city: formData.city,
       state: formData.state,
       amenities: formData.amenities,
+      images: formData.images,
       status: 'pending',
     });
 
@@ -109,6 +112,23 @@ export default function AddPropertyPage() {
         </div>
 
         <form onSubmit={handleSubmit}>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Property Images</CardTitle>
+              <CardDescription>Upload up to 10 photos of your property</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {user?.id && (
+                <PropertyImageUpload
+                  images={formData.images}
+                  onImagesChange={(images) => setFormData(prev => ({ ...prev, images }))}
+                  userId={user.id}
+                  maxImages={10}
+                />
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
