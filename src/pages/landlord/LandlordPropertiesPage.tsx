@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Eye, Search, Plus, Clock, CheckCircle, XCircle, Pencil, Trash2 } from 'lucide-react';
+import { Building2, Eye, Search, Plus, Clock, CheckCircle, XCircle, Pencil, Trash2, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
@@ -23,6 +23,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 
+interface PropertyWithFavorites {
+  id: string;
+  title: string;
+  address: string;
+  city: string;
+  state: string | null;
+  price: number;
+  property_type: string;
+  status: string;
+  images: string[] | null;
+  views_count: number;
+  favorites_count: number;
+}
+
 export default function LandlordPropertiesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -33,7 +47,7 @@ export default function LandlordPropertiesPage() {
 
   const { data: properties, isLoading, refetch } = useQuery({
     queryKey: ['landlord-properties', user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<PropertyWithFavorites[]> => {
       const { data, error } = await supabase
         .from('properties')
         .select('*')
@@ -41,7 +55,23 @@ export default function LandlordPropertiesPage() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+
+      // Get favorites count for each property
+      const propertyIds = data?.map(p => p.id) || [];
+      const { data: favorites } = await supabase
+        .from('favorites')
+        .select('property_id')
+        .in('property_id', propertyIds);
+
+      const favoritesCount = propertyIds.reduce((acc, id) => {
+        acc[id] = favorites?.filter(f => f.property_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return (data || []).map(property => ({
+        ...property,
+        favorites_count: favoritesCount[property.id] || 0,
+      }));
     },
     enabled: !!user?.id,
   });
@@ -183,9 +213,15 @@ export default function LandlordPropertiesPage() {
                   <p className="text-sm text-muted-foreground mb-2">{property.city}, {property.state}</p>
                   <div className="flex items-center justify-between mb-4">
                     <span className="font-bold text-primary">{formatCurrency(property.price)}</span>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Eye className="w-3 h-3" />
-                      {property.views_count} views
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-3 h-3" />
+                        {property.views_count}
+                      </div>
+                      <div className="flex items-center gap-1 text-pink-500">
+                        <Heart className="w-3 h-3 fill-current" />
+                        {property.favorites_count}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-2">

@@ -51,11 +51,13 @@ import {
   Clock,
   AlertTriangle,
   DollarSign,
-  MapPin
+  MapPin,
+  Heart
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { PropertyPreviewModal } from '@/components/admin/PropertyPreviewModal';
 
 type PropertyStatus = 'pending' | 'approved' | 'rejected' | 'removed';
 type PropertyType = 'sale' | 'rent' | 'airbnb';
@@ -76,10 +78,12 @@ interface PropertyWithLandlord {
   state: string | null;
   country: string;
   images: string[];
+  amenities: string[];
   views_count: number;
   created_at: string;
   landlord_name: string | null;
   landlord_email: string | null;
+  favorites_count: number;
 }
 
 const statusColors: Record<PropertyStatus, string> = {
@@ -110,6 +114,7 @@ export default function AdminPropertiesPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<string | null>(null);
+  const [previewProperty, setPreviewProperty] = useState<PropertyWithLandlord | null>(null);
   const { toast } = useToast();
 
   const fetchProperties = async () => {
@@ -134,6 +139,18 @@ export default function AdminPropertiesPage() {
 
       if (profilesError) throw profilesError;
 
+      // Get favorites count for each property
+      const propertyIds = propertiesData?.map(p => p.id) || [];
+      const { data: favorites } = await supabase
+        .from('favorites')
+        .select('property_id')
+        .in('property_id', propertyIds);
+
+      const favoritesCount = propertyIds.reduce((acc, id) => {
+        acc[id] = favorites?.filter(f => f.property_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
       // Merge properties with landlord info
       const propertiesWithLandlords: PropertyWithLandlord[] = (propertiesData || []).map((property) => {
         const landlord = profiles?.find(p => p.user_id === property.landlord_id);
@@ -142,8 +159,10 @@ export default function AdminPropertiesPage() {
           property_type: property.property_type as PropertyType,
           status: property.status as PropertyStatus,
           images: property.images || [],
+          amenities: property.amenities || [],
           landlord_name: landlord?.full_name || null,
           landlord_email: landlord?.email || null,
+          favorites_count: favoritesCount[property.id] || 0,
         };
       });
 
@@ -374,6 +393,7 @@ export default function AdminPropertiesPage() {
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Price</TableHead>
+                  <TableHead>Favorites</TableHead>
                   <TableHead>Landlord</TableHead>
                   <TableHead>Listed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -425,6 +445,12 @@ export default function AdminPropertiesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div className="flex items-center gap-1 text-pink-500">
+                        <Heart className="w-3 h-3 fill-current" />
+                        <span className="font-medium">{property.favorites_count}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <div>
                         <p className="font-medium text-foreground">
                           {property.landlord_name || 'Unknown'}
@@ -446,7 +472,7 @@ export default function AdminPropertiesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPreviewProperty(property)}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
@@ -523,6 +549,22 @@ export default function AdminPropertiesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Property Preview Modal */}
+      <PropertyPreviewModal
+        property={previewProperty}
+        open={!!previewProperty}
+        onOpenChange={(open) => !open && setPreviewProperty(null)}
+        onApprove={(id) => {
+          updatePropertyStatus(id, 'approved');
+          setPreviewProperty(null);
+        }}
+        onReject={(id) => {
+          updatePropertyStatus(id, 'rejected');
+          setPreviewProperty(null);
+        }}
+        showActions={previewProperty?.status === 'pending'}
+      />
     </AdminLayout>
   );
 }
