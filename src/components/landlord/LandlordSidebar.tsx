@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User } from 'lucide-react';
+import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -7,6 +7,7 @@ const navItems = [
   { href: '/landlord', icon: BarChart3, label: 'Dashboard' },
   { href: '/landlord/properties', icon: Building2, label: 'My Properties' },
   { href: '/landlord/add-property', icon: Plus, label: 'Add Property' },
+  { href: '/landlord/messages', icon: Mail, label: 'Messages' },
   { href: '/landlord/inquiries', icon: MessageSquare, label: 'Inquiries' },
 ];
 

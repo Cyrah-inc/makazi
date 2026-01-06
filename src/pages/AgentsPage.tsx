@@ -7,20 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Phone, Mail, Building2, MapPin, Star, MessageSquare } from 'lucide-react';
+import { Search, Phone, Mail, Building2, Star, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useMessages } from '@/hooks/useMessages';
+import { ComposeMessageDialog } from '@/components/messages/ComposeMessageDialog';
 
 interface Agent {
   id: string;
@@ -38,11 +31,11 @@ const AgentsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { sendMessage } = useMessages();
 
   useEffect(() => {
     fetchAgents();
@@ -118,7 +111,7 @@ const AgentsPage = () => {
     }
   };
 
-  const handleContactAgent = async () => {
+  const handleContactAgent = (agent: Agent) => {
     if (!user) {
       toast({
         title: 'Login Required',
@@ -129,30 +122,13 @@ const AgentsPage = () => {
       return;
     }
 
-    if (!selectedAgent || !message.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a message.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    setSelectedAgent(agent);
+    setComposeOpen(true);
+  };
 
-    // Note: This would require a general messages table which doesn't exist
-    // For now, we'll just show a success message
-    setSending(true);
-    
-    // Simulate sending
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: 'Message Sent',
-      description: `Your message has been sent to ${selectedAgent.full_name || 'the agent'}.`,
-    });
-    
-    setMessage('');
+  const handleCloseCompose = () => {
+    setComposeOpen(false);
     setSelectedAgent(null);
-    setSending(false);
   };
 
   const filteredAgents = agents.filter(agent => {
@@ -299,40 +275,13 @@ const AgentsPage = () => {
                     </div>
                     
                     <div className="mt-4 flex gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            className="flex-1"
-                            onClick={() => setSelectedAgent(agent)}
-                          >
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Contact
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Contact {agent.full_name || 'Agent'}</DialogTitle>
-                            <DialogDescription>
-                              Send a message to this agent. They will respond to your inquiry via email.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 mt-4">
-                            <Textarea
-                              placeholder="Write your message here..."
-                              value={message}
-                              onChange={(e) => setMessage(e.target.value)}
-                              rows={4}
-                            />
-                            <Button 
-                              className="w-full" 
-                              onClick={handleContactAgent}
-                              disabled={sending || !message.trim()}
-                            >
-                              {sending ? 'Sending...' : 'Send Message'}
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button 
+                        className="flex-1"
+                        onClick={() => handleContactAgent(agent)}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Contact
+                      </Button>
                       
                       {agent.phone && (
                         <Button variant="outline" size="icon" asChild>
@@ -351,6 +300,15 @@ const AgentsPage = () => {
       </section>
 
       <Footer />
+
+      {/* Compose Message Dialog */}
+      <ComposeMessageDialog
+        open={composeOpen}
+        onOpenChange={handleCloseCompose}
+        onSend={sendMessage}
+        recipientId={selectedAgent?.user_id}
+        recipientName={selectedAgent?.full_name || selectedAgent?.email || 'Agent'}
+      />
     </div>
   );
 };
