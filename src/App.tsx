@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import BuyPage from "./pages/BuyPage";
 import RentPage from "./pages/RentPage";
 import AirbnbPage from "./pages/AirbnbPage";
+import AgentsPage from "./pages/AgentsPage";
 import PropertyDetailPage from "./pages/PropertyDetailPage";
 import AuthPage from "./pages/auth/AuthPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/buy" element={<BuyPage />} />
             <Route path="/rent" element={<RentPage />} />
             <Route path="/airbnb" element={<AirbnbPage />} />
+            <Route path="/agents" element={<AgentsPage />} />
             <Route path="/property/:id" element={<PropertyDetailPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/admin" element={<AdminDashboard />} />
