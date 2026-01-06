@@ -22,9 +22,11 @@ import LandlordPropertiesPage from "./pages/landlord/LandlordPropertiesPage";
 import AddPropertyPage from "./pages/landlord/AddPropertyPage";
 import EditPropertyPage from "./pages/landlord/EditPropertyPage";
 import LandlordInquiriesPage from "./pages/landlord/LandlordInquiriesPage";
+import LandlordMessagesPage from "./pages/landlord/LandlordMessagesPage";
 import UserDashboard from "./pages/user/UserDashboard";
 import UserInquiriesPage from "./pages/user/UserInquiriesPage";
 import UserFavoritesPage from "./pages/user/UserFavoritesPage";
+import UserMessagesPage from "./pages/user/UserMessagesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,7 +57,9 @@ const App = () => (
             <Route path="/landlord/add-property" element={<AddPropertyPage />} />
             <Route path="/landlord/edit-property/:id" element={<EditPropertyPage />} />
             <Route path="/landlord/inquiries" element={<LandlordInquiriesPage />} />
+            <Route path="/landlord/messages" element={<LandlordMessagesPage />} />
             <Route path="/dashboard" element={<UserDashboard />} />
+            <Route path="/dashboard/messages" element={<UserMessagesPage />} />
             <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
             <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
