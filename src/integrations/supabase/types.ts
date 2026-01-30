@@ -186,8 +186,12 @@ export type Database = {
           landlord_id: string
           latitude: number | null
           longitude: number | null
+          monthly_rent: number | null
+          nightly_rate: number | null
           price: number
+          property_category: string | null
           property_type: Database["public"]["Enums"]["property_type"]
+          sale_price: number | null
           state: string | null
           status: Database["public"]["Enums"]["property_status"]
           title: string
@@ -209,8 +213,12 @@ export type Database = {
           landlord_id: string
           latitude?: number | null
           longitude?: number | null
+          monthly_rent?: number | null
+          nightly_rate?: number | null
           price: number
+          property_category?: string | null
           property_type?: Database["public"]["Enums"]["property_type"]
+          sale_price?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["property_status"]
           title: string
@@ -232,8 +240,12 @@ export type Database = {
           landlord_id?: string
           latitude?: number | null
           longitude?: number | null
+          monthly_rent?: number | null
+          nightly_rate?: number | null
           price?: number
+          property_category?: string | null
           property_type?: Database["public"]["Enums"]["property_type"]
+          sale_price?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["property_status"]
           title?: string
