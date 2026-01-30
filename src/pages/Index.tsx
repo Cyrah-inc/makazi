@@ -6,10 +6,11 @@ import PropertyGrid from '@/components/PropertyGrid';
 import LocationsSection from '@/components/LocationsSection';
 import FeaturesSection from '@/components/FeaturesSection';
 import CTASection from '@/components/CTASection';
-import { mockProperties } from '@/data/mockProperties';
+import { useFeaturedProperties } from '@/hooks/useProperties';
+import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-  const featuredProperties = mockProperties.filter(p => p.featured);
+  const { data: featuredProperties = [], isLoading } = useFeaturedProperties();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -67,11 +68,22 @@ const Index = () => {
         {/* Featured Properties */}
         <section className="py-16 md:py-24 bg-muted/30">
           <div className="container">
-            <PropertyGrid 
-              properties={featuredProperties}
-              title="Featured Properties"
-              subtitle="Hand-picked properties by our team for exceptional value and quality"
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : featuredProperties.length > 0 ? (
+              <PropertyGrid 
+                properties={featuredProperties}
+                title="Featured Properties"
+                subtitle="Hand-picked properties by our team for exceptional value and quality"
+              />
+            ) : (
+              <div className="text-center py-16">
+                <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-2">Featured Properties</h2>
+                <p className="text-muted-foreground">No properties available yet. Check back soon!</p>
+              </div>
+            )}
           </div>
         </section>
 

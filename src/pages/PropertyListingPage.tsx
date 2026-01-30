@@ -4,9 +4,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PropertyGrid from '@/components/PropertyGrid';
 import PropertyFilters from '@/components/PropertyFilters';
-import { mockProperties } from '@/data/mockProperties';
+import { useProperties } from '@/hooks/useProperties';
 import { PropertyPurpose, PropertyFilter } from '@/types/property';
-import { Building, SlidersHorizontal, Grid3X3, List, Map } from 'lucide-react';
+import { Building, SlidersHorizontal, Grid3X3, List, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
@@ -25,11 +25,11 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Fetch real properties from Supabase
+  const { data: properties = [], isLoading, error } = useProperties(purpose);
+
   const filteredProperties = useMemo(() => {
-    return mockProperties.filter((property) => {
-      // Purpose filter
-      if (!property.purposes.includes(purpose)) return false;
-      
+    return properties.filter((property) => {
       // County filter
       if (filters.county && property.county !== filters.county) return false;
       
@@ -60,7 +60,7 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
       
       return true;
     });
-  }, [filters, purpose]);
+  }, [filters, properties, purpose]);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...filteredProperties];
@@ -127,7 +127,16 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                 {/* Toolbar */}
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
                   <p className="text-muted-foreground">
-                    <span className="font-semibold text-foreground">{sortedProperties.length}</span> properties found
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading properties...
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-foreground">{sortedProperties.length}</span> properties found
+                      </>
+                    )}
                   </p>
                   
                   <div className="flex items-center gap-2">
@@ -182,11 +191,27 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                   </div>
                 </div>
 
+                {/* Loading State */}
+                {isLoading && (
+                  <div className="flex items-center justify-center py-16">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                )}
+
+                {/* Error State */}
+                {error && (
+                  <div className="text-center py-16">
+                    <p className="text-destructive">Failed to load properties. Please try again.</p>
+                  </div>
+                )}
+
                 {/* Property Grid */}
-                <PropertyGrid 
-                  properties={sortedProperties}
-                  emptyMessage="No properties match your criteria. Try adjusting your filters."
-                />
+                {!isLoading && !error && (
+                  <PropertyGrid 
+                    properties={sortedProperties}
+                    emptyMessage="No properties match your criteria. Try adjusting your filters."
+                  />
+                )}
               </div>
             </div>
           </div>
