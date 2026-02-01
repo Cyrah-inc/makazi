@@ -97,15 +97,18 @@ const LocationPickerMap = ({
     );
   };
 
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
+      setIsGettingLocation(true);
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           setMarker({ lat, lng });
           map?.panTo({ lat, lng });
-          map?.setZoom(15);
+          map?.setZoom(17); // Higher zoom for better accuracy
           onLocationChange(lat, lng);
           
           // Reverse geocode
@@ -115,9 +118,16 @@ const LocationPickerMap = ({
               onLocationChange(lat, lng, results[0].formatted_address);
             }
           });
+          setIsGettingLocation(false);
         },
         (error) => {
           console.error('Error getting location:', error);
+          setIsGettingLocation(false);
+        },
+        {
+          enableHighAccuracy: true, // Request high accuracy GPS
+          timeout: 10000,
+          maximumAge: 0
         }
       );
     }
@@ -177,9 +187,10 @@ const LocationPickerMap = ({
           type="button" 
           variant="outline" 
           onClick={handleGetCurrentLocation}
-          title="Use my current location"
+          disabled={isGettingLocation}
+          title="Use my current location (high accuracy)"
         >
-          <Navigation className="w-4 h-4" />
+          {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
         </Button>
       </div>
 
