@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Home, Building, Landmark, Trees } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
+import { LocationPicker } from '@/components/LocationPicker';
 import { KENYA_COUNTIES } from '@/types/property';
 
 const amenitiesList = [
@@ -62,6 +63,8 @@ export default function AddPropertyPage() {
     address: '',
     city: '',
     state: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     // Features
     amenities: [] as string[],
     images: [] as string[],
@@ -156,6 +159,8 @@ export default function AddPropertyPage() {
       city: formData.city,
       state: formData.state,
       country: 'Kenya',
+      latitude: formData.latitude,
+      longitude: formData.longitude,
       amenities: formData.amenities,
       images: formData.images,
       status: 'pending',
@@ -416,7 +421,7 @@ export default function AddPropertyPage() {
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Location</CardTitle>
-              <CardDescription>Where is the property located?</CardDescription>
+              <CardDescription>Where is the property located? Pin the exact location on the map.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -453,6 +458,23 @@ export default function AddPropertyPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              
+              {/* Map Location Picker */}
+              <div className="pt-4">
+                <Label className="mb-3 block">Pin Location on Map</Label>
+                <LocationPicker
+                  latitude={formData.latitude || undefined}
+                  longitude={formData.longitude || undefined}
+                  onLocationChange={(lat, lng, address) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      latitude: lat,
+                      longitude: lng,
+                      ...(address && !prev.address ? { address } : {}),
+                    }));
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
