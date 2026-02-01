@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, GripVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
+import { LocationPicker } from '@/components/LocationPicker';
 
 const amenitiesList = [
   'Parking', 'Swimming Pool', 'Gym', 'Security', 'Garden', 
@@ -40,6 +41,8 @@ export default function EditPropertyPage() {
     address: '',
     city: '',
     state: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     amenities: [] as string[],
     images: [] as string[],
   });
@@ -73,6 +76,8 @@ export default function EditPropertyPage() {
         address: property.address || '',
         city: property.city || '',
         state: property.state || '',
+        latitude: property.latitude ?? null,
+        longitude: property.longitude ?? null,
         amenities: property.amenities || [],
         images: property.images || [],
       });
@@ -106,6 +111,8 @@ export default function EditPropertyPage() {
         address: formData.address,
         city: formData.city,
         state: formData.state,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         amenities: formData.amenities,
         images: formData.images,
       })
@@ -382,6 +389,23 @@ export default function EditPropertyPage() {
                     placeholder="e.g., Nairobi County"
                   />
                 </div>
+              </div>
+              
+              {/* Map Location Picker */}
+              <div className="pt-4">
+                <Label className="mb-3 block">Pin Location on Map</Label>
+                <LocationPicker
+                  latitude={formData.latitude || undefined}
+                  longitude={formData.longitude || undefined}
+                  onLocationChange={(lat, lng, address) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      latitude: lat,
+                      longitude: lng,
+                      ...(address && !prev.address ? { address } : {}),
+                    }));
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
