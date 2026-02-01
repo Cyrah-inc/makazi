@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { InquiryForm } from '@/components/InquiryForm';
+import { PropertyMap } from '@/components/PropertyMap';
 import { mockProperties } from '@/data/mockProperties';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,6 +69,8 @@ const PropertyDetailPage = () => {
     furnished: false,
     landlordId: dbProperty.landlord_id,
     landlordName: 'Property Owner',
+    latitude: dbProperty.latitude ? Number(dbProperty.latitude) : undefined,
+    longitude: dbProperty.longitude ? Number(dbProperty.longitude) : undefined,
   } : mockProperty;
 
   if (isLoading) {
@@ -288,6 +291,24 @@ const PropertyDetailPage = () => {
                     ))}
                   </div>
                 </div>
+
+                {/* Location Map */}
+                {property.latitude && property.longitude && (
+                  <div>
+                    <h2 className="font-heading text-xl font-semibold mb-4">Location</h2>
+                    <PropertyMap
+                      latitude={property.latitude}
+                      longitude={property.longitude}
+                      title={property.title}
+                      address={property.address}
+                      height="350px"
+                    />
+                    <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      {property.address}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Sidebar */}
