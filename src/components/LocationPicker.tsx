@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
-import { useGoogleMapsKey } from '@/hooks/useGoogleMapsKey';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { MapPin, Search, Loader2, Navigation } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LocationPickerProps {
   latitude?: number;
@@ -25,8 +25,16 @@ const defaultCenter = {
   lng: 36.8219,
 };
 
-export const LocationPicker = ({ latitude, longitude, onLocationChange }: LocationPickerProps) => {
-  const { apiKey, isLoading: keyLoading, error: keyError } = useGoogleMapsKey();
+// Libraries array must be static to prevent reloads
+const libraries: ("places")[] = ['places'];
+
+// Inner component that uses the Google Maps API - only rendered when API key is available
+const LocationPickerMap = ({ 
+  latitude, 
+  longitude, 
+  onLocationChange,
+  apiKey 
+}: LocationPickerProps & { apiKey: string }) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
     latitude && longitude ? { lat: latitude, lng: longitude } : null
@@ -36,8 +44,8 @@ export const LocationPicker = ({ latitude, longitude, onLocationChange }: Locati
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: apiKey || '',
-    libraries: ['places'],
+    googleMapsApiKey: apiKey,
+    libraries,
   });
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -122,18 +130,7 @@ export const LocationPicker = ({ latitude, longitude, onLocationChange }: Locati
     }
   }, [latitude, longitude]);
 
-  if (keyLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading map...</span>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (keyError || loadError) {
+  if (loadError) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-8 text-center">
@@ -145,11 +142,12 @@ export const LocationPicker = ({ latitude, longitude, onLocationChange }: Locati
     );
   }
 
-  if (!apiKey || !isLoaded) {
+  if (!isLoaded) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading map...</span>
         </CardContent>
       </Card>
     );
@@ -235,5 +233,72 @@ export const LocationPicker = ({ latitude, longitude, onLocationChange }: Locati
         Click on the map to pin the property location, or search for an address. You can also drag the marker to adjust.
       </p>
     </div>
+  );
+};
+
+// Main component that fetches the API key first
+export const LocationPicker = ({ latitude, longitude, onLocationChange }: LocationPickerProps) => {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-maps-key');
+        
+        if (error) {
+          console.error('Error fetching maps key:', error);
+          setError('Failed to load Google Maps');
+          return;
+        }
+        
+        if (data?.apiKey) {
+          setApiKey(data.apiKey);
+        } else {
+          setError('Google Maps API key not available');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        setError('Failed to load Google Maps');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchApiKey();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading map...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !apiKey) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+          <MapPin className="w-8 h-8 text-muted-foreground mb-2" />
+          <p className="text-muted-foreground">Unable to load Google Maps</p>
+          <p className="text-xs text-muted-foreground mt-1">You can still enter coordinates manually</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Only render the map component after we have the API key
+  return (
+    <LocationPickerMap
+      latitude={latitude}
+      longitude={longitude}
+      onLocationChange={onLocationChange}
+      apiKey={apiKey}
+    />
   );
 };
