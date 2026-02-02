@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PropertyGrid from '@/components/PropertyGrid';
 import PropertyFilters from '@/components/PropertyFilters';
+import CommuteChecker, { CommuteSettings, TransportMode } from '@/components/CommuteChecker';
 import { useProperties } from '@/hooks/useProperties';
 import { PropertyPurpose, PropertyFilter } from '@/types/property';
 import { Building, SlidersHorizontal, Grid3X3, List, Map, Loader2 } from 'lucide-react';
@@ -25,8 +26,37 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Commute state
+  const [commuteSettings, setCommuteSettings] = useState<CommuteSettings>({
+    destination: '',
+    mode: 'transit',
+    maxMinutes: 60,
+  });
+  const [commuteTimes, setCommuteTimes] = useState<Record<string, number>>({});
+  const [isLoadingCommute, setIsLoadingCommute] = useState(false);
+  const [commuteActive, setCommuteActive] = useState(false);
+
   // Fetch real properties from Supabase
   const { data: properties = [], isLoading, error } = useProperties(purpose);
+
+  // Generate mock commute times when user searches
+  const handleCommuteSearch = useCallback(() => {
+    if (!commuteSettings.destination.trim()) return;
+    
+    setIsLoadingCommute(true);
+    setCommuteActive(true);
+    
+    // Simulate API call with 1 second delay
+    setTimeout(() => {
+      const mockTimes: Record<string, number> = {};
+      properties.forEach((property) => {
+        // Generate random commute time between 15 and 90 minutes
+        mockTimes[property.id] = Math.floor(Math.random() * 76) + 15;
+      });
+      setCommuteTimes(mockTimes);
+      setIsLoadingCommute(false);
+    }, 1000);
+  }, [commuteSettings.destination, properties]);
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
@@ -58,9 +88,14 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
       if (filters.minPrice && price && price < filters.minPrice) return false;
       if (filters.maxPrice && price && price > filters.maxPrice) return false;
       
+      // Commute time filter
+      if (commuteActive && commuteTimes[property.id] !== undefined) {
+        if (commuteTimes[property.id] > commuteSettings.maxMinutes) return false;
+      }
+      
       return true;
     });
-  }, [filters, properties, purpose]);
+  }, [filters, properties, purpose, commuteActive, commuteTimes, commuteSettings.maxMinutes]);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...filteredProperties];
@@ -86,6 +121,7 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
         return sorted;
     }
   }, [filteredProperties, filters.sortBy, purpose]);
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -114,7 +150,16 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
           <div className="container">
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Desktop Filters */}
-              <aside className="hidden lg:block w-72 shrink-0">
+              <aside className="hidden lg:block w-72 shrink-0 space-y-6">
+                {/* Commute Checker */}
+                <CommuteChecker
+                  settings={commuteSettings}
+                  onChange={setCommuteSettings}
+                  onSearch={handleCommuteSearch}
+                  isLoading={isLoadingCommute}
+                />
+                
+                {/* Property Filters */}
                 <PropertyFilters 
                   filters={filters} 
                   onChange={setFilters} 
@@ -152,7 +197,15 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                         <SheetHeader>
                           <SheetTitle>Filters</SheetTitle>
                         </SheetHeader>
-                        <div className="mt-6">
+                        <div className="mt-6 space-y-6">
+                          {/* Commute Checker (Mobile) */}
+                          <CommuteChecker
+                            settings={commuteSettings}
+                            onChange={setCommuteSettings}
+                            onSearch={handleCommuteSearch}
+                            isLoading={isLoadingCommute}
+                          />
+                          
                           <PropertyFilters 
                             filters={filters} 
                             onChange={setFilters} 
@@ -210,6 +263,10 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                   <PropertyGrid 
                     properties={sortedProperties}
                     emptyMessage="No properties match your criteria. Try adjusting your filters."
+                    commuteTimes={commuteActive ? commuteTimes : undefined}
+                    commuteMode={commuteSettings.mode}
+                    commuteDestination={commuteSettings.destination}
+                    isLoadingCommute={isLoadingCommute}
                   />
                 )}
               </div>
