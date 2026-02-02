@@ -1,19 +1,32 @@
 import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, MapPin, Bed, Bath, Car, Maximize, Eye, Star } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';
+import CommuteBadge from './CommuteBadge';
+import { TransportMode } from './CommuteChecker';
 
 interface PropertyCardProps {
   property: Property;
   variant?: 'default' | 'featured' | 'compact';
+  commuteTime?: number | null;
+  commuteMode?: TransportMode;
+  commuteDestination?: string;
+  isLoadingCommute?: boolean;
 }
 
-const PropertyCard = ({ property, variant = 'default' }: PropertyCardProps) => {
+const PropertyCard = ({ 
+  property, 
+  variant = 'default',
+  commuteTime,
+  commuteMode = 'transit',
+  commuteDestination = '',
+  isLoadingCommute = false,
+}: PropertyCardProps) => {
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const [imageLoaded, setImageLoaded] = useState(false);
   const favorited = isFavorite(property.id);
@@ -93,10 +106,20 @@ const PropertyCard = ({ property, variant = 'default' }: PropertyCardProps) => {
 
         {/* Content */}
         <div className="p-4 space-y-3">
-          {/* Price */}
-          <div className="flex items-baseline gap-1">
-            <span className="text-xl font-heading font-bold text-primary">{price}</span>
-            {label && <span className="text-sm text-muted-foreground">{label}</span>}
+          {/* Price and Commute Badge */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-heading font-bold text-primary">{price}</span>
+              {label && <span className="text-sm text-muted-foreground">{label}</span>}
+            </div>
+            {(commuteTime !== undefined || isLoadingCommute) && commuteDestination && (
+              <CommuteBadge
+                minutes={commuteTime ?? null}
+                mode={commuteMode}
+                destination={commuteDestination}
+                isLoading={isLoadingCommute}
+              />
+            )}
           </div>
 
           {/* Title */}
@@ -126,7 +149,7 @@ const PropertyCard = ({ property, variant = 'default' }: PropertyCardProps) => {
             )}
             {property.parkingSpaces > 0 && (
               <div className="flex items-center gap-1.5">
-                <Car className="h-4 w-4" />
+                <CarIcon className="h-4 w-4" />
                 <span>{property.parkingSpaces}</span>
               </div>
             )}

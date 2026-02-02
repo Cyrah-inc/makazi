@@ -1,14 +1,28 @@
 import { Property } from '@/types/property';
 import PropertyCard from './PropertyCard';
+import { TransportMode } from './CommuteChecker';
 
 interface PropertyGridProps {
   properties: Property[];
   title?: string;
   subtitle?: string;
   emptyMessage?: string;
+  commuteTimes?: Record<string, number>;
+  commuteMode?: TransportMode;
+  commuteDestination?: string;
+  isLoadingCommute?: boolean;
 }
 
-const PropertyGrid = ({ properties, title, subtitle, emptyMessage = 'No properties found' }: PropertyGridProps) => {
+const PropertyGrid = ({ 
+  properties, 
+  title, 
+  subtitle, 
+  emptyMessage = 'No properties found',
+  commuteTimes,
+  commuteMode,
+  commuteDestination,
+  isLoadingCommute,
+}: PropertyGridProps) => {
   if (properties.length === 0) {
     return (
       <div className="text-center py-16">
@@ -33,7 +47,13 @@ const PropertyGrid = ({ properties, title, subtitle, emptyMessage = 'No properti
             className="animate-fade-in-up opacity-0"
             style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
           >
-            <PropertyCard property={property} />
+            <PropertyCard 
+              property={property}
+              commuteTime={commuteTimes?.[property.id]}
+              commuteMode={commuteMode}
+              commuteDestination={commuteDestination}
+              isLoadingCommute={isLoadingCommute}
+            />
           </div>
         ))}
       </div>
