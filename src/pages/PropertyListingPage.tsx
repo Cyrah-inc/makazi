@@ -10,6 +10,8 @@ import { PropertyPurpose, PropertyFilter } from '@/types/property';
 import { Building, SlidersHorizontal, Grid3X3, List, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface PropertyListingPageProps {
   purpose: PropertyPurpose;
@@ -39,24 +41,56 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   // Fetch real properties from Supabase
   const { data: properties = [], isLoading, error } = useProperties(purpose);
 
-  // Generate mock commute times when user searches
-  const handleCommuteSearch = useCallback(() => {
+  // Calculate real commute times using Google Distance Matrix API
+  const handleCommuteSearch = useCallback(async () => {
     if (!commuteSettings.destination.trim()) return;
+    
+    // Filter properties with coordinates
+    const propertiesWithCoords = properties.filter(
+      (p) => p.latitude != null && p.longitude != null
+    );
+
+    if (propertiesWithCoords.length === 0) {
+      toast.error('No properties with location data available');
+      return;
+    }
     
     setIsLoadingCommute(true);
     setCommuteActive(true);
     
-    // Simulate API call with 1 second delay
-    setTimeout(() => {
-      const mockTimes: Record<string, number> = {};
-      properties.forEach((property) => {
-        // Generate random commute time between 15 and 90 minutes
-        mockTimes[property.id] = Math.floor(Math.random() * 76) + 15;
+    try {
+      const origins = propertiesWithCoords.map((p) => ({
+        id: p.id,
+        lat: p.latitude!,
+        lng: p.longitude!,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('calculate-commute', {
+        body: {
+          origins,
+          destination: commuteSettings.destination,
+          mode: commuteSettings.mode,
+        },
       });
-      setCommuteTimes(mockTimes);
+
+      if (error) throw error;
+
+      if (data?.results) {
+        const times: Record<string, number> = {};
+        data.results.forEach((result: { propertyId: string; durationMinutes: number | null }) => {
+          if (result.durationMinutes !== null) {
+            times[result.propertyId] = result.durationMinutes;
+          }
+        });
+        setCommuteTimes(times);
+      }
+    } catch (err) {
+      console.error('Error calculating commute:', err);
+      toast.error('Failed to calculate commute times. Please try again.');
+    } finally {
       setIsLoadingCommute(false);
-    }, 1000);
-  }, [commuteSettings.destination, properties]);
+    }
+  }, [commuteSettings.destination, commuteSettings.mode, properties]);
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
