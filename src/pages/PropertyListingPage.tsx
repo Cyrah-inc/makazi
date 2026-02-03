@@ -38,8 +38,8 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   const [isLoadingCommute, setIsLoadingCommute] = useState(false);
   const [commuteActive, setCommuteActive] = useState(false);
 
-  // Fetch real properties from Supabase - require location for commute feature
-  const { data: properties = [], isLoading, error } = useProperties(purpose, true);
+  // Fetch real properties from Supabase - don't require location by default
+  const { data: properties = [], isLoading, error } = useProperties(purpose, false);
 
   // Calculate real commute times using Google Distance Matrix API
   const handleCommuteSearch = useCallback(async () => {
