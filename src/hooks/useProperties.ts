@@ -118,9 +118,9 @@ const transformProperty = async (dbProperty: DbProperty): Promise<Property> => {
   };
 };
 
-export const useProperties = (purpose?: PropertyPurpose) => {
+export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolean = false) => {
   return useQuery({
-    queryKey: ['properties', purpose],
+    queryKey: ['properties', purpose, requireLocation],
     queryFn: async (): Promise<Property[]> => {
       let query = supabase
         .from('properties')
@@ -132,6 +132,11 @@ export const useProperties = (purpose?: PropertyPurpose) => {
       if (purpose) {
         const dbPropertyType = mapPurposeToPropertyType(purpose);
         query = query.eq('property_type', dbPropertyType);
+      }
+
+      // Filter to only properties with valid coordinates if required
+      if (requireLocation) {
+        query = query.not('latitude', 'is', null).not('longitude', 'is', null);
       }
       
       const { data, error } = await query;
