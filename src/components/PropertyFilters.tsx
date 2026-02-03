@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { PropertyFilter, PropertyPurpose, KENYA_COUNTIES, PROPERTY_TYPES, AMENITIES } from '@/types/property';
 import { formatPrice } from '@/lib/formatters';
-import { getTowns } from '@/data/mockProperties';
+import { getTowns } from '@/lib/locations';
 import { X } from 'lucide-react';
 
 interface PropertyFiltersProps {
