@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { InquiryForm } from '@/components/InquiryForm';
 import { PropertyMap } from '@/components/PropertyMap';
-import { mockProperties } from '@/data/mockProperties';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -23,7 +22,7 @@ const PropertyDetailPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
 
-  // Try to fetch from Supabase first
+  // Fetch from Supabase
   const { data: dbProperty, isLoading } = useQuery({
     queryKey: ['property', id],
     queryFn: async () => {
@@ -40,10 +39,7 @@ const PropertyDetailPage = () => {
     enabled: !!id,
   });
 
-  // Fallback to mock data
-  const mockProperty = mockProperties.find(p => p.id === id);
-  
-  // Use DB property if available, otherwise use mock
+  // Transform DB property to display format
   const property = dbProperty ? {
     id: dbProperty.id,
     title: dbProperty.title,
@@ -51,27 +47,27 @@ const PropertyDetailPage = () => {
     address: `${dbProperty.address}, ${dbProperty.city}`,
     county: dbProperty.state || '',
     town: dbProperty.city,
-    images: dbProperty.images || ['/placeholder.svg'],
+    images: dbProperty.images && dbProperty.images.length > 0 ? dbProperty.images : ['/placeholder.svg'],
     bedrooms: dbProperty.bedrooms,
     bathrooms: dbProperty.bathrooms,
     parkingSpaces: 0,
     size: dbProperty.area_sqft || 0,
-    purposes: [dbProperty.property_type] as ('buy' | 'rent' | 'airbnb')[],
-    salePrice: dbProperty.property_type === 'sale' ? dbProperty.price : undefined,
-    monthlyRent: dbProperty.property_type === 'rent' ? dbProperty.price : undefined,
-    nightlyRate: dbProperty.property_type === 'airbnb' ? dbProperty.price : undefined,
+    purposes: [dbProperty.property_type === 'sale' ? 'buy' : dbProperty.property_type] as ('buy' | 'rent' | 'airbnb')[],
+    salePrice: dbProperty.sale_price || (dbProperty.property_type === 'sale' ? dbProperty.price : undefined),
+    monthlyRent: dbProperty.monthly_rent || (dbProperty.property_type === 'rent' ? dbProperty.price : undefined),
+    nightlyRate: dbProperty.nightly_rate || (dbProperty.property_type === 'airbnb' ? dbProperty.price : undefined),
     amenities: dbProperty.amenities || [],
     views: dbProperty.views_count,
     createdAt: dbProperty.created_at,
     verified: true,
-    propertyType: 'apartment',
+    propertyType: dbProperty.property_category || 'apartment',
     yearBuilt: undefined,
     furnished: false,
     landlordId: dbProperty.landlord_id,
     landlordName: 'Property Owner',
     latitude: dbProperty.latitude ? Number(dbProperty.latitude) : undefined,
     longitude: dbProperty.longitude ? Number(dbProperty.longitude) : undefined,
-  } : mockProperty;
+  } : null;
 
   if (isLoading) {
     return (

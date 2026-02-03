@@ -160,16 +160,23 @@ export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolea
   });
 };
 
-export const useFeaturedProperties = () => {
+export const useFeaturedProperties = (requireLocation: boolean = false) => {
   return useQuery({
-    queryKey: ['properties', 'featured'],
+    queryKey: ['properties', 'featured', requireLocation],
     queryFn: async (): Promise<Property[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('properties')
         .select('*')
         .eq('status', 'approved')
         .order('views_count', { ascending: false })
         .limit(8);
+
+      // Filter to only properties with valid coordinates if required
+      if (requireLocation) {
+        query = query.not('latitude', 'is', null).not('longitude', 'is', null);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching featured properties:', error);
