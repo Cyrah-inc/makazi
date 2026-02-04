@@ -7,8 +7,9 @@ import PropertyFilters from '@/components/PropertyFilters';
 import CommuteChecker, { CommuteSettings, TransportMode } from '@/components/CommuteChecker';
 import { useProperties } from '@/hooks/useProperties';
 import { PropertyPurpose, PropertyFilter } from '@/types/property';
-import { Building, SlidersHorizontal, Grid3X3, List, Map, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -168,155 +169,160 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
     }
   }, [filteredProperties, filters.sortBy, purpose]);
 
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const searchValue = formData.get('search') as string;
+    setFilters(prev => ({ ...prev, search: searchValue }));
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1">
-        {/* Header */}
-        <section className="bg-primary py-12 md:py-16">
-          <div className="container">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="h-12 w-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
-                <Building className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="font-heading text-3xl md:text-4xl font-bold text-primary-foreground">
-                  {title}
-                </h1>
-                <p className="text-primary-foreground/80">{subtitle}</p>
-              </div>
-            </div>
+      <main className="flex-1 pt-6 md:pt-8">
+        {/* Header with Search */}
+        <section className="container mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
+              {title}
+            </h1>
+            <form onSubmit={handleSearch} className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                name="search"
+                placeholder="Search properties..."
+                defaultValue={filters.search || ''}
+                className="pl-10 h-10"
+              />
+            </form>
           </div>
         </section>
 
         {/* Filters & Results */}
-        <section className="py-8">
-          <div className="container">
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Desktop Filters */}
-              <aside className="hidden lg:block w-72 shrink-0 space-y-6">
-                {/* Commute Checker */}
-                <CommuteChecker
-                  settings={commuteSettings}
-                  onChange={setCommuteSettings}
-                  onSearch={handleCommuteSearch}
-                  isLoading={isLoadingCommute}
-                />
+        <section className="container pb-12">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Desktop Filters */}
+            <aside className="hidden lg:block w-72 shrink-0 space-y-6">
+              {/* Commute Checker */}
+              <CommuteChecker
+                settings={commuteSettings}
+                onChange={setCommuteSettings}
+                onSearch={handleCommuteSearch}
+                isLoading={isLoadingCommute}
+              />
+              
+              {/* Property Filters */}
+              <PropertyFilters 
+                filters={filters} 
+                onChange={setFilters} 
+                purpose={purpose}
+              />
+            </aside>
+
+            {/* Results */}
+            <div className="flex-1">
+              {/* Toolbar */}
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+                <p className="text-muted-foreground">
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading properties...
+                    </span>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-foreground">{sortedProperties.length}</span> properties found
+                    </>
+                  )}
+                </p>
                 
-                {/* Property Filters */}
-                <PropertyFilters 
-                  filters={filters} 
-                  onChange={setFilters} 
-                  purpose={purpose}
-                />
-              </aside>
+                <div className="flex items-center gap-2">
+                  {/* Mobile Filters */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="sm" className="lg:hidden gap-2">
+                        <SlidersHorizontal className="h-4 w-4" />
+                        Filters
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="w-80 overflow-y-auto">
+                      <SheetHeader>
+                        <SheetTitle>Filters</SheetTitle>
+                      </SheetHeader>
+                      <div className="mt-6 space-y-6">
+                        {/* Commute Checker (Mobile) */}
+                        <CommuteChecker
+                          settings={commuteSettings}
+                          onChange={setCommuteSettings}
+                          onSearch={handleCommuteSearch}
+                          isLoading={isLoadingCommute}
+                        />
+                        
+                        <PropertyFilters 
+                          filters={filters} 
+                          onChange={setFilters} 
+                          purpose={purpose}
+                        />
+                      </div>
+                    </SheetContent>
+                  </Sheet>
 
-              {/* Results */}
-              <div className="flex-1">
-                {/* Toolbar */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
-                  <p className="text-muted-foreground">
-                    {isLoading ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading properties...
-                      </span>
-                    ) : (
-                      <>
-                        <span className="font-semibold text-foreground">{sortedProperties.length}</span> properties found
-                      </>
-                    )}
-                  </p>
-                  
-                  <div className="flex items-center gap-2">
-                    {/* Mobile Filters */}
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button variant="outline" size="sm" className="lg:hidden gap-2">
-                          <SlidersHorizontal className="h-4 w-4" />
-                          Filters
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent side="left" className="w-80 overflow-y-auto">
-                        <SheetHeader>
-                          <SheetTitle>Filters</SheetTitle>
-                        </SheetHeader>
-                        <div className="mt-6 space-y-6">
-                          {/* Commute Checker (Mobile) */}
-                          <CommuteChecker
-                            settings={commuteSettings}
-                            onChange={setCommuteSettings}
-                            onSearch={handleCommuteSearch}
-                            isLoading={isLoadingCommute}
-                          />
-                          
-                          <PropertyFilters 
-                            filters={filters} 
-                            onChange={setFilters} 
-                            purpose={purpose}
-                          />
-                        </div>
-                      </SheetContent>
-                    </Sheet>
-
-                    {/* View Mode */}
-                    <div className="hidden sm:flex items-center gap-1 bg-muted rounded-lg p-1">
-                      <Button
-                        variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setViewMode('grid')}
-                      >
-                        <Grid3X3 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setViewMode('list')}
-                      >
-                        <List className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                      >
-                        <Map className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  {/* View Mode */}
+                  <div className="hidden sm:flex items-center gap-1 bg-muted rounded-lg p-1">
+                    <Button
+                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                    >
+                      <Map className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-
-                {/* Loading State */}
-                {isLoading && (
-                  <div className="flex items-center justify-center py-16">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                )}
-
-                {/* Error State */}
-                {error && (
-                  <div className="text-center py-16">
-                    <p className="text-destructive">Failed to load properties. Please try again.</p>
-                  </div>
-                )}
-
-                {/* Property Grid */}
-                {!isLoading && !error && (
-                  <PropertyGrid 
-                    properties={sortedProperties}
-                    emptyMessage="No properties match your criteria. Try adjusting your filters."
-                    commuteTimes={commuteTimes}
-                    commuteMode={commuteSettings.mode}
-                    commuteDestination={commuteSettings.destination}
-                    isLoadingCommute={isLoadingCommute}
-                    showCommuteBadge={commuteActive || isLoadingCommute}
-                  />
-                )}
               </div>
+
+              {/* Loading State */}
+              {isLoading && (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
+
+              {/* Error State */}
+              {error && (
+                <div className="text-center py-16">
+                  <p className="text-destructive">Failed to load properties. Please try again.</p>
+                </div>
+              )}
+
+              {/* Property Grid */}
+              {!isLoading && !error && (
+                <PropertyGrid 
+                  properties={sortedProperties}
+                  emptyMessage="No properties match your criteria. Try adjusting your filters."
+                  commuteTimes={commuteTimes}
+                  commuteMode={commuteSettings.mode}
+                  commuteDestination={commuteSettings.destination}
+                  isLoadingCommute={isLoadingCommute}
+                  showCommuteBadge={commuteActive || isLoadingCommute}
+                />
+              )}
             </div>
           </div>
         </section>
