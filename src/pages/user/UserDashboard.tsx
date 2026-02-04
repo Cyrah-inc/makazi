@@ -1,17 +1,134 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserLayout } from '@/components/user/UserLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Clock, CheckCircle, Heart, Building2, ArrowRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  MessageSquare, Clock, CheckCircle, Heart, Building2, ArrowRight, 
+  User, Camera, Mail, Phone, Pencil, Save, X, Loader2 
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { formatRelativeDate } from '@/lib/formatters';
+import { toast } from '@/hooks/use-toast';
 
 export default function UserDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
+  // Fetch user profile
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Form state
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+  });
+
+  // Initialize form when profile loads
+  const initializeForm = () => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        email: profile.email || user?.email || '',
+        phone: profile.phone || '',
+      });
+    }
+  };
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: data.full_name,
+          email: data.email,
+          phone: data.phone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-profile', user?.id] });
+      toast({ title: 'Profile updated', description: 'Your changes have been saved.' });
+      setIsEditing(false);
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to update profile. Please try again.', variant: 'destructive' });
+    },
+  });
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please upload an image file.', variant: 'destructive' });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Please upload an image under 2MB.', variant: 'destructive' });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('property-images')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('property-images')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ['user-profile', user.id] });
+      toast({ title: 'Avatar updated', description: 'Your profile picture has been changed.' });
+    } catch (error) {
+      toast({ title: 'Upload failed', description: 'Could not upload avatar. Please try again.', variant: 'destructive' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  // Fetch inquiries
   const { data: inquiries } = useQuery({
     queryKey: ['user-inquiries', user?.id],
     queryFn: async () => {
@@ -38,27 +155,180 @@ export default function UserDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+        return <Badge variant="outline" className="border-yellow-500 text-yellow-700"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
       case 'replied':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
+        return <Badge variant="outline" className="border-green-500 text-green-700"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
+  const getInitials = (name?: string | null, email?: string | null) => {
+    if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    if (email) return email[0].toUpperCase();
+    return 'U';
+  };
+
+  const handleEditClick = () => {
+    initializeForm();
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setFormData({ full_name: '', email: '', phone: '' });
+  };
+
+  const handleSave = () => {
+    updateProfileMutation.mutate(formData);
+  };
+
+  if (profileLoading) {
+    return (
+      <UserLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </UserLayout>
+    );
+  }
+
   return (
     <UserLayout>
-      <div className="p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Welcome Back!</h1>
-          <p className="text-muted-foreground mt-1">Manage your property inquiries and saved listings</p>
-        </div>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+        {/* Profile Section */}
+        <Card className="mb-6 lg:mb-8">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <CardTitle className="text-xl sm:text-2xl">My Profile</CardTitle>
+              {!isEditing ? (
+                <Button variant="outline" size="sm" onClick={handleEditClick}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleCancelEdit}
+                    disabled={updateProfileMutation.isPending}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleSave}
+                    disabled={updateProfileMutation.isPending}
+                  >
+                    {updateProfileMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+              {/* Avatar Section */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative group">
+                  <Avatar className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-muted">
+                    <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
+                    <AvatarFallback className="text-2xl sm:text-3xl bg-primary/10 text-primary">
+                      {getInitials(profile?.full_name, profile?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    {avatarUploading ? (
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                      disabled={avatarUploading}
+                    />
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">Click to change photo</p>
+              </div>
+
+              {/* Profile Details */}
+              <div className="flex-1 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name" className="flex items-center gap-2 text-muted-foreground">
+                    <User className="w-4 h-4" /> Full Name
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="full_name"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                      placeholder="Enter your full name"
+                    />
+                  ) : (
+                    <p className="text-foreground font-medium py-2">{profile?.full_name || 'Not set'}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="w-4 h-4" /> Email
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Enter your email"
+                    />
+                  ) : (
+                    <p className="text-foreground font-medium py-2">{profile?.email || user?.email || 'Not set'}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                  <Label htmlFor="phone" className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="w-4 h-4" /> Phone Number
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="Enter your phone number"
+                    />
+                  ) : (
+                    <p className="text-foreground font-medium py-2">{profile?.phone || 'Not set'}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                  <Label className="text-muted-foreground">Account Status</Label>
+                  <div className="py-2">
+                    <Badge variant="outline" className="capitalize">{profile?.status || 'active'}</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:mb-8">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Inquiries</CardTitle>
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
@@ -67,7 +337,7 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">Awaiting Reply</CardTitle>
               <Clock className="w-4 h-4 text-yellow-600" />
             </CardHeader>
@@ -76,7 +346,7 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">Replies Received</CardTitle>
               <CheckCircle className="w-4 h-4 text-green-600" />
             </CardHeader>
@@ -87,38 +357,40 @@ export default function UserDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 lg:mb-8">
           <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold">Browse Properties</h3>
-                  <p className="text-sm text-muted-foreground">Explore available listings</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base">Browse Properties</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Explore available listings</p>
                 </div>
                 <Link to="/">
-                  <Button variant="outline" size="sm">
-                    Browse <ArrowRight className="w-4 h-4 ml-2" />
+                  <Button variant="outline" size="sm" className="shrink-0">
+                    <span className="hidden sm:inline">Browse</span>
+                    <ArrowRight className="w-4 h-4 sm:ml-2" />
                   </Button>
                 </Link>
               </div>
             </CardContent>
           </Card>
           <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Heart className="w-6 h-6 text-accent" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                  <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold">Saved Properties</h3>
-                  <p className="text-sm text-muted-foreground">View your favorites</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base">Saved Properties</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">View your favorites</p>
                 </div>
                 <Link to="/dashboard/favorites">
-                  <Button variant="outline" size="sm">
-                    View <ArrowRight className="w-4 h-4 ml-2" />
+                  <Button variant="outline" size="sm" className="shrink-0">
+                    <span className="hidden sm:inline">View</span>
+                    <ArrowRight className="w-4 h-4 sm:ml-2" />
                   </Button>
                 </Link>
               </div>
@@ -128,8 +400,8 @@ export default function UserDashboard() {
 
         {/* Recent Inquiries */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Inquiries</CardTitle>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <CardTitle className="text-lg sm:text-xl">Recent Inquiries</CardTitle>
             <Link to="/dashboard/inquiries">
               <Button variant="outline" size="sm">View All</Button>
             </Link>
@@ -144,17 +416,22 @@ export default function UserDashboard() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentInquiries.map((inquiry) => (
-                  <div key={inquiry.id} className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <div 
+                    key={inquiry.id} 
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="hidden sm:flex w-10 h-10 rounded-full bg-muted items-center justify-center shrink-0">
                       <MessageSquare className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm line-clamp-1">{inquiry.message}</p>
-                      <p className="text-xs text-muted-foreground">{formatRelativeDate(inquiry.created_at)}</p>
+                      <p className="text-sm line-clamp-2 sm:line-clamp-1">{inquiry.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{formatRelativeDate(inquiry.created_at)}</p>
                     </div>
-                    {getStatusBadge(inquiry.status)}
+                    <div className="flex justify-end">
+                      {getStatusBadge(inquiry.status)}
+                    </div>
                   </div>
                 ))}
               </div>
