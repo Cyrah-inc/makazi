@@ -4,6 +4,16 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
+/* Safe area for bottom navigation */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Add bottom padding to main content when bottom nav is visible */
+.has-bottom-nav {
+  padding-bottom: 4rem;
+}
+
 @layer base {
   :root {
     /* Kenya-inspired color palette - Forest greens, earth tones, warm neutrals */
