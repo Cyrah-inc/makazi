@@ -11,6 +11,7 @@ interface PropertyGridProps {
   commuteMode?: TransportMode;
   commuteDestination?: string;
   isLoadingCommute?: boolean;
+  showCommuteBadge?: boolean;
 }
 
 const PropertyGrid = ({ 
@@ -22,6 +23,7 @@ const PropertyGrid = ({
   commuteMode,
   commuteDestination,
   isLoadingCommute,
+  showCommuteBadge = false,
 }: PropertyGridProps) => {
   if (properties.length === 0) {
     return (
@@ -53,6 +55,7 @@ const PropertyGrid = ({
               commuteMode={commuteMode}
               commuteDestination={commuteDestination}
               isLoadingCommute={isLoadingCommute}
+              showCommuteBadge={showCommuteBadge}
             />
           </div>
         ))}

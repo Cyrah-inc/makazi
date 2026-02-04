@@ -309,10 +309,11 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                   <PropertyGrid 
                     properties={sortedProperties}
                     emptyMessage="No properties match your criteria. Try adjusting your filters."
-                    commuteTimes={commuteActive ? commuteTimes : undefined}
+                    commuteTimes={commuteTimes}
                     commuteMode={commuteSettings.mode}
                     commuteDestination={commuteSettings.destination}
                     isLoadingCommute={isLoadingCommute}
+                    showCommuteBadge={commuteActive || isLoadingCommute}
                   />
                 )}
               </div>
