@@ -1,13 +1,14 @@
-import { Car, Bus, PersonStanding, Clock } from 'lucide-react';
+import { Car, Bus, PersonStanding, MapPinOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TransportMode } from './CommuteChecker';
 
 interface CommuteBadgeProps {
-  minutes: number | null;
+  minutes: number | null | undefined;
   mode: TransportMode;
   destination: string;
   isLoading?: boolean;
+  noLocation?: boolean;
 }
 
 const getModeIcon = (mode: TransportMode) => {
@@ -34,7 +35,7 @@ const formatTime = (minutes: number): string => {
   return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
 };
 
-const CommuteBadge = ({ minutes, mode, destination, isLoading }: CommuteBadgeProps) => {
+const CommuteBadge = ({ minutes, mode, destination, isLoading, noLocation }: CommuteBadgeProps) => {
   const Icon = getModeIcon(mode);
 
   if (isLoading) {
@@ -45,7 +46,20 @@ const CommuteBadge = ({ minutes, mode, destination, isLoading }: CommuteBadgePro
     );
   }
 
-  if (minutes === null) {
+  // Property has no location data
+  if (noLocation) {
+    return (
+      <div
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-muted/50 text-muted-foreground border-border"
+        title="This property has no location data"
+      >
+        <MapPinOff className="h-3 w-3" />
+        <span>No location</span>
+      </div>
+    );
+  }
+
+  if (minutes === null || minutes === undefined) {
     return null;
   }
 

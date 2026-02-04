@@ -17,6 +17,7 @@ interface PropertyCardProps {
   commuteMode?: TransportMode;
   commuteDestination?: string;
   isLoadingCommute?: boolean;
+  showCommuteBadge?: boolean;
 }
 
 const PropertyCard = ({ 
@@ -26,6 +27,7 @@ const PropertyCard = ({
   commuteMode = 'transit',
   commuteDestination = '',
   isLoadingCommute = false,
+  showCommuteBadge = false,
 }: PropertyCardProps) => {
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -112,12 +114,13 @@ const PropertyCard = ({
               <span className="text-xl font-heading font-bold text-primary">{price}</span>
               {label && <span className="text-sm text-muted-foreground">{label}</span>}
             </div>
-            {(commuteTime !== undefined || isLoadingCommute) && commuteDestination && (
+            {showCommuteBadge && commuteDestination && (
               <CommuteBadge
-                minutes={commuteTime ?? null}
+                minutes={commuteTime}
                 mode={commuteMode}
                 destination={commuteDestination}
                 isLoading={isLoadingCommute}
+                noLocation={!property.latitude || !property.longitude}
               />
             )}
           </div>
