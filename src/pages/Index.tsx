@@ -41,24 +41,6 @@ const Index = () => {
               <HeroSearch />
             </div>
 
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center gap-8 md:gap-16 mt-12 pt-12 border-t border-primary-foreground/20 animate-fade-in delay-500">
-              {[
-                { value: '5,000+', label: 'Properties Listed' },
-                { value: '2,500+', label: 'Happy Customers' },
-                { value: '47', label: 'Counties Covered' },
-                { value: '500+', label: 'Verified Agents' },
-              ].map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="text-2xl md:text-3xl font-heading font-bold text-primary-foreground">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-primary-foreground/70">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 
