@@ -58,6 +58,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { PropertyPreviewModal } from '@/components/admin/PropertyPreviewModal';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 type PropertyStatus = 'pending' | 'approved' | 'rejected' | 'removed';
 type PropertyType = 'sale' | 'rent' | 'airbnb';
@@ -407,8 +408,9 @@ export default function AdminPropertiesPage() {
                         <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                           {property.images.length > 0 ? (
                             <img 
-                              src={property.images[0]} 
+                              src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.DASHBOARD.width, IMAGE_SIZES.DASHBOARD.quality)} 
                               alt={property.title}
+                              loading="lazy"
                               className="w-full h-full object-cover"
                             />
                           ) : (

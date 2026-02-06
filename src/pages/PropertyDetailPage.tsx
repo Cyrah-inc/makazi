@@ -17,6 +17,7 @@ import {
   Shield, Eye, Home, CheckCircle2, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -118,8 +119,9 @@ const PropertyDetailPage = () => {
           <div className="container py-4">
             <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden">
               <img
-                src={property.images[currentImageIndex]}
+                src={getOptimizedImageUrl(property.images[currentImageIndex], IMAGE_SIZES.DETAIL.width, IMAGE_SIZES.DETAIL.quality)}
                 alt={property.title}
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
               
@@ -182,7 +184,7 @@ const PropertyDetailPage = () => {
                       index === currentImageIndex ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
                     )}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img src={getOptimizedImageUrl(img, IMAGE_SIZES.DETAIL_THUMB.width, IMAGE_SIZES.DETAIL_THUMB.quality)} alt="" loading="lazy" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

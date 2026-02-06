@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,33 +7,42 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { BottomNav } from "@/components/BottomNav";
-import Index from "./pages/Index";
-import BuyPage from "./pages/BuyPage";
-import RentPage from "./pages/RentPage";
-import AirbnbPage from "./pages/AirbnbPage";
-import AgentsPage from "./pages/AgentsPage";
-import PropertyDetailPage from "./pages/PropertyDetailPage";
-import AuthPage from "./pages/auth/AuthPage";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminLandlordsPage from "./pages/admin/AdminLandlordsPage";
-import AdminPropertiesPage from "./pages/admin/AdminPropertiesPage";
-import AdminListingsPage from "./pages/admin/AdminListingsPage";
-import LandlordDashboard from "./pages/landlord/LandlordDashboard";
-import LandlordPropertiesPage from "./pages/landlord/LandlordPropertiesPage";
-import AddPropertyPage from "./pages/landlord/AddPropertyPage";
-import EditPropertyPage from "./pages/landlord/EditPropertyPage";
-import LandlordInquiriesPage from "./pages/landlord/LandlordInquiriesPage";
-import LandlordMessagesPage from "./pages/landlord/LandlordMessagesPage";
-import UserDashboard from "./pages/user/UserDashboard";
-import UserInquiriesPage from "./pages/user/UserInquiriesPage";
-import UserFavoritesPage from "./pages/user/UserFavoritesPage";
-import UserMessagesPage from "./pages/user/UserMessagesPage";
-import UserBookingsPage from "./pages/user/UserBookingsPage";
-import LandlordAirbnbPage from "./pages/landlord/LandlordAirbnbPage";
-import NotFound from "./pages/NotFound";
+import { Loader2 } from "lucide-react";
+
+// Lazy-loaded pages for code splitting
+const Index = lazy(() => import("./pages/Index"));
+const BuyPage = lazy(() => import("./pages/BuyPage"));
+const RentPage = lazy(() => import("./pages/RentPage"));
+const AirbnbPage = lazy(() => import("./pages/AirbnbPage"));
+const AgentsPage = lazy(() => import("./pages/AgentsPage"));
+const PropertyDetailPage = lazy(() => import("./pages/PropertyDetailPage"));
+const AuthPage = lazy(() => import("./pages/auth/AuthPage"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminLandlordsPage = lazy(() => import("./pages/admin/AdminLandlordsPage"));
+const AdminPropertiesPage = lazy(() => import("./pages/admin/AdminPropertiesPage"));
+const AdminListingsPage = lazy(() => import("./pages/admin/AdminListingsPage"));
+const LandlordDashboard = lazy(() => import("./pages/landlord/LandlordDashboard"));
+const LandlordPropertiesPage = lazy(() => import("./pages/landlord/LandlordPropertiesPage"));
+const AddPropertyPage = lazy(() => import("./pages/landlord/AddPropertyPage"));
+const EditPropertyPage = lazy(() => import("./pages/landlord/EditPropertyPage"));
+const LandlordInquiriesPage = lazy(() => import("./pages/landlord/LandlordInquiriesPage"));
+const LandlordMessagesPage = lazy(() => import("./pages/landlord/LandlordMessagesPage"));
+const UserDashboard = lazy(() => import("./pages/user/UserDashboard"));
+const UserInquiriesPage = lazy(() => import("./pages/user/UserInquiriesPage"));
+const UserFavoritesPage = lazy(() => import("./pages/user/UserFavoritesPage"));
+const UserMessagesPage = lazy(() => import("./pages/user/UserMessagesPage"));
+const UserBookingsPage = lazy(() => import("./pages/user/UserBookingsPage"));
+const LandlordAirbnbPage = lazy(() => import("./pages/landlord/LandlordAirbnbPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -43,34 +53,36 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <div className="min-h-screen flex flex-col">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/buy" element={<BuyPage />} />
-                <Route path="/rent" element={<RentPage />} />
-                <Route path="/airbnb" element={<AirbnbPage />} />
-                <Route path="/agents" element={<AgentsPage />} />
-                <Route path="/property/:id" element={<PropertyDetailPage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/admin/landlords" element={<AdminLandlordsPage />} />
-                <Route path="/admin/properties" element={<AdminPropertiesPage />} />
-                <Route path="/admin/listings" element={<AdminListingsPage />} />
-                <Route path="/landlord" element={<LandlordDashboard />} />
-                <Route path="/landlord/properties" element={<LandlordPropertiesPage />} />
-                <Route path="/landlord/add-property" element={<AddPropertyPage />} />
-                <Route path="/landlord/edit-property/:id" element={<EditPropertyPage />} />
-                <Route path="/landlord/inquiries" element={<LandlordInquiriesPage />} />
-                <Route path="/landlord/messages" element={<LandlordMessagesPage />} />
-                <Route path="/dashboard" element={<UserDashboard />} />
-                <Route path="/dashboard/messages" element={<UserMessagesPage />} />
-                <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
-                <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
-                <Route path="/dashboard/bookings" element={<UserBookingsPage />} />
-                <Route path="/landlord/airbnb-bookings" element={<LandlordAirbnbPage />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/buy" element={<BuyPage />} />
+                  <Route path="/rent" element={<RentPage />} />
+                  <Route path="/airbnb" element={<AirbnbPage />} />
+                  <Route path="/agents" element={<AgentsPage />} />
+                  <Route path="/property/:id" element={<PropertyDetailPage />} />
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/users" element={<AdminUsersPage />} />
+                  <Route path="/admin/landlords" element={<AdminLandlordsPage />} />
+                  <Route path="/admin/properties" element={<AdminPropertiesPage />} />
+                  <Route path="/admin/listings" element={<AdminListingsPage />} />
+                  <Route path="/landlord" element={<LandlordDashboard />} />
+                  <Route path="/landlord/properties" element={<LandlordPropertiesPage />} />
+                  <Route path="/landlord/add-property" element={<AddPropertyPage />} />
+                  <Route path="/landlord/edit-property/:id" element={<EditPropertyPage />} />
+                  <Route path="/landlord/inquiries" element={<LandlordInquiriesPage />} />
+                  <Route path="/landlord/messages" element={<LandlordMessagesPage />} />
+                  <Route path="/dashboard" element={<UserDashboard />} />
+                  <Route path="/dashboard/messages" element={<UserMessagesPage />} />
+                  <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
+                  <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
+                  <Route path="/dashboard/bookings" element={<UserBookingsPage />} />
+                  <Route path="/landlord/airbnb-bookings" element={<LandlordAirbnbPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
               <BottomNav />
             </div>
           </BrowserRouter>

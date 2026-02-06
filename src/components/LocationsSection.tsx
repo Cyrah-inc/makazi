@@ -80,6 +80,7 @@ const LocationsSection = () => {
                 <img
                   src={location.image}
                   alt={location.name}
+                  loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />

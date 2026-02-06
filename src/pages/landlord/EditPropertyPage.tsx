@@ -238,6 +238,7 @@ export default function EditPropertyPage() {
                         <img
                           src={url}
                           alt={`Image ${index + 1}`}
+                          loading="lazy"
                           className="w-16 h-12 object-cover rounded"
                         />
                         <span className="text-xs text-muted-foreground px-1">

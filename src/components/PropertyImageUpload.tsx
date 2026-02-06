@@ -177,6 +177,7 @@ export function PropertyImageUpload({
               <img
                 src={url}
                 alt={`Property image ${index + 1}`}
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
               <button

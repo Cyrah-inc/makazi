@@ -37,22 +37,16 @@ const mapPropertyCategory = (category: string | null | undefined): PropertyType 
 const determinePurposes = (dbProperty: DbProperty): PropertyPurpose[] => {
   const purposes: PropertyPurpose[] = [];
   
-  // Check for sale price
   if (dbProperty.sale_price || dbProperty.property_type === 'sale') {
     purposes.push('buy');
   }
-  
-  // Check for monthly rent
   if (dbProperty.monthly_rent || dbProperty.property_type === 'rent') {
     purposes.push('rent');
   }
-  
-  // Check for nightly rate
   if (dbProperty.nightly_rate || dbProperty.property_type === 'airbnb') {
     purposes.push('airbnb');
   }
   
-  // Fallback to primary purpose if none detected
   if (purposes.length === 0) {
     purposes.push(mapPropertyTypeToPurpose(dbProperty.property_type));
   }
@@ -60,26 +54,38 @@ const determinePurposes = (dbProperty: DbProperty): PropertyPurpose[] => {
   return purposes;
 };
 
-// Transform database property to frontend Property type
-const transformProperty = async (dbProperty: DbProperty): Promise<Property> => {
-  // Fetch landlord profile
-  let landlordName = 'Unknown';
-  let landlordAvatar: string | undefined;
-  
-  const { data: profile } = await supabase
+interface ProfileMap {
+  [userId: string]: { full_name: string | null; avatar_url: string | null };
+}
+
+// Batch-fetch all landlord profiles in a single query (fixes N+1)
+const fetchLandlordProfiles = async (landlordIds: string[]): Promise<ProfileMap> => {
+  if (landlordIds.length === 0) return {};
+
+  const uniqueIds = [...new Set(landlordIds)];
+  const { data: profiles } = await supabase
     .from('profiles')
-    .select('full_name, avatar_url')
-    .eq('user_id', dbProperty.landlord_id)
-    .single();
-  
-  if (profile) {
-    landlordName = profile.full_name || 'Unknown';
-    landlordAvatar = profile.avatar_url || undefined;
-  }
+    .select('user_id, full_name, avatar_url')
+    .in('user_id', uniqueIds);
+
+  const map: ProfileMap = {};
+  profiles?.forEach((p) => {
+    map[p.user_id] = { full_name: p.full_name, avatar_url: p.avatar_url };
+  });
+  return map;
+};
+
+// Transform database property to frontend Property type (sync, no DB calls)
+const transformProperty = (
+  dbProperty: DbProperty,
+  profileMap: ProfileMap
+): Property => {
+  const profile = profileMap[dbProperty.landlord_id];
+  const landlordName = profile?.full_name || 'Unknown';
+  const landlordAvatar = profile?.avatar_url || undefined;
 
   const purposes = determinePurposes(dbProperty);
   
-  // Determine prices based on available data
   const salePrice = dbProperty.sale_price || (dbProperty.property_type === 'sale' ? dbProperty.price : undefined);
   const monthlyRent = dbProperty.monthly_rent || (dbProperty.property_type === 'rent' ? dbProperty.price : undefined);
   const nightlyRate = dbProperty.nightly_rate || (dbProperty.property_type === 'airbnb' ? dbProperty.price : undefined);
@@ -128,13 +134,11 @@ export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolea
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
       
-      // Filter by property type if purpose is specified
       if (purpose) {
         const dbPropertyType = mapPurposeToPropertyType(purpose);
         query = query.eq('property_type', dbPropertyType);
       }
 
-      // Filter to only properties with valid coordinates if required
       if (requireLocation) {
         query = query.not('latitude', 'is', null).not('longitude', 'is', null);
       }
@@ -150,12 +154,10 @@ export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolea
         return [];
       }
       
-      // Transform all properties
-      const transformedProperties = await Promise.all(
-        data.map(transformProperty)
-      );
+      // Batch-fetch all landlord profiles in ONE query (was N+1)
+      const profileMap = await fetchLandlordProfiles(data.map((p) => p.landlord_id));
       
-      return transformedProperties;
+      return data.map((dbProperty) => transformProperty(dbProperty, profileMap));
     },
   });
 };
@@ -171,7 +173,6 @@ export const useFeaturedProperties = (requireLocation: boolean = false) => {
         .order('views_count', { ascending: false })
         .limit(8);
 
-      // Filter to only properties with valid coordinates if required
       if (requireLocation) {
         query = query.not('latitude', 'is', null).not('longitude', 'is', null);
       }
@@ -187,11 +188,9 @@ export const useFeaturedProperties = (requireLocation: boolean = false) => {
         return [];
       }
       
-      const transformedProperties = await Promise.all(
-        data.map(transformProperty)
-      );
+      const profileMap = await fetchLandlordProfiles(data.map((p) => p.landlord_id));
       
-      return transformedProperties;
+      return data.map((dbProperty) => transformProperty(dbProperty, profileMap));
     },
   });
 };

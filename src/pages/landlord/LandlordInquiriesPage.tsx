@@ -244,7 +244,7 @@ export default function LandlordInquiriesPage() {
                       {/* Property Image */}
                       <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
                         {property?.images?.[0] ? (
-                          <img src={property.images[0]} alt="" className="w-full h-full object-cover" />
+                          <img src={property.images[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
                         ) : (
                           <Building2 className="w-6 h-6 text-muted-foreground" />
                         )}

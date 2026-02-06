@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 interface FavoriteProperty {
   id: string;
@@ -105,8 +106,9 @@ export default function UserFavoritesPage() {
                 <div className="relative aspect-[4/3] bg-muted">
                   {property.images && property.images.length > 0 ? (
                     <img
-                      src={property.images[0]}
+                      src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)}
                       alt={property.title}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
                   ) : (

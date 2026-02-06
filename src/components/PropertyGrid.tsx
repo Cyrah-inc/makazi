@@ -1,5 +1,6 @@
 import { Property } from '@/types/property';
 import PropertyCard from './PropertyCard';
+import PropertyCardSkeleton from './PropertyCardSkeleton';
 import { TransportMode } from './CommuteChecker';
 
 interface PropertyGridProps {
@@ -12,6 +13,7 @@ interface PropertyGridProps {
   commuteDestination?: string;
   isLoadingCommute?: boolean;
   showCommuteBadge?: boolean;
+  isLoading?: boolean;
 }
 
 const PropertyGrid = ({ 
@@ -24,7 +26,26 @@ const PropertyGrid = ({
   commuteDestination,
   isLoadingCommute,
   showCommuteBadge = false,
+  isLoading = false,
 }: PropertyGridProps) => {
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        {(title || subtitle) && (
+          <div className="space-y-2">
+            {title && <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground">{title}</h2>}
+            {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <PropertyCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (properties.length === 0) {
     return (
       <div className="text-center py-16">
