@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
-  { href: '/rent', icon: Search, label: 'Browse' },
+  { href: '/rent', icon: Search, label: 'Browse', matchPaths: ['/rent', '/buy', '/airbnb'] },
   { href: '/dashboard/favorites', icon: Heart, label: 'Saved', requiresAuth: true },
   { href: '/dashboard/messages', icon: MessageSquare, label: 'Messages', requiresAuth: true },
   { href: '/dashboard', icon: User, label: 'Profile', requiresAuth: true },
@@ -36,7 +36,8 @@ export function BottomNav() {
       <div className="flex items-center justify-around h-16 px-2">
         {displayItems.map((item) => {
           const isActive = location.pathname === item.href || 
-                          (item.href !== '/' && location.pathname.startsWith(item.href));
+                          (item.href !== '/' && location.pathname.startsWith(item.href)) ||
+                          ('matchPaths' in item && item.matchPaths?.some(p => location.pathname.startsWith(p)));
           
           return (
             <Link
