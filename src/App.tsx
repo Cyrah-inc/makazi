@@ -28,6 +28,8 @@ import UserDashboard from "./pages/user/UserDashboard";
 import UserInquiriesPage from "./pages/user/UserInquiriesPage";
 import UserFavoritesPage from "./pages/user/UserFavoritesPage";
 import UserMessagesPage from "./pages/user/UserMessagesPage";
+import UserBookingsPage from "./pages/user/UserBookingsPage";
+import LandlordAirbnbPage from "./pages/landlord/LandlordAirbnbPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +66,8 @@ const App = () => (
                 <Route path="/dashboard/messages" element={<UserMessagesPage />} />
                 <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
                 <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
+                <Route path="/dashboard/bookings" element={<UserBookingsPage />} />
+                <Route path="/landlord/airbnb-bookings" element={<LandlordAirbnbPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
