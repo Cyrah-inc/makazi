@@ -373,7 +373,7 @@ export default function AddPropertyPage() {
               <CardDescription>Bedrooms, bathrooms, and size</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="bedrooms">Bedrooms</Label>
                   <Select value={formData.bedrooms} onValueChange={(value) => setFormData(prev => ({ ...prev, bedrooms: value }))}>
@@ -430,7 +430,7 @@ export default function AddPropertyPage() {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="city">Town/City *</Label>
                   <Input
@@ -443,7 +443,7 @@ export default function AddPropertyPage() {
                 </div>
                 <div>
                   <Label htmlFor="state">County *</Label>
-                  <Select value={formData.state} onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}>
+                  <Select value={formData.state || undefined} onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select county" />
                     </SelectTrigger>
