@@ -34,6 +34,8 @@ const UserFavoritesPage = lazy(() => import("./pages/user/UserFavoritesPage"));
 const UserMessagesPage = lazy(() => import("./pages/user/UserMessagesPage"));
 const UserBookingsPage = lazy(() => import("./pages/user/UserBookingsPage"));
 const LandlordAirbnbPage = lazy(() => import("./pages/landlord/LandlordAirbnbPage"));
+const UserBookingDetailPage = lazy(() => import("./pages/user/UserBookingDetailPage"));
+const LandlordBookingDetailPage = lazy(() => import("./pages/landlord/LandlordBookingDetailPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -78,7 +80,9 @@ const App = () => (
                   <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
                   <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
                   <Route path="/dashboard/bookings" element={<UserBookingsPage />} />
+                  <Route path="/dashboard/bookings/:id" element={<UserBookingDetailPage />} />
                   <Route path="/landlord/airbnb-bookings" element={<LandlordAirbnbPage />} />
+                  <Route path="/landlord/airbnb-bookings/:id" element={<LandlordBookingDetailPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

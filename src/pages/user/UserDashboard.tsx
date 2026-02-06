@@ -9,19 +9,24 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MessageSquare, Clock, CheckCircle, Heart, Building2, ArrowRight, 
-  User, Camera, Mail, Phone, Pencil, Save, X, Loader2 
+  User, Camera, Mail, Phone, Pencil, Save, X, Loader2, CalendarDays, DollarSign, MapPin
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useGuestBookings } from '@/hooks/useBookings';
+import { BOOKING_STATUS_CONFIG, BookingStatus } from '@/types/booking';
 import { Link } from 'react-router-dom';
-import { formatRelativeDate } from '@/lib/formatters';
+import { formatRelativeDate, formatFullPrice, formatDate } from '@/lib/formatters';
+import { getBookingRelativeLabel } from '@/lib/bookingUtils';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function UserDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const { data: bookings } = useGuestBookings();
 
   // Fetch user profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -150,14 +155,23 @@ export default function UserDashboard() {
     replied: inquiries?.filter(i => i.status === 'replied').length ?? 0,
   };
 
+  const bookingStats = {
+    total: bookings?.length ?? 0,
+    upcoming: bookings?.filter(b => ['pending_payment', 'paid'].includes(b.status)).length ?? 0,
+    totalSpent: bookings
+      ?.filter(b => !['cancelled', 'refunded'].includes(b.status))
+      .reduce((sum, b) => sum + b.total_amount, 0) ?? 0,
+  };
+
+  const recentBookings = bookings?.slice(0, 3) ?? [];
   const recentInquiries = inquiries?.slice(0, 3) ?? [];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-700"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+        return <Badge variant="outline" className="border-accent text-accent"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
       case 'replied':
-        return <Badge variant="outline" className="border-green-500 text-green-700"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
+        return <Badge variant="outline" className="border-primary text-primary"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -326,32 +340,59 @@ export default function UserDashboard() {
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 lg:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 lg:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Inquiries</CardTitle>
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Inquiries</CardTitle>
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalInquiries}</div>
+              <div className="text-xl sm:text-2xl font-bold">{stats.totalInquiries}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Awaiting Reply</CardTitle>
-              <Clock className="w-4 h-4 text-yellow-600" />
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Awaiting Reply</CardTitle>
+              <Clock className="w-4 h-4 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+              <div className="text-xl sm:text-2xl font-bold text-accent">{stats.pending}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Replies Received</CardTitle>
-              <CheckCircle className="w-4 h-4 text-green-600" />
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Replies</CardTitle>
+              <CheckCircle className="w-4 h-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.replied}</div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{stats.replied}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl sm:text-2xl font-bold">{bookingStats.total}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Upcoming</CardTitle>
+              <CalendarDays className="w-4 h-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl sm:text-2xl font-bold text-primary">{bookingStats.upcoming}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Money Spent</CardTitle>
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl sm:text-2xl font-bold">{formatFullPrice(bookingStats.totalSpent)}</div>
             </CardContent>
           </Card>
         </div>
@@ -397,6 +438,59 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recent Bookings */}
+        <Card className="mb-6 lg:mb-8">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <CardTitle className="text-lg sm:text-xl">Recent Bookings</CardTitle>
+            <Link to="/dashboard/bookings">
+              <Button variant="outline" size="sm">View All</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recentBookings.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarDays className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">No bookings yet</p>
+                <Link to="/airbnb">
+                  <Button>Browse Airbnb Stays</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentBookings.map((booking) => {
+                  const statusConfig = BOOKING_STATUS_CONFIG[booking.status as BookingStatus];
+                  const relativeLabel = getBookingRelativeLabel(booking.check_in_date, booking.check_out_date, booking.status);
+                  return (
+                    <Link key={booking.id} to={`/dashboard/bookings/${booking.id}`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer mb-2">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="hidden sm:flex w-10 h-10 rounded-full bg-muted items-center justify-center shrink-0">
+                            <CalendarDays className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{booking.property_title}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" /> {booking.property_city}
+                              <span className="mx-1">·</span>
+                              {formatDate(booking.check_in_date)} → {formatDate(booking.check_out_date)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 justify-end">
+                          <span className="text-xs text-muted-foreground">{relativeLabel.text}</span>
+                          <Badge className={cn('text-xs shrink-0', statusConfig?.color)}>
+                            {statusConfig?.label}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Inquiries */}
         <Card>
