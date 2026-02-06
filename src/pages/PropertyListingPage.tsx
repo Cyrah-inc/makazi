@@ -6,7 +6,7 @@ import PropertyGrid from '@/components/PropertyGrid';
 import PropertyFilters from '@/components/PropertyFilters';
 import CommuteChecker, { CommuteSettings, TransportMode } from '@/components/CommuteChecker';
 import { useProperties } from '@/hooks/useProperties';
-import { PropertyPurpose, PropertyFilter } from '@/types/property';
+import { PropertyPurpose, PropertyFilter, PROPERTY_TYPES } from '@/types/property';
 import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search, ShoppingCart, Home, Palmtree } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -189,27 +189,64 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
       <Navbar />
       
       <main className="flex-1 pt-4 md:pt-8">
-        {/* Mobile Browse Tabs */}
-        <div className="lg:hidden container mb-4">
-          <div className="flex rounded-lg bg-muted p-1 gap-1">
-            {browseTabs.map((tab) => {
-              const isActive = tab.purpose === purpose;
-              return (
-                <Link
-                  key={tab.purpose}
-                  to={tab.href}
+        {/* Mobile Browse Tabs + Category Filter */}
+        <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border pb-3 -mx-4 px-4 pt-1">
+          {/* Browse Tabs */}
+          <div className="container mb-3">
+            <div className="flex rounded-lg bg-muted p-1 gap-1">
+              {browseTabs.map((tab) => {
+                const isActive = tab.purpose === purpose;
+                return (
+                  <Link
+                    key={tab.purpose}
+                    to={tab.href}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all',
+                      isActive
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    {tab.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Category Filter Chips */}
+          <div className="container">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mb-1">
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, propertyType: undefined }))}
+                className={cn(
+                  'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                  !filters.propertyType
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background text-muted-foreground border-border hover:border-foreground/30'
+                )}
+              >
+                All
+              </button>
+              {PROPERTY_TYPES.map((type) => (
+                <button
+                  key={type.value}
+                  onClick={() => setFilters(prev => ({
+                    ...prev,
+                    propertyType: prev.propertyType === type.value ? undefined : type.value,
+                  }))}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all',
-                    isActive
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
+                    'shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                    filters.propertyType === type.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background text-muted-foreground border-border hover:border-foreground/30'
                   )}
                 >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                </Link>
-              );
-            })}
+                  {type.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
