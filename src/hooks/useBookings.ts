@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Booking, BookingWithProperty, SERVICE_FEE_RATE } from '@/types/booking';
+import { Booking, BookingWithProperty, BookingDetail, SERVICE_FEE_RATE } from '@/types/booking';
 import { toast } from '@/hooks/use-toast';
 
 // Fetch bookings for the current guest
@@ -22,7 +22,6 @@ export function useGuestBookings() {
       if (error) throw error;
       if (!data) return [];
 
-      // Enrich with property data
       const propertyIds = [...new Set(data.map(b => b.property_id))];
       const { data: properties } = await supabase
         .from('properties')
@@ -63,7 +62,6 @@ export function useLandlordBookings() {
       if (error) throw error;
       if (!data) return [];
 
-      // Enrich with property + guest data
       const propertyIds = [...new Set(data.map(b => b.property_id))];
       const guestIds = [...new Set(data.map(b => b.guest_id))];
 
@@ -92,6 +90,65 @@ export function useLandlordBookings() {
   });
 }
 
+// Fetch a single booking with full details
+export function useBookingDetail(bookingId: string | undefined) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['booking-detail', bookingId],
+    queryFn: async (): Promise<BookingDetail | null> => {
+      if (!bookingId || !user) return null;
+
+      const { data: booking, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', bookingId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!booking) return null;
+
+      // Fetch property and guest profile in parallel
+      const [propRes, guestRes] = await Promise.all([
+        supabase
+          .from('properties')
+          .select('id, title, images, city, address, latitude, longitude, bedrooms, bathrooms, amenities, property_type, property_category')
+          .eq('id', booking.property_id)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('user_id, full_name, email, phone, avatar_url')
+          .eq('user_id', booking.guest_id)
+          .maybeSingle(),
+      ]);
+
+      const prop = propRes.data;
+      const guest = guestRes.data;
+
+      return {
+        ...booking,
+        property_title: prop?.title || 'Unknown Property',
+        property_image: prop?.images?.[0] || '/placeholder.svg',
+        property_images: prop?.images || [],
+        property_city: prop?.city || '',
+        property_address: prop?.address || '',
+        property_latitude: prop?.latitude || null,
+        property_longitude: prop?.longitude || null,
+        property_bedrooms: prop?.bedrooms || 0,
+        property_bathrooms: prop?.bathrooms || 0,
+        property_amenities: prop?.amenities || [],
+        property_type: prop?.property_type || 'airbnb',
+        property_category: prop?.property_category || null,
+        guest_name: guest?.full_name || 'Guest',
+        guest_email: guest?.email || '',
+        guest_phone_profile: guest?.phone || null,
+        guest_avatar_url: guest?.avatar_url || null,
+      } as BookingDetail;
+    },
+    enabled: !!bookingId && !!user,
+  });
+}
+
 // Fetch booked dates for a property (to block on calendar)
 export function usePropertyBookedDates(propertyId: string) {
   return useQuery({
@@ -105,7 +162,6 @@ export function usePropertyBookedDates(propertyId: string) {
 
       if (error) throw error;
 
-      // Build array of disabled dates
       const disabledDates: Date[] = [];
       data?.forEach(booking => {
         const start = new Date(booking.check_in_date);
@@ -190,6 +246,7 @@ export function useCheckIn() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['booking-detail'] });
       toast({
         title: 'Checked In!',
         description: 'You have successfully checked in. The landlord will receive their payout.',
@@ -198,6 +255,75 @@ export function useCheckIn() {
     onError: (error) => {
       toast({
         title: 'Check-in failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Cancel booking mutation
+export function useCancelBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', bookingId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['booking-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['booked-dates'] });
+      toast({
+        title: 'Booking Cancelled',
+        description: 'Your booking has been cancelled successfully.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Cancellation failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Mark booking as completed (landlord action)
+export function useCompleteBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ status: 'completed' })
+        .eq('id', bookingId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['booking-detail'] });
+      toast({
+        title: 'Booking Completed',
+        description: 'The booking has been marked as completed.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to complete booking',
         description: error.message,
         variant: 'destructive',
       });

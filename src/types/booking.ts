@@ -39,6 +39,27 @@ export interface BookingWithProperty extends Booking {
   guest_email?: string;
 }
 
+export interface BookingDetail extends Booking {
+  // Property details
+  property_title: string;
+  property_image: string;
+  property_images: string[];
+  property_city: string;
+  property_address: string;
+  property_latitude: number | null;
+  property_longitude: number | null;
+  property_bedrooms: number;
+  property_bathrooms: number;
+  property_amenities: string[];
+  property_type: string;
+  property_category: string | null;
+  // Guest details
+  guest_name: string;
+  guest_email: string;
+  guest_phone_profile: string | null;
+  guest_avatar_url: string | null;
+}
+
 export const BOOKING_STATUS_CONFIG: Record<BookingStatus, { label: string; color: string }> = {
   pending_payment: { label: 'Pending Payment', color: 'bg-yellow-100 text-yellow-800' },
   paid: { label: 'Paid (In Escrow)', color: 'bg-blue-100 text-blue-800' },
