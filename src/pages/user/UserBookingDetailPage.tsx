@@ -70,7 +70,7 @@ export default function UserBookingDetailPage() {
 
   return (
     <UserLayout>
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/bookings')}>

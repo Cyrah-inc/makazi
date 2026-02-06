@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { UserSidebar } from './UserSidebar';
+import { UserBreadcrumb } from '@/components/DashboardBreadcrumb';
 import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -52,7 +53,10 @@ export function UserLayout({ children }: UserLayoutProps) {
       )}
       
       <main className={`flex-1 overflow-auto ${isMobile ? 'pt-16' : ''}`}>
-        {children}
+        <div className="p-4 sm:p-6 lg:p-8">
+          <UserBreadcrumb />
+          {children}
+        </div>
       </main>
     </div>
   );

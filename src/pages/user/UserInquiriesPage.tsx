@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { UserLayout } from '@/components/user/UserLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -76,11 +76,11 @@ export default function UserInquiriesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="w-3 h-3 mr-1" /> Awaiting Reply</Badge>;
+        return <Badge variant="outline" className="border-accent text-accent"><Clock className="w-3 h-3 mr-1" /> Awaiting Reply</Badge>;
       case 'replied':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
+        return <Badge variant="outline" className="border-primary text-primary"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
       case 'closed':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100"><XCircle className="w-3 h-3 mr-1" /> Closed</Badge>;
+        return <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" /> Closed</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -88,17 +88,17 @@ export default function UserInquiriesPage() {
 
   return (
     <UserLayout>
-      <div className="p-8">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">My Inquiries</h1>
-          <p className="text-muted-foreground mt-1">Track your property inquiries and landlord responses</p>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-foreground">My Inquiries</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Track your property inquiries and landlord responses</p>
+          </div>
 
-        {/* Filter */}
-        <div className="mb-6">
+          {/* Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-40 sm:w-48">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -118,7 +118,7 @@ export default function UserInquiriesPage() {
             <CardContent className="py-12 text-center">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-semibold text-lg mb-2">No Inquiries Yet</h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-4 text-sm">
                 Start browsing properties and send inquiries to landlords
               </p>
               <Link to="/">
@@ -134,9 +134,9 @@ export default function UserInquiriesPage() {
               return (
                 <Card key={inquiry.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                       {/* Property Image */}
-                      <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-full sm:w-20 h-32 sm:h-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
                         {property?.images?.[0] ? (
                           <img src={property.images[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
                         ) : (
@@ -159,13 +159,13 @@ export default function UserInquiriesPage() {
                         </p>
 
                         {inquiry.status === 'replied' && inquiry.reply && (
-                          <div className="p-3 bg-green-50 border border-green-100 rounded-lg mb-3">
-                            <p className="text-xs font-medium text-green-800 mb-1">Landlord replied:</p>
-                            <p className="text-sm text-green-700 line-clamp-2">{inquiry.reply}</p>
+                          <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg mb-3">
+                            <p className="text-xs font-medium text-primary mb-1">Landlord replied:</p>
+                            <p className="text-sm text-foreground line-clamp-2">{inquiry.reply}</p>
                           </div>
                         )}
                         
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                           <span className="text-xs text-muted-foreground">
                             Sent {formatRelativeDate(inquiry.created_at)}
                             {inquiry.replied_at && ` • Replied ${formatRelativeDate(inquiry.replied_at)}`}
@@ -224,8 +224,8 @@ export default function UserInquiriesPage() {
                 {selectedInquiry.reply ? (
                   <div>
                     <p className="text-sm font-medium mb-1">Landlord's Reply</p>
-                    <div className="p-4 bg-green-50 border border-green-100 rounded-lg">
-                      <p className="text-sm text-green-800">{selectedInquiry.reply}</p>
+                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                      <p className="text-sm">{selectedInquiry.reply}</p>
                     </div>
                     {selectedInquiry.replied_at && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -234,9 +234,9 @@ export default function UserInquiriesPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-lg text-center">
-                    <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-                    <p className="text-sm text-yellow-800">Awaiting landlord's reply</p>
+                  <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg text-center">
+                    <Clock className="w-8 h-8 text-accent mx-auto mb-2" />
+                    <p className="text-sm text-accent">Awaiting landlord's reply</p>
                   </div>
                 )}
 

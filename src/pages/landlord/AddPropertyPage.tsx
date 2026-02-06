@@ -194,15 +194,11 @@ export default function AddPropertyPage() {
 
   return (
     <LandlordLayout>
-      <div className="p-8 max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <Link to="/landlord/properties" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Properties
-          </Link>
-          <h1 className="text-3xl font-heading font-bold text-foreground">Add New Property</h1>
-          <p className="text-muted-foreground mt-1">Fill in the details to list your property</p>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Add New Property</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Fill in the details to list your property</p>
         </div>
 
         <form onSubmit={handleSubmit}>

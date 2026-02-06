@@ -37,26 +37,26 @@ const LandlordAirbnbPage = () => {
     <LandlordLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="font-heading text-2xl font-bold">Airbnb Bookings</h1>
-          <p className="text-muted-foreground text-sm">Track reservations and revenue</p>
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold">Airbnb Bookings</h1>
+          <p className="text-muted-foreground text-sm mt-1">Track reservations and revenue</p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { label: 'Total Bookings', value: stats.total, icon: CalendarDays, color: 'text-primary' },
-            { label: 'Pending Check-ins', value: stats.pendingCheckIn, icon: Clock, color: 'text-blue-600' },
-            { label: 'Revenue Earned', value: formatFullPrice(stats.revenue), icon: DollarSign, color: 'text-green-600' },
-            { label: 'Active Guests', value: stats.activeGuests, icon: Users, color: 'text-accent' },
+            { label: 'Total Bookings', value: stats.total, icon: CalendarDays, bgColor: 'bg-muted', iconColor: 'text-muted-foreground' },
+            { label: 'Pending Check-ins', value: stats.pendingCheckIn, icon: Clock, bgColor: 'bg-primary/10', iconColor: 'text-primary' },
+            { label: 'Revenue Earned', value: formatFullPrice(stats.revenue), icon: DollarSign, bgColor: 'bg-primary/10', iconColor: 'text-primary' },
+            { label: 'Active Guests', value: stats.activeGuests, icon: Users, bgColor: 'bg-accent/10', iconColor: 'text-accent' },
           ].map(stat => (
             <Card key={stat.label}>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={cn('p-2 rounded-lg bg-muted', stat.color)}>
-                  <stat.icon className="h-5 w-5" />
+                <div className={cn('p-2.5 rounded-lg shrink-0', stat.bgColor)}>
+                  <stat.icon className={cn('h-5 w-5', stat.iconColor)} />
                 </div>
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="font-heading text-lg sm:text-xl font-bold">{stat.value}</p>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{stat.label}</p>
+                  <p className="font-heading text-lg sm:text-xl font-bold truncate">{stat.value}</p>
                 </div>
               </CardContent>
             </Card>
@@ -65,8 +65,8 @@ const LandlordAirbnbPage = () => {
 
         {/* Bookings */}
         <Card>
-          <CardHeader>
-            <CardTitle className="font-heading text-lg">Recent Bookings</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-heading text-lg">All Bookings</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -76,7 +76,7 @@ const LandlordAirbnbPage = () => {
             ) : !bookings?.length ? (
               <div className="text-center py-12">
                 <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-                <p className="text-muted-foreground">No bookings yet</p>
+                <p className="text-muted-foreground text-sm">No bookings yet</p>
               </div>
             ) : isMobile ? (
               /* Mobile card layout */
@@ -108,7 +108,7 @@ const LandlordAirbnbPage = () => {
                                 <span>{formatDate(booking.check_in_date)} → {formatDate(booking.check_out_date)}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="font-heading font-bold text-sm">
+                                <span className="font-heading font-bold text-sm text-primary">
                                   {formatFullPrice(booking.total_amount - booking.service_fee)}
                                 </span>
                                 <span className="text-xs text-muted-foreground">{relativeLabel.text}</span>
@@ -123,7 +123,7 @@ const LandlordAirbnbPage = () => {
               </div>
             ) : (
               /* Desktop table layout */
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-6">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -157,14 +157,14 @@ const LandlordAirbnbPage = () => {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium text-sm">{booking.property_title}</TableCell>
+                          <TableCell className="font-medium text-sm max-w-[200px] truncate">{booking.property_title}</TableCell>
                           <TableCell>
                             <div className="text-sm">
                               <p>{formatDate(booking.check_in_date)}</p>
                               <p className="text-muted-foreground">→ {formatDate(booking.check_out_date)}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="font-heading font-bold">
+                          <TableCell className="font-heading font-bold text-primary">
                             {formatFullPrice(booking.total_amount - booking.service_fee)}
                           </TableCell>
                           <TableCell>

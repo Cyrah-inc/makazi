@@ -33,12 +33,11 @@ const UserMessagesPage = () => {
 
   return (
     <UserLayout>
-      <div className="space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Mail className="h-6 w-6" />
+            <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
               Messages
               {unreadCount > 0 && (
                 <Badge variant="default" className="ml-2">
@@ -46,7 +45,7 @@ const UserMessagesPage = () => {
                 </Badge>
               )}
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-sm">
               Communicate with landlords and agents
             </p>
           </div>
@@ -78,7 +77,6 @@ const UserMessagesPage = () => {
 
         {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Message List */}
           <div className={selectedMessage ? 'hidden lg:block' : ''}>
             <MessageList
               messages={messages}
@@ -91,7 +89,6 @@ const UserMessagesPage = () => {
             />
           </div>
 
-          {/* Message Detail */}
           {selectedMessage && (
             <div className="lg:sticky lg:top-6">
               <MessageDetail
@@ -114,7 +111,6 @@ const UserMessagesPage = () => {
         </div>
       </div>
 
-      {/* Compose Dialog */}
       <ComposeMessageDialog
         open={composeOpen}
         onOpenChange={handleComposeClose}

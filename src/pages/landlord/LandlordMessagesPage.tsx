@@ -37,8 +37,7 @@ const LandlordMessagesPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Mail className="h-6 w-6" />
+            <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
               Messages
               {unreadCount > 0 && (
                 <Badge variant="default" className="ml-2">
@@ -46,11 +45,11 @@ const LandlordMessagesPage = () => {
                 </Badge>
               )}
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-sm">
               Communicate with potential tenants and users
             </p>
           </div>
-          <Button onClick={() => setComposeOpen(true)}>
+          <Button onClick={() => setComposeOpen(true)} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             New Message
           </Button>
@@ -78,7 +77,6 @@ const LandlordMessagesPage = () => {
 
         {/* Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Message List */}
           <div className={selectedMessage ? 'hidden lg:block' : ''}>
             <MessageList
               messages={messages}
@@ -91,7 +89,6 @@ const LandlordMessagesPage = () => {
             />
           </div>
 
-          {/* Message Detail */}
           {selectedMessage && (
             <div className="lg:sticky lg:top-6">
               <MessageDetail
@@ -107,14 +104,13 @@ const LandlordMessagesPage = () => {
             <div className="hidden lg:flex items-center justify-center h-96 border rounded-lg bg-muted/20">
               <div className="text-center">
                 <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Select a message to read</p>
+                <p className="text-muted-foreground text-sm">Select a message to read</p>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Compose Dialog */}
       <ComposeMessageDialog
         open={composeOpen}
         onOpenChange={handleComposeClose}

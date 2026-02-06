@@ -209,9 +209,9 @@ export default function UserDashboard() {
 
   return (
     <UserLayout>
-      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Profile Section */}
-        <Card className="mb-6 lg:mb-8">
+        <Card>
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <CardTitle className="text-xl sm:text-2xl">My Profile</CardTitle>
@@ -340,7 +340,7 @@ export default function UserDashboard() {
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 lg:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Inquiries</CardTitle>
@@ -398,7 +398,7 @@ export default function UserDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 lg:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-4">
@@ -440,7 +440,7 @@ export default function UserDashboard() {
         </div>
 
         {/* Recent Bookings */}
-        <Card className="mb-6 lg:mb-8">
+        <Card>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardTitle className="text-lg sm:text-xl">Recent Bookings</CardTitle>
             <Link to="/dashboard/bookings">
