@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PropertyGrid from '@/components/PropertyGrid';
@@ -7,7 +7,15 @@ import PropertyFilters from '@/components/PropertyFilters';
 import CommuteChecker, { CommuteSettings, TransportMode } from '@/components/CommuteChecker';
 import { useProperties } from '@/hooks/useProperties';
 import { PropertyPurpose, PropertyFilter } from '@/types/property';
-import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search } from 'lucide-react';
+import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search, ShoppingCart, Home, Palmtree } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const browseTabs = [
+  { purpose: 'buy' as PropertyPurpose, label: 'Buy', href: '/buy', icon: ShoppingCart },
+  { purpose: 'rent' as PropertyPurpose, label: 'Rent', href: '/rent', icon: Home },
+  { purpose: 'airbnb' as PropertyPurpose, label: 'Airbnb', href: '/airbnb', icon: Palmtree },
+];
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -180,7 +188,31 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1 pt-6 md:pt-8">
+      <main className="flex-1 pt-4 md:pt-8">
+        {/* Mobile Browse Tabs */}
+        <div className="lg:hidden container mb-4">
+          <div className="flex rounded-lg bg-muted p-1 gap-1">
+            {browseTabs.map((tab) => {
+              const isActive = tab.purpose === purpose;
+              return (
+                <Link
+                  key={tab.purpose}
+                  to={tab.href}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all',
+                    isActive
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Header with Search */}
         <section className="container mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
