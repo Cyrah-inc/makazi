@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { InquiryForm } from '@/components/InquiryForm';
 import { PropertyMap } from '@/components/PropertyMap';
+import { BookingDialog } from '@/components/booking/BookingDialog';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -358,11 +359,18 @@ const PropertyDetailPage = () => {
                           <Phone className="h-5 w-5" />
                           Call Now
                         </Button>
-                        {property.purposes.includes('airbnb') && (
-                          <Button variant="accent" size="lg" className="w-full gap-2">
-                            <Calendar className="h-5 w-5" />
-                            Book Now
-                          </Button>
+                        {property.purposes.includes('airbnb') && property.nightlyRate && (
+                          <BookingDialog
+                            propertyId={property.id}
+                            landlordId={property.landlordId}
+                            nightlyRate={property.nightlyRate}
+                            propertyTitle={property.title}
+                          >
+                            <Button variant="accent" size="lg" className="w-full gap-2">
+                              <Calendar className="h-5 w-5" />
+                              Book Now
+                            </Button>
+                          </BookingDialog>
                         )}
                       </div>
                     </CardContent>

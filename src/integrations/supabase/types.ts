@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          check_in_date: string
+          check_out_date: string
+          checked_in_at: string | null
+          created_at: string
+          guest_id: string
+          guest_phone: string | null
+          id: string
+          landlord_id: string
+          landlord_phone: string | null
+          nightly_rate: number
+          nights: number
+          paid_out_at: string | null
+          payment_method: string
+          payment_reference: string | null
+          payout_reference: string | null
+          property_id: string
+          service_fee: number
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          check_in_date: string
+          check_out_date: string
+          checked_in_at?: string | null
+          created_at?: string
+          guest_id: string
+          guest_phone?: string | null
+          id?: string
+          landlord_id: string
+          landlord_phone?: string | null
+          nightly_rate: number
+          nights: number
+          paid_out_at?: string | null
+          payment_method?: string
+          payment_reference?: string | null
+          payout_reference?: string | null
+          property_id: string
+          service_fee?: number
+          status?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          check_in_date?: string
+          check_out_date?: string
+          checked_in_at?: string | null
+          created_at?: string
+          guest_id?: string
+          guest_phone?: string | null
+          id?: string
+          landlord_id?: string
+          landlord_phone?: string | null
+          nightly_rate?: number
+          nights?: number
+          paid_out_at?: string | null
+          payment_method?: string
+          payment_reference?: string | null
+          payout_reference?: string | null
+          property_id?: string
+          service_fee?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
