@@ -5,9 +5,10 @@ import Footer from '@/components/Footer';
 import PropertyGrid from '@/components/PropertyGrid';
 import PropertyFilters from '@/components/PropertyFilters';
 import CommuteChecker, { CommuteSettings, TransportMode } from '@/components/CommuteChecker';
+import CommuteBar from '@/components/CommuteBar';
 import { useProperties } from '@/hooks/useProperties';
 import { PropertyPurpose, PropertyFilter, PROPERTY_TYPES } from '@/types/property';
-import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search, ShoppingCart, Home, Palmtree } from 'lucide-react';
+import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search, ShoppingCart, Home, Palmtree, Car, Bus, PersonStanding, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const browseTabs = [
@@ -15,6 +16,21 @@ const browseTabs = [
   { purpose: 'rent' as PropertyPurpose, label: 'Rent', href: '/rent', icon: Home },
   { purpose: 'airbnb' as PropertyPurpose, label: 'Airbnb', href: '/airbnb', icon: Palmtree },
 ];
+
+const getModeIcon = (mode: TransportMode) => {
+  switch (mode) {
+    case 'driving': return Car;
+    case 'transit': return Bus;
+    case 'walking': return PersonStanding;
+  }
+};
+
+const formatTime = (minutes: number): string => {
+  if (minutes < 60) return `${minutes} min`;
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hrs}h ${mins}m` : `${hrs} hour${hrs > 1 ? 's' : ''}`;
+};
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +65,13 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
 
   // Fetch real properties from Supabase - don't require location by default
   const { data: properties = [], isLoading, error } = useProperties(purpose, false);
+
+  // Clear commute handler
+  const handleClearCommute = useCallback(() => {
+    setCommuteActive(false);
+    setCommuteTimes({});
+    setCommuteSettings(prev => ({ ...prev, destination: '' }));
+  }, []);
 
   // Calculate real commute times using Google Distance Matrix API
   const handleCommuteSearch = useCallback(async () => {
@@ -115,10 +138,7 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
-      // County filter
       if (filters.county && property.county !== filters.county) return false;
-      
-      // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         if (!property.title.toLowerCase().includes(searchLower) &&
@@ -127,34 +147,22 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
           return false;
         }
       }
-      
-      // Property type filter
       if (filters.propertyType && property.propertyType !== filters.propertyType) return false;
-      
-      // Bedrooms filter
       if (filters.bedrooms && property.bedrooms < filters.bedrooms) return false;
-      
-      // Furnished filter
       if (filters.furnished !== undefined && property.furnished !== filters.furnished) return false;
-      
-      // Price filter
       const price = purpose === 'buy' ? property.salePrice : 
                    purpose === 'rent' ? property.monthlyRent : property.nightlyRate;
       if (filters.minPrice && price && price < filters.minPrice) return false;
       if (filters.maxPrice && price && price > filters.maxPrice) return false;
-      
-      // Commute time filter
       if (commuteActive && commuteTimes[property.id] !== undefined) {
         if (commuteTimes[property.id] > commuteSettings.maxMinutes) return false;
       }
-      
       return true;
     });
   }, [filters, properties, purpose, commuteActive, commuteTimes, commuteSettings.maxMinutes]);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...filteredProperties];
-    
     switch (filters.sortBy) {
       case 'price-asc':
         return sorted.sort((a, b) => {
@@ -183,6 +191,8 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
     const searchValue = formData.get('search') as string;
     setFilters(prev => ({ ...prev, search: searchValue }));
   };
+
+  const ModeIcon = getModeIcon(commuteSettings.mode);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -250,6 +260,18 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
           </div>
         </div>
 
+        {/* Mobile/Tablet Commute Bar - below sticky header, scrolls with content */}
+        <div className="lg:hidden mt-3 mb-4">
+          <CommuteBar
+            settings={commuteSettings}
+            onChange={setCommuteSettings}
+            onSearch={handleCommuteSearch}
+            isLoading={isLoadingCommute}
+            isActive={commuteActive}
+            onClear={handleClearCommute}
+          />
+        </div>
+
         {/* Header with Search */}
         <section className="container mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -273,13 +295,15 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Desktop Filters */}
             <aside className="hidden lg:block w-72 shrink-0 space-y-6">
-              {/* Commute Checker */}
-              <CommuteChecker
-                settings={commuteSettings}
-                onChange={setCommuteSettings}
-                onSearch={handleCommuteSearch}
-                isLoading={isLoadingCommute}
-              />
+              {/* Commute Checker - Highlighted card */}
+              <div className="rounded-xl border-2 border-primary/20 bg-primary/5 overflow-hidden">
+                <CommuteChecker
+                  settings={commuteSettings}
+                  onChange={setCommuteSettings}
+                  onSearch={handleCommuteSearch}
+                  isLoading={isLoadingCommute}
+                />
+              </div>
               
               {/* Property Filters */}
               <PropertyFilters 
@@ -292,78 +316,88 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
             {/* Results */}
             <div className="flex-1">
               {/* Toolbar */}
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
-                <p className="text-muted-foreground">
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading properties...
-                    </span>
-                  ) : (
-                    <>
-                      <span className="font-semibold text-foreground">{sortedProperties.length}</span> properties found
-                    </>
-                  )}
-                </p>
-                
-                <div className="flex items-center gap-2">
-                  {/* Mobile Filters */}
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="sm" className="lg:hidden gap-2">
-                        <SlidersHorizontal className="h-4 w-4" />
-                        Filters
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="w-80 overflow-y-auto">
-                      <SheetHeader>
-                        <SheetTitle>Filters</SheetTitle>
-                      </SheetHeader>
-                      <div className="mt-6 space-y-6">
-                        {/* Commute Checker (Mobile) */}
-                        <CommuteChecker
-                          settings={commuteSettings}
-                          onChange={setCommuteSettings}
-                          onSearch={handleCommuteSearch}
-                          isLoading={isLoadingCommute}
-                        />
-                        
-                        <PropertyFilters 
-                          filters={filters} 
-                          onChange={setFilters} 
-                          purpose={purpose}
-                        />
-                      </div>
-                    </SheetContent>
-                  </Sheet>
+              <div className="flex flex-col gap-3 mb-6 pb-4 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground">
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading properties...
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-foreground">{sortedProperties.length}</span> properties found
+                      </>
+                    )}
+                  </p>
+                  
+                  <div className="flex items-center gap-2">
+                    {/* Mobile Filters */}
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="sm" className="lg:hidden gap-2">
+                          <SlidersHorizontal className="h-4 w-4" />
+                          Filters
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="w-80 overflow-y-auto">
+                        <SheetHeader>
+                          <SheetTitle>Filters</SheetTitle>
+                        </SheetHeader>
+                        <div className="mt-6 space-y-6">
+                          <PropertyFilters 
+                            filters={filters} 
+                            onChange={setFilters} 
+                            purpose={purpose}
+                          />
+                        </div>
+                      </SheetContent>
+                    </Sheet>
 
-                  {/* View Mode */}
-                  <div className="hidden sm:flex items-center gap-1 bg-muted rounded-lg p-1">
-                    <Button
-                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setViewMode('grid')}
-                    >
-                      <Grid3X3 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                    >
-                      <Map className="h-4 w-4" />
-                    </Button>
+                    {/* View Mode */}
+                    <div className="hidden sm:flex items-center gap-1 bg-muted rounded-lg p-1">
+                      <Button
+                        variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setViewMode('grid')}
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setViewMode('list')}
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                      >
+                        <Map className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
+
+                {/* Active Commute Indicator Chip */}
+                {commuteActive && commuteSettings.destination && (
+                  <div className="flex items-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      <ModeIcon className="h-3.5 w-3.5" />
+                      <span>Within {formatTime(commuteSettings.maxMinutes)} of {commuteSettings.destination}</span>
+                      <button
+                        onClick={handleClearCommute}
+                        className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Loading State */}
