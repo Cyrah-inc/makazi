@@ -138,7 +138,7 @@ export default function UserInquiriesPage() {
                       {/* Property Image */}
                       <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
                         {property?.images?.[0] ? (
-                          <img src={property.images[0]} alt="" className="w-full h-full object-cover" />
+                          <img src={property.images[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
                         ) : (
                           <Building2 className="w-8 h-8 text-muted-foreground" />
                         )}

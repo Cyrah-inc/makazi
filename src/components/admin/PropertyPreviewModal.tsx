@@ -16,6 +16,7 @@ import {
   Building2
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 interface PropertyPreviewModalProps {
   property: {
@@ -91,24 +92,27 @@ export function PropertyPreviewModal({
               <div className="grid grid-cols-2 gap-2">
                 <div className="col-span-2">
                   <img
-                    src={property.images[0]}
+                    src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.PREVIEW.width, IMAGE_SIZES.PREVIEW.quality)}
                     alt={property.title}
+                    loading="lazy"
                     className="w-full h-64 object-cover rounded-lg"
                   />
                 </div>
                 {property.images.slice(1, 5).map((img, idx) => (
                   <img
                     key={idx}
-                    src={img}
+                    src={getOptimizedImageUrl(img, IMAGE_SIZES.DETAIL_THUMB.width, IMAGE_SIZES.DETAIL_THUMB.quality)}
                     alt={`${property.title} ${idx + 2}`}
+                    loading="lazy"
                     className="w-full h-32 object-cover rounded-lg"
                   />
                 ))}
                 {property.images.length > 5 && (
                   <div className="relative">
                     <img
-                      src={property.images[5]}
+                      src={getOptimizedImageUrl(property.images[5], IMAGE_SIZES.DETAIL_THUMB.width, IMAGE_SIZES.DETAIL_THUMB.quality)}
                       alt={`${property.title} 6`}
+                      loading="lazy"
                       className="w-full h-32 object-cover rounded-lg"
                     />
                     <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center text-white font-semibold">

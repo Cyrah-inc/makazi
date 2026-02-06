@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';
 import CommuteBadge from './CommuteBadge';
 import { TransportMode } from './CommuteChecker';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 interface PropertyCardProps {
   property: Property;
@@ -59,8 +60,9 @@ const PropertyCard = ({
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <img
-            src={property.images[0]}
+            src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)}
             alt={property.title}
+            loading="lazy"
             className={cn(
               "w-full h-full object-cover transition-all duration-500 group-hover:scale-105",
               imageLoaded ? "opacity-100" : "opacity-0"

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, CalendarDays, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -73,8 +74,9 @@ const UserBookingsPage = () => {
                       {/* Image */}
                       <div className="sm:w-40 h-32 sm:h-auto shrink-0">
                         <img
-                          src={booking.property_image}
+                          src={getOptimizedImageUrl(booking.property_image, IMAGE_SIZES.DASHBOARD.width, IMAGE_SIZES.DASHBOARD.quality)}
                           alt={booking.property_title}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       </div>

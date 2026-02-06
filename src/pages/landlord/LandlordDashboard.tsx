@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 export default function LandlordDashboard() {
   const { user } = useAuth();
@@ -132,7 +133,7 @@ export default function LandlordDashboard() {
                   <div key={property.id} className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                     <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                       {property.images?.[0] ? (
-                        <img src={property.images[0]} alt={property.title} className="w-full h-full object-cover" />
+                        <img src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.DASHBOARD.width, IMAGE_SIZES.DASHBOARD.quality)} alt={property.title} loading="lazy" className="w-full h-full object-cover" />
                       ) : (
                         <Building2 className="w-6 h-6 text-muted-foreground" />
                       )}

@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 interface PropertyWithFavorites {
   id: string;
@@ -198,7 +199,7 @@ export default function LandlordPropertiesPage() {
               <Card key={property.id} className="overflow-hidden">
                 <div className="aspect-video bg-muted relative">
                   {property.images?.[0] ? (
-                    <img src={property.images[0]} alt={property.title} className="w-full h-full object-cover" />
+                    <img src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)} alt={property.title} loading="lazy" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Building2 className="w-12 h-12 text-muted-foreground" />
