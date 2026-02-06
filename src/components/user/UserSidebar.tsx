@@ -1,10 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageSquare, Heart, User, LogOut, LayoutDashboard, Mail, CalendarDays } from 'lucide-react';
+import { Home, MessageSquare, Heart, User, LogOut, Mail, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/dashboard', icon: User, label: 'My Profile' },
   { href: '/dashboard/bookings', icon: CalendarDays, label: 'My Bookings' },
   { href: '/dashboard/messages', icon: Mail, label: 'Messages' },
   { href: '/dashboard/inquiries', icon: MessageSquare, label: 'My Inquiries' },
@@ -40,7 +40,7 @@ export function UserSidebar({ onNavigate }: UserSidebarProps) {
           </div>
           <div>
             <span className="font-heading font-bold text-lg text-foreground">Makazi</span>
-            <span className="text-xs text-muted-foreground block">My Account</span>
+            <span className="text-xs text-muted-foreground block">My Profile</span>
           </div>
         </Link>
       </div>

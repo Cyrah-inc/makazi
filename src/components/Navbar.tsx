@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -133,8 +133,8 @@ const Navbar = () => {
                 
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
-                    <LayoutDashboard className="h-4 w-4" />
-                    User Dashboard
+                    <User className="h-4 w-4" />
+                    My Profile
                   </Link>
                 </DropdownMenuItem>
                 
@@ -204,7 +204,7 @@ const Navbar = () => {
                   <div className="space-y-2">
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">My Account</h3>
                     <div className="space-y-1">
-                      <MobileNavLink to="/dashboard" icon={LayoutDashboard} label="User Dashboard" />
+                      <MobileNavLink to="/dashboard" icon={User} label="My Profile" />
                       <MobileNavLink to="/dashboard/favorites" icon={Heart} label="My Favorites" />
                     </div>
                   </div>
