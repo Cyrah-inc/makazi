@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LandlordLayout } from '@/components/landlord/LandlordLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -141,11 +141,11 @@ export default function LandlordInquiriesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+        return <Badge className="bg-accent/10 text-accent hover:bg-accent/10"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
       case 'replied':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
+        return <Badge className="bg-primary/10 text-primary hover:bg-primary/10"><CheckCircle className="w-3 h-3 mr-1" /> Replied</Badge>;
       case 'closed':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100"><XCircle className="w-3 h-3 mr-1" /> Closed</Badge>;
+        return <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" /> Closed</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -159,54 +159,15 @@ export default function LandlordInquiriesPage() {
 
   return (
     <LandlordLayout>
-      <div className="p-8">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Inquiries</h1>
-          <p className="text-muted-foreground mt-1">View and respond to property inquiries</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-muted-foreground">Total Inquiries</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                <p className="text-sm text-muted-foreground">Awaiting Reply</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.replied}</p>
-                <p className="text-sm text-muted-foreground">Replied</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filter */}
-        <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Inquiries</h1>
+            <p className="text-muted-foreground mt-1 text-sm">View and respond to property inquiries</p>
+          </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -218,6 +179,43 @@ export default function LandlordInquiriesPage() {
           </Select>
         </div>
 
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-muted shrink-0">
+                <MessageSquare className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+                <p className="font-heading text-lg sm:text-2xl font-bold">{stats.total}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-accent/10 shrink-0">
+                <Clock className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Awaiting</p>
+                <p className="font-heading text-lg sm:text-2xl font-bold text-accent">{stats.pending}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10 shrink-0">
+                <CheckCircle className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Replied</p>
+                <p className="font-heading text-lg sm:text-2xl font-bold text-primary">{stats.replied}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Inquiries List */}
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Loading...</div>
@@ -226,13 +224,13 @@ export default function LandlordInquiriesPage() {
             <CardContent className="py-12 text-center">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-semibold text-lg mb-2">No Inquiries Yet</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 When potential tenants or buyers inquire about your properties, you'll see them here.
               </p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredInquiries.map((inquiry) => {
               const property = getProperty(inquiry.property_id);
               const sender = getSender(inquiry.sender_id);
@@ -240,9 +238,9 @@ export default function LandlordInquiriesPage() {
               return (
                 <Card key={inquiry.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                       {/* Property Image */}
-                      <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-full sm:w-16 h-24 sm:h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
                         {property?.images?.[0] ? (
                           <img src={property.images[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
                         ) : (
@@ -257,9 +255,9 @@ export default function LandlordInquiriesPage() {
                             <h4 className="font-semibold truncate">{property?.title ?? 'Unknown Property'}</h4>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <User className="w-3 h-3" />
-                              <span>{sender?.full_name || sender?.email || 'Unknown User'}</span>
+                              <span className="truncate">{sender?.full_name || sender?.email || 'Unknown User'}</span>
                               <span>•</span>
-                              <span>{formatRelativeDate(inquiry.created_at)}</span>
+                              <span className="shrink-0">{formatRelativeDate(inquiry.created_at)}</span>
                             </div>
                           </div>
                           {getStatusBadge(inquiry.status)}
@@ -269,7 +267,7 @@ export default function LandlordInquiriesPage() {
                           {inquiry.message}
                         </p>
                         
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             size="sm"
                             variant={inquiry.status === 'pending' ? 'default' : 'outline'}

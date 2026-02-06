@@ -73,11 +73,11 @@ export default function UserFavoritesPage() {
 
   return (
     <UserLayout>
-      <div className="p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Saved Properties</h1>
-          <p className="text-muted-foreground mt-1">
+        <div>
+          <h1 className="text-2xl font-heading font-bold text-foreground">Saved Properties</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             {properties.length} {properties.length === 1 ? 'property' : 'properties'} saved
           </p>
         </div>
@@ -91,7 +91,7 @@ export default function UserFavoritesPage() {
             <CardContent className="py-12 text-center">
               <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-semibold text-lg mb-2">No Saved Properties</h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-4 text-sm">
                 When you save properties, they'll appear here for quick access.
               </p>
               <Link to="/">
@@ -100,7 +100,7 @@ export default function UserFavoritesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {properties.map((property) => (
               <Card key={property.id} className="overflow-hidden group">
                 <div className="relative aspect-[4/3] bg-muted">

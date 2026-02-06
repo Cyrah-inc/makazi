@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LandlordLayout } from '@/components/landlord/LandlordLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,14 +12,8 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
@@ -57,7 +51,6 @@ export default function LandlordPropertiesPage() {
       
       if (error) throw error;
 
-      // Get favorites count for each property
       const propertyIds = data?.map(p => p.id) || [];
       const { data: favorites } = await supabase
         .from('favorites')
@@ -96,16 +89,9 @@ export default function LandlordPropertiesPage() {
       .eq('landlord_id', user?.id);
     
     if (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete property',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to delete property', variant: 'destructive' });
     } else {
-      toast({
-        title: 'Property deleted',
-        description: 'The property has been removed',
-      });
+      toast({ title: 'Property deleted', description: 'The property has been removed' });
       refetch();
     }
     setDeleteId(null);
@@ -114,11 +100,11 @@ export default function LandlordPropertiesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="w-3 h-3 mr-1" /> Approved</Badge>;
+        return <Badge className="bg-primary/10 text-primary hover:bg-primary/10"><CheckCircle className="w-3 h-3 mr-1" /> Approved</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+        return <Badge className="bg-accent/10 text-accent hover:bg-accent/10"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
       case 'rejected':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><XCircle className="w-3 h-3 mr-1" /> Rejected</Badge>;
+        return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10"><XCircle className="w-3 h-3 mr-1" /> Rejected</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -126,15 +112,15 @@ export default function LandlordPropertiesPage() {
 
   return (
     <LandlordLayout>
-      <div className="p-8">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">My Properties</h1>
-            <p className="text-muted-foreground mt-1">Manage all your property listings</p>
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">My Properties</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Manage all your property listings</p>
           </div>
           <Link to="/landlord/add-property">
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="w-4 h-4" />
               Add New Property
             </Button>
@@ -142,9 +128,9 @@ export default function LandlordPropertiesPage() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card>
           <CardContent className="py-4">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -155,7 +141,7 @@ export default function LandlordPropertiesPage() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-40">
+                <SelectTrigger className="w-full sm:w-36">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -166,7 +152,7 @@ export default function LandlordPropertiesPage() {
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full md:w-40">
+                <SelectTrigger className="w-full sm:w-36">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -194,9 +180,9 @@ export default function LandlordPropertiesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredProperties.map((property) => (
-              <Card key={property.id} className="overflow-hidden">
+              <Card key={property.id} className="overflow-hidden group hover:shadow-md transition-shadow">
                 <div className="aspect-video bg-muted relative">
                   {property.images?.[0] ? (
                     <img src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)} alt={property.title} loading="lazy" className="w-full h-full object-cover" />
@@ -211,7 +197,7 @@ export default function LandlordPropertiesPage() {
                 </div>
                 <CardContent className="p-4">
                   <h3 className="font-semibold truncate">{property.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-2">{property.city}, {property.state}</p>
+                  <p className="text-sm text-muted-foreground mb-3">{property.city}, {property.state}</p>
                   <div className="flex items-center justify-between mb-4">
                     <span className="font-bold text-primary">{formatCurrency(property.price)}</span>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -219,7 +205,7 @@ export default function LandlordPropertiesPage() {
                         <Eye className="w-3 h-3" />
                         {property.views_count}
                       </div>
-                      <div className="flex items-center gap-1 text-pink-500">
+                      <div className="flex items-center gap-1 text-accent">
                         <Heart className="w-3 h-3 fill-current" />
                         {property.favorites_count}
                       </div>

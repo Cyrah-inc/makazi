@@ -79,7 +79,7 @@ export default function LandlordBookingDetailPage() {
 
   return (
     <LandlordLayout>
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/landlord/airbnb-bookings')}>
@@ -110,20 +110,20 @@ export default function LandlordBookingDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-14 w-14">
+                  <Avatar className="h-14 w-14 shrink-0">
                     <AvatarImage src={booking.guest_avatar_url || undefined} />
                     <AvatarFallback className="bg-primary/10 text-primary text-lg">
                       {getInitials(booking.guest_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 space-y-1">
-                    <p className="font-semibold">{booking.guest_name}</p>
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <p className="font-semibold truncate">{booking.guest_name}</p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5" /> {booking.guest_email}
+                      <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{booking.guest_email}</span>
                     </p>
                     {booking.guest_phone_profile && (
                       <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5" /> {booking.guest_phone_profile}
+                        <Phone className="h-3.5 w-3.5 shrink-0" /> {booking.guest_phone_profile}
                       </p>
                     )}
                   </div>
@@ -132,15 +132,15 @@ export default function LandlordBookingDetailPage() {
             </Card>
 
             {/* Property Summary */}
-            <Card>
+            <Card className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex flex-col sm:flex-row">
-                  <div className="sm:w-32 h-24 sm:h-auto shrink-0">
+                  <div className="sm:w-40 h-32 sm:h-auto shrink-0">
                     <img
                       src={getOptimizedImageUrl(booking.property_image, IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)}
                       alt={booking.property_title}
                       loading="lazy"
-                      className="w-full h-full object-cover rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="p-4 flex-1">
@@ -258,7 +258,7 @@ export default function LandlordBookingDetailPage() {
                 {booking.payment_reference && (
                   <div className="p-3 rounded-lg bg-muted/50 mt-2">
                     <p className="text-xs text-muted-foreground">Payment Ref</p>
-                    <p className="text-xs font-mono">{booking.payment_reference}</p>
+                    <p className="text-xs font-mono truncate">{booking.payment_reference}</p>
                   </div>
                 )}
               </CardContent>
@@ -339,11 +339,11 @@ export default function LandlordBookingDetailPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Booking Reference</p>
-                    <p className="text-xs font-mono">{booking.id.slice(0, 8)}...</p>
+                    <p className="text-xs font-mono truncate">{booking.id.slice(0, 8)}...</p>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={copyBookingRef}>
+                  <Button variant="ghost" size="sm" onClick={copyBookingRef} className="shrink-0">
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
