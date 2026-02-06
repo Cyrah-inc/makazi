@@ -1,224 +1,121 @@
 
+# Performance Optimization Plan: Image Loading and App Speed
 
-# Airbnb Booking System with Escrow Payments
+## Problem Summary
 
-## Overview
-
-Build a complete booking flow for Airbnb properties where users can select dates, pay via M-Pesa or Stripe, and the funds are held in escrow until the guest physically checks in. Landlords receive notifications and can track bookings from their dashboard.
-
----
-
-## How It Works (User Flow)
-
-```text
-+------------------+     +------------------+     +------------------+
-|  1. Guest picks  | --> |  2. Guest pays   | --> |  3. Money held   |
-|  check-in/out    |     |  via M-Pesa or   |     |  in escrow       |
-|  dates           |     |  Stripe          |     |  (status: paid)  |
-+------------------+     +------------------+     +------------------+
-                                                          |
-                                                          v
-+------------------+     +------------------+     +------------------+
-|  6. Landlord     | <-- |  5. Money sent   | <-- |  4. Guest clicks |
-|  sees payout in  |     |  to landlord     |     |  "Check In" at   |
-|  dashboard       |     |  (M-Pesa/Stripe) |     |  the property    |
-+------------------+     +------------------+     +------------------+
-```
-
-**Booking Statuses:**
-- **pending_payment** -- Booking created, waiting for payment
-- **paid** -- Payment received, money in escrow
-- **checked_in** -- Guest confirmed arrival, payout initiated
-- **completed** -- Landlord paid out, booking finished
-- **cancelled** -- Booking cancelled (refund if paid)
-- **refunded** -- Payment refunded to guest
+The app currently loads slowly due to several compounding issues:
+- All images load at full resolution regardless of where they appear (thumbnail vs full-screen)
+- All pages are bundled together and loaded upfront, even if the user never visits them
+- Every property listing triggers a separate database call for landlord info (N+1 query problem)
+- Fonts block the page from rendering until they download
+- No images use browser-native lazy loading
 
 ---
 
-## Phase 1: Database & Core Booking Logic
+## Optimization Strategy
 
-### New `bookings` table
+### 1. Supabase Storage Image Transforms (Biggest Impact)
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| property_id | uuid | FK to properties |
-| guest_id | uuid | The user booking |
-| landlord_id | uuid | Property owner |
-| check_in_date | date | Arrival date |
-| check_out_date | date | Departure date |
-| nights | integer | Number of nights |
-| nightly_rate | numeric | Rate at time of booking |
-| total_amount | numeric | nights x nightly_rate |
-| service_fee | numeric | Platform fee (e.g., 10%) |
-| payment_method | text | 'mpesa' or 'stripe' |
-| payment_reference | text | Transaction ID from payment provider |
-| payout_reference | text | Payout transaction ID to landlord |
-| status | text | Booking lifecycle status |
-| guest_phone | text | For M-Pesa STK push |
-| landlord_phone | text | For M-Pesa B2C payout |
-| checked_in_at | timestamptz | When guest confirmed check-in |
-| paid_out_at | timestamptz | When landlord received funds |
-| created_at | timestamptz | Booking creation time |
-| updated_at | timestamptz | Last update |
+Supabase Storage supports on-the-fly image resizing via URL parameters. Instead of loading a 5MB original image for a small thumbnail, we request a resized version.
 
-### RLS Policies
-- Guests can create bookings and view their own bookings
-- Landlords can view bookings for their properties
-- Admins can view all bookings
-- Only the system (via edge functions) updates payment/payout status
+**What changes:**
+- Create a helper function `getOptimizedImageUrl(url, width, quality)` in `src/lib/imageUtils.ts`
+- For property card thumbnails: request 400px wide, 75% quality
+- For property detail main image: request 800px wide, 80% quality
+- For property detail thumbnails: request 160px wide, 70% quality
+- For location section images: request 300px wide, 75% quality
+- For admin/landlord dashboard thumbnails: request 100px wide, 70% quality
 
----
+This alone can reduce image sizes by 80-90%.
 
-## Phase 2: Booking UI on Property Detail Page
+### 2. Native Lazy Loading on All Images
 
-### Book Now Dialog
-When a user clicks "Book Now" on an Airbnb property, a dialog/sheet opens with:
+Add `loading="lazy"` to all `<img>` tags so browsers only download images when they scroll into view. This is a simple HTML attribute change across 13 files.
 
-1. **Date Picker** -- Calendar for selecting check-in and check-out dates (supports both the date range picker and a "number of nights" shortcut)
-2. **Booking Summary** -- Shows nightly rate, number of nights, subtotal, service fee, and total
-3. **Payment Method Selection** -- Toggle between M-Pesa and Stripe
-4. **For M-Pesa**: Phone number input field (pre-filled from profile if available)
-5. **For Stripe**: Redirects to Stripe Checkout
-6. **Confirm & Pay** button
+**Files affected:** PropertyCard, PropertyDetailPage, LocationsSection, PropertyPreviewModal, PropertyImageUpload, UserFavoritesPage, UserBookingsPage, LandlordPropertiesPage, LandlordDashboard, LandlordInquiriesPage, UserInquiriesPage, AdminPropertiesPage, EditPropertyPage
 
-### Date Availability
-- Query existing bookings to block out already-booked dates on the calendar
-- Show visual indicators for unavailable dates
+### 3. Route-Based Code Splitting (Lazy Loading Pages)
 
----
+Currently all 20+ page components are imported at the top of `App.tsx` and bundled into one large JavaScript file. With code splitting, each page only loads when the user navigates to it.
 
-## Phase 3: Payment Processing (Edge Functions)
+**What changes:**
+- Convert all page imports in `App.tsx` to use `React.lazy()`
+- Wrap `Routes` in a `Suspense` boundary with a loading spinner fallback
+- This can reduce the initial JavaScript bundle by 60-70%
 
-### 3a. Stripe Payment Flow
-1. **Edge Function: `create-booking-checkout`**
-   - Creates a booking record with status `pending_payment`
-   - Creates a Stripe Checkout Session with the total amount
-   - Returns the Stripe checkout URL
-   - Guest is redirected to Stripe to pay
+### 4. Fix N+1 Database Query (Landlord Profiles)
 
-2. **Edge Function: `stripe-booking-webhook`**
-   - Listens for `checkout.session.completed` event
-   - Updates booking status to `paid`
-   - Stores payment reference
+Currently, the `useProperties` hook fetches all properties, then makes a separate database call for each property's landlord profile. For 20 properties, that is 21 database calls instead of 1.
 
-3. **Edge Function: `process-booking-payout`**
-   - Triggered when guest checks in
-   - Creates a Stripe Transfer to the landlord's connected account (or marks for manual payout)
-   - Updates booking to `completed`
+**What changes:**
+- Modify `useProperties.ts` to batch-fetch all landlord profiles in a single query after getting properties
+- This reduces database calls from N+1 to just 2, dramatically improving data load time
 
-### 3b. M-Pesa Payment Flow
-1. **Edge Function: `mpesa-stk-push`**
-   - Initiates an STK Push to the guest's phone number
-   - Creates booking with status `pending_payment`
+### 5. Skeleton Loading States for Property Cards
 
-2. **Edge Function: `mpesa-callback`**
-   - Receives Safaricom callback confirming payment
-   - Updates booking status to `paid`
-   - Stores M-Pesa receipt number
+Instead of showing a blank page or spinner while images and data load, show placeholder skeleton cards that match the layout. This makes the app feel faster even when loading takes the same time.
 
-3. **Edge Function: `mpesa-b2c-payout`**
-   - Triggered on check-in
-   - Sends B2C payment to landlord's M-Pesa number
-   - Updates booking to `completed`
+**What changes:**
+- Create a `PropertyCardSkeleton` component
+- Use it in `PropertyGrid` while data is loading
 
-### Required Secrets (to be added later)
-- `STRIPE_SECRET_KEY` -- For Stripe payments
-- `STRIPE_WEBHOOK_SECRET` -- For webhook verification
-- `MPESA_CONSUMER_KEY` -- Safaricom Daraja API
-- `MPESA_CONSUMER_SECRET` -- Safaricom Daraja API
-- `MPESA_SHORTCODE` -- Business shortcode
-- `MPESA_PASSKEY` -- For STK Push
-- `MPESA_B2C_INITIATOR` -- For B2C payouts
-- `MPESA_B2C_PASSWORD` -- For B2C payouts
+### 6. Font Loading Optimization
+
+The Google Fonts import in `index.css` blocks rendering. Moving it to an optimized `<link>` tag with `font-display: swap` lets the page render immediately with system fonts, then swaps to custom fonts when ready.
+
+**What changes:**
+- Remove the `@import` from `index.css`
+- Add preconnect and preload font links in `index.html`
+- Use `font-display=swap` parameter
 
 ---
 
-## Phase 4: Guest Booking Management
-
-### User Dashboard Updates
-- Add "My Bookings" section showing all bookings with status badges
-- Each booking shows: property image, dates, total paid, current status
-- **Check-In Button**: Visible only when status is `paid` and current date equals check-in date (with a small grace window)
-- Booking detail view with full timeline
-
-### New Route: `/dashboard/bookings`
-- List of all guest bookings
-- Filter by status (upcoming, active, past)
-
----
-
-## Phase 5: Landlord Airbnb Dashboard
-
-### New "Airbnb Bookings" page in landlord section
-- Route: `/landlord/airbnb-bookings`
-- New sidebar nav item with a calendar icon
-
-### Features
-- **Stats cards**: Total bookings, pending check-ins, revenue earned
-- **Booking list**: Shows guest name, property, dates, amount, status
-- **Notification indicators**: New booking badge count on sidebar
-- **Booking detail view**: Full booking info with payment status and timeline
-
-### Landlord M-Pesa Setup
-- Add a field in the landlord profile for their M-Pesa phone number (for receiving payouts)
-
----
-
-## Phase 6: Check-In & Payout Flow
-
-### Guest Check-In
-1. Guest arrives at property and opens their booking
-2. A prominent "Check In" button appears (only enabled on/after check-in date)
-3. Guest taps "Check In" which triggers the payout edge function
-4. Booking status changes: `paid` -> `checked_in` -> `completed`
-5. Toast notification confirms check-in
-
-### Landlord Payout
-- Automatic payout triggered by check-in
-- For M-Pesa: B2C transfer to landlord's registered phone
-- For Stripe: Transfer to landlord's connected account
-- Payout status tracked in the booking record
-
----
-
-## Implementation Order
-
-Since payment provider credentials are not yet available, we will build in this order:
-
-1. **Database migration** -- Create the `bookings` table with RLS policies
-2. **Booking UI** -- Date picker dialog, booking summary, payment method selection on the property detail page
-3. **Guest bookings page** -- `/dashboard/bookings` with check-in functionality
-4. **Landlord Airbnb bookings page** -- `/landlord/airbnb-bookings` with stats and booking list
-5. **Edge functions (scaffolded)** -- Payment processing functions ready for when credentials are added
-6. **Stripe integration** -- Enable Stripe, add credentials, connect payment flow
-7. **M-Pesa integration** -- Add Daraja credentials, connect STK Push and B2C flows
-
-Steps 1-5 will be fully functional with simulated payment flow (booking created, status manually trackable). Steps 6-7 will connect real payment processing once you provide the API credentials.
-
----
-
-## Files to Create/Modify
+## Technical Details
 
 ### New Files
-- `src/components/booking/BookingDialog.tsx` -- Main booking flow dialog with date picker
-- `src/components/booking/BookingSummary.tsx` -- Price breakdown component
-- `src/components/booking/PaymentMethodSelector.tsx` -- M-Pesa / Stripe toggle
-- `src/components/booking/CheckInButton.tsx` -- Check-in confirmation component
-- `src/pages/user/UserBookingsPage.tsx` -- Guest's booking management page
-- `src/pages/landlord/LandlordAirbnbPage.tsx` -- Landlord's Airbnb booking dashboard
-- `src/hooks/useBookings.ts` -- Shared booking data hooks
-- `supabase/functions/create-booking-checkout/index.ts` -- Stripe checkout creation
-- `supabase/functions/stripe-booking-webhook/index.ts` -- Stripe webhook handler
-- `supabase/functions/mpesa-stk-push/index.ts` -- M-Pesa payment initiation
-- `supabase/functions/mpesa-callback/index.ts` -- M-Pesa payment callback
-- `supabase/functions/process-booking-payout/index.ts` -- Payout on check-in
+
+| File | Purpose |
+|------|---------|
+| `src/lib/imageUtils.ts` | Image URL optimization helper for Supabase Storage transforms |
+| `src/components/PropertyCardSkeleton.tsx` | Skeleton placeholder while property cards load |
 
 ### Modified Files
-- `src/pages/PropertyDetailPage.tsx` -- Add BookingDialog to the "Book Now" button
-- `src/App.tsx` -- Add new routes for bookings pages
-- `src/components/landlord/LandlordSidebar.tsx` -- Add Airbnb Bookings nav item
-- `src/components/user/UserSidebar.tsx` -- Add My Bookings nav item
-- `supabase/config.toml` -- Register new edge functions
-- Database migration for `bookings` table
 
+| File | Changes |
+|------|---------|
+| `src/lib/imageUtils.ts` | New utility: `getOptimizedImageUrl(url, width, quality)` that appends Supabase transform params |
+| `src/components/PropertyCard.tsx` | Use optimized image URL (400px), add `loading="lazy"` |
+| `src/pages/PropertyDetailPage.tsx` | Use optimized URLs for main image (800px) and thumbnails (160px), add `loading="lazy"` |
+| `src/components/LocationsSection.tsx` | Use optimized image URLs (300px), add `loading="lazy"` |
+| `src/components/PropertyGrid.tsx` | Show skeleton cards during loading state |
+| `src/components/PropertyImageUpload.tsx` | Add `loading="lazy"` to preview images |
+| `src/components/admin/PropertyPreviewModal.tsx` | Use optimized URLs, add `loading="lazy"` |
+| `src/pages/user/UserFavoritesPage.tsx` | Use optimized URLs, add `loading="lazy"` |
+| `src/pages/user/UserBookingsPage.tsx` | Use optimized URLs, add `loading="lazy"` |
+| `src/pages/landlord/LandlordPropertiesPage.tsx` | Use optimized URLs, add `loading="lazy"` |
+| `src/pages/landlord/LandlordDashboard.tsx` | Use optimized URLs, add `loading="lazy"` |
+| `src/pages/landlord/LandlordInquiriesPage.tsx` | Add `loading="lazy"` |
+| `src/pages/landlord/EditPropertyPage.tsx` | Add `loading="lazy"` |
+| `src/pages/user/UserInquiriesPage.tsx` | Add `loading="lazy"` |
+| `src/pages/admin/AdminPropertiesPage.tsx` | Add `loading="lazy"` |
+| `src/App.tsx` | Convert all page imports to `React.lazy()`, add `Suspense` wrapper |
+| `src/hooks/useProperties.ts` | Batch landlord profile queries to fix N+1 problem |
+| `src/index.css` | Remove render-blocking `@import` for Google Fonts |
+| `index.html` | Add optimized font loading with preconnect and `font-display=swap` |
+
+### Implementation Order
+
+1. Create `imageUtils.ts` helper (foundation for all image optimizations)
+2. Update all image-heavy components with optimized URLs and lazy loading
+3. Create skeleton components and integrate into PropertyGrid
+4. Fix N+1 query in useProperties hook
+5. Add code splitting to App.tsx
+6. Optimize font loading in index.html and index.css
+
+### Expected Impact
+
+- **Image data transfer**: ~80-90% reduction (full-size to appropriately sized)
+- **Initial JavaScript bundle**: ~60-70% reduction via code splitting
+- **Database calls on listing pages**: From N+1 to 2 queries
+- **First Contentful Paint**: Significantly faster with font optimization and code splitting
+- **Perceived performance**: Much better with skeleton loading states
