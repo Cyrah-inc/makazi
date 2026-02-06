@@ -21,6 +21,7 @@ import { getBookingRelativeLabel } from '@/lib/bookingUtils';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
+// User profile dashboard
 export default function UserDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
