@@ -1,8 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User, Mail, CalendarDays, ChevronRight } from 'lucide-react';
+import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User, Mail, CalendarDays, ChevronRight, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { useLandlordProfile } from '@/hooks/useLandlordProfile';
 
 const navGroups = [
   {
@@ -26,6 +28,12 @@ const navGroups = [
       { href: '/landlord/inquiries', icon: MessageSquare, label: 'Inquiries' },
     ],
   },
+  {
+    label: 'Account',
+    items: [
+      { href: '/landlord/profile', icon: Shield, label: 'My Profile' },
+    ],
+  },
 ];
 
 interface LandlordSidebarProps {
@@ -36,6 +44,15 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
+  const { landlordProfile } = useLandlordProfile();
+
+  const verificationBadge = (status?: string) => {
+    if (!status || status === 'unverified') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-accent/10 text-accent">Unverified</Badge>;
+    if (status === 'pending') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold-foreground))]">Pending</Badge>;
+    if (status === 'verified') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary">Verified</Badge>;
+    if (status === 'rejected') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-destructive/10 text-destructive">Rejected</Badge>;
+    return null;
+  };
 
   const handleNavClick = () => {
     onNavigate?.();
@@ -86,7 +103,8 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
                   >
                     <item.icon className="w-[18px] h-[18px] shrink-0" />
                     <span className="font-medium text-sm flex-1">{item.label}</span>
-                    {!isActive && (
+                    {item.href === '/landlord/profile' && verificationBadge(landlordProfile?.verification_status)}
+                    {!isActive && item.href !== '/landlord/profile' && (
                       <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />
                     )}
                   </Link>

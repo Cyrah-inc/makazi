@@ -16,6 +16,9 @@ import { Link } from 'react-router-dom';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 import { LocationPicker } from '@/components/LocationPicker';
 import { KENYA_COUNTIES } from '@/types/property';
+import { useLandlordProfile } from '@/hooks/useLandlordProfile';
+import { VerificationBanner } from '@/components/landlord/VerificationBanner';
+import { SubscriptionPaymentDialog } from '@/components/landlord/SubscriptionPaymentDialog';
 
 const amenitiesList = [
   'Parking', 'Swimming Pool', 'Gym', 'Security', 'Garden', 
@@ -42,6 +45,8 @@ export default function AddPropertyPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
+  const { landlordProfile, isVerified, needsSubscription, canListProperty, isLoading: profileLoading } = useLandlordProfile();
   
   const [formData, setFormData] = useState({
     title: '',
@@ -192,6 +197,8 @@ export default function AddPropertyPage() {
     }));
   };
 
+  const isBlocked = !isVerified || needsSubscription;
+
   return (
     <LandlordLayout>
       <div className="max-w-3xl mx-auto space-y-6">
@@ -200,6 +207,16 @@ export default function AddPropertyPage() {
           <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Add New Property</h1>
           <p className="text-muted-foreground mt-1 text-sm">Fill in the details to list your property</p>
         </div>
+
+        {/* Verification / Subscription Banner */}
+        {!profileLoading && landlordProfile && (
+          <VerificationBanner
+            verificationStatus={landlordProfile.verification_status}
+            verificationNotes={landlordProfile.verification_notes}
+            needsSubscription={needsSubscription}
+            onSubscribe={() => setSubscriptionOpen(true)}
+          />
+        )}
 
         <form onSubmit={handleSubmit}>
           <Card className="mb-6">
@@ -500,7 +517,7 @@ export default function AddPropertyPage() {
             <Button type="button" variant="outline" className="flex-1" onClick={() => navigate('/landlord/properties')}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={isLoading}>
+            <Button type="submit" className="flex-1" disabled={isLoading || isBlocked}>
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -513,6 +530,7 @@ export default function AddPropertyPage() {
           </div>
         </form>
       </div>
+      <SubscriptionPaymentDialog open={subscriptionOpen} onOpenChange={setSubscriptionOpen} />
     </LandlordLayout>
   );
 }
