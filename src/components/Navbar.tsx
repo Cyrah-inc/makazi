@@ -162,12 +162,12 @@ const Navbar = () => {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-80 p-0">
-            <SheetHeader className="p-4 border-b border-border">
+          <SheetContent side="right" className="w-80 p-0 flex flex-col">
+            <SheetHeader className="p-4 border-b border-border shrink-0">
               <SheetTitle className="text-left">Menu</SheetTitle>
             </SheetHeader>
             
-            <div className="flex flex-col h-[calc(100vh-65px)]">
+            <div className="flex flex-col flex-1 min-h-0">
               {/* User Info */}
               {user && (
                 <div className="p-4 bg-muted/30 border-b border-border">
