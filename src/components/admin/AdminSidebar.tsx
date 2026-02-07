@@ -7,7 +7,8 @@ import {
   LogOut,
   Home,
   FileText,
-  BarChart3,
+  CalendarDays,
+  DollarSign,
   Shield
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -20,8 +21,9 @@ const sidebarItems = [
   { icon: Users, label: 'Users', path: '/admin/users' },
   { icon: UserCheck, label: 'Landlords', path: '/admin/landlords' },
   { icon: Building2, label: 'Properties', path: '/admin/properties' },
-  { icon: FileText, label: 'Listings', path: '/admin/listings' },
-  { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+  { icon: FileText, label: 'Listings Overview', path: '/admin/listings' },
+  { icon: CalendarDays, label: 'Airbnb', path: '/admin/airbnb' },
+  { icon: DollarSign, label: 'Revenue', path: '/admin/revenue' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 

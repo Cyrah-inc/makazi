@@ -22,6 +22,8 @@ const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
 const AdminLandlordsPage = lazy(() => import("./pages/admin/AdminLandlordsPage"));
 const AdminPropertiesPage = lazy(() => import("./pages/admin/AdminPropertiesPage"));
 const AdminListingsPage = lazy(() => import("./pages/admin/AdminListingsPage"));
+const AdminRevenuePage = lazy(() => import("./pages/admin/AdminRevenuePage"));
+const AdminAirbnbPage = lazy(() => import("./pages/admin/AdminAirbnbPage"));
 const LandlordDashboard = lazy(() => import("./pages/landlord/LandlordDashboard"));
 const LandlordPropertiesPage = lazy(() => import("./pages/landlord/LandlordPropertiesPage"));
 const AddPropertyPage = lazy(() => import("./pages/landlord/AddPropertyPage"));
@@ -70,6 +72,8 @@ const App = () => (
                   <Route path="/admin/landlords" element={<AdminLandlordsPage />} />
                   <Route path="/admin/properties" element={<AdminPropertiesPage />} />
                   <Route path="/admin/listings" element={<AdminListingsPage />} />
+                  <Route path="/admin/revenue" element={<AdminRevenuePage />} />
+                  <Route path="/admin/airbnb" element={<AdminAirbnbPage />} />
                   <Route path="/landlord" element={<LandlordDashboard />} />
                   <Route path="/landlord/properties" element={<LandlordPropertiesPage />} />
                   <Route path="/landlord/add-property" element={<AddPropertyPage />} />
