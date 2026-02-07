@@ -1,7 +1,6 @@
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeroSearch from '@/components/HeroSearch';
-import CategorySection from '@/components/CategorySection';
 import PropertyGrid from '@/components/PropertyGrid';
 import LocationsSection from '@/components/LocationsSection';
 import FeaturesSection from '@/components/FeaturesSection';
@@ -44,8 +43,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Category Cards */}
-        <CategorySection />
 
         {/* Featured Properties */}
         <section className="py-16 md:py-24 bg-muted/30">
