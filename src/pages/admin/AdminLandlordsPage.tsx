@@ -25,6 +25,48 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+function extractFilePath(url: string): string {
+  if (!url.startsWith('http')) return url;
+  const match = url.match(/landlord-documents\/(.+)$/);
+  return match ? match[1] : url;
+}
+
+function AdminDocumentLink({ docPath, index }: { docPath: string; index: number }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const path = extractFilePath(docPath);
+    supabase.storage
+      .from('landlord-documents')
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (data?.signedUrl) setSignedUrl(data.signedUrl);
+      });
+  }, [docPath]);
+
+  return (
+    <a
+      href={signedUrl || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors",
+        !signedUrl && "opacity-50 pointer-events-none"
+      )}
+    >
+      {docPath.match(/\.(jpg|jpeg|png)$/i) && signedUrl ? (
+        <img src={signedUrl} alt="Doc" className="w-10 h-10 rounded object-cover shrink-0" />
+      ) : (
+        <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
+          <FileText className="w-5 h-5 text-accent" />
+        </div>
+      )}
+      <span className="text-sm truncate flex-1">Document {index + 1}</span>
+      <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+    </a>
+  );
+}
+
 interface LandlordData {
   user_id: string;
   full_name: string | null;
@@ -381,23 +423,7 @@ export default function AdminLandlordsPage() {
                       <p className="text-sm font-medium mb-2">Documents ({selectedLandlord.documents.length})</p>
                       <div className="space-y-2">
                         {selectedLandlord.documents.map((doc, i) => (
-                          <a
-                            key={i}
-                            href={doc}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                          >
-                            {doc.match(/\.(jpg|jpeg|png)$/i) ? (
-                              <img src={doc} alt="Doc" className="w-10 h-10 rounded object-cover shrink-0" />
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
-                                <FileText className="w-5 h-5 text-accent" />
-                              </div>
-                            )}
-                            <span className="text-sm truncate flex-1">Document {i + 1}</span>
-                            <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
-                          </a>
+                          <AdminDocumentLink key={i} docPath={doc} index={i} />
                         ))}
                       </div>
                     </div>

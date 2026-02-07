@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,11 +12,32 @@ interface SingleDocumentUploadProps {
   disabled?: boolean;
 }
 
+function extractFilePath(url: string): string {
+  if (!url.startsWith('http')) return url;
+  const match = url.match(/landlord-documents\/(.+)$/);
+  return match ? match[1] : url;
+}
+
 export function SingleDocumentUpload({ label, value, onChange, disabled }: SingleDocumentUploadProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (value) {
+      const path = extractFilePath(value);
+      supabase.storage
+        .from('landlord-documents')
+        .createSignedUrl(path, 3600)
+        .then(({ data }) => {
+          if (data?.signedUrl) setSignedUrl(data.signedUrl);
+        });
+    } else {
+      setSignedUrl(null);
+    }
+  }, [value]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,26 +63,25 @@ export function SingleDocumentUpload({ label, value, onChange, disabled }: Singl
       return;
     }
 
-    const { data: urlData } = supabase.storage.from('landlord-documents').getPublicUrl(filePath);
-    onChange(urlData.publicUrl);
+    // Store the path, not the public URL
+    onChange(filePath);
     setIsUploading(false);
     if (fileRef.current) fileRef.current.value = '';
   };
 
   const handleRemove = async () => {
     if (!value) return;
-    const bucketUrl = supabase.storage.from('landlord-documents').getPublicUrl('').data.publicUrl;
-    const path = value.replace(bucketUrl, '');
+    const path = extractFilePath(value);
     await supabase.storage.from('landlord-documents').remove([path]);
     onChange(null);
   };
 
-  const getFileName = (url: string) => {
-    const parts = url.split('/');
+  const getFileName = (path: string) => {
+    const parts = path.split('/');
     return parts[parts.length - 1].replace(/^\d+-/, '');
   };
 
-  const isImage = (url: string) => /\.(jpg|jpeg|png)$/i.test(url);
+  const isImage = (path: string) => /\.(jpg|jpeg|png)$/i.test(path);
 
   return (
     <div className="space-y-2">
@@ -76,8 +96,8 @@ export function SingleDocumentUpload({ label, value, onChange, disabled }: Singl
 
       {value ? (
         <div className="flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
-          {isImage(value) ? (
-            <img src={value} alt="Document" className="w-10 h-10 rounded object-cover shrink-0" />
+          {isImage(value) && signedUrl ? (
+            <img src={signedUrl} alt="Document" className="w-10 h-10 rounded object-cover shrink-0" />
           ) : (
             <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center shrink-0">
               <FileText className="w-5 h-5 text-primary" />
