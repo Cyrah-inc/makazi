@@ -12,10 +12,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLandlordProfile } from '@/hooks/useLandlordProfile';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { DocumentUpload } from '@/components/landlord/DocumentUpload';
+import { VerificationDetailsCard } from '@/components/landlord/VerificationDetailsCard';
 import { SubscriptionPaymentDialog } from '@/components/landlord/SubscriptionPaymentDialog';
 import {
-  Loader2, Save, User, Shield, CreditCard, CheckCircle, Clock, XCircle, AlertCircle, BadgeCheck
+  Loader2, Save, User, CreditCard, CheckCircle, Clock, XCircle, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -49,13 +49,6 @@ export default function LandlordProfilePage() {
   const [phone, setPhone] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Verification details
-  const [idNumber, setIdNumber] = useState('');
-  const [kraPin, setKraPin] = useState('');
-  const [businessPhone, setBusinessPhone] = useState('');
-  const [documents, setDocuments] = useState<string[]>([]);
-  const [savingVerification, setSavingVerification] = useState(false);
-
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   useEffect(() => {
@@ -65,15 +58,6 @@ export default function LandlordProfilePage() {
       setPhone(profile.phone || '');
     }
   }, [profile]);
-
-  useEffect(() => {
-    if (landlordProfile) {
-      setIdNumber(landlordProfile.id_number || '');
-      setKraPin(landlordProfile.kra_pin || '');
-      setBusinessPhone(landlordProfile.business_phone || '');
-      setDocuments(landlordProfile.documents || []);
-    }
-  }, [landlordProfile]);
 
   const handleSaveProfile = async () => {
     if (!user?.id) return;
@@ -91,54 +75,6 @@ export default function LandlordProfilePage() {
       toast({ title: 'Profile updated' });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
     }
-  };
-
-  const handleSaveVerification = async (submit = false) => {
-    if (!user?.id) return;
-    setSavingVerification(true);
-
-    const updates: Record<string, any> = {
-      id_number: idNumber,
-      kra_pin: kraPin,
-      business_phone: businessPhone,
-      documents,
-    };
-
-    if (submit) {
-      // Validate required fields
-      if (!idNumber || !kraPin || !businessPhone || documents.length === 0) {
-        toast({ title: 'Incomplete', description: 'Fill in all fields and upload at least one document', variant: 'destructive' });
-        setSavingVerification(false);
-        return;
-      }
-      updates.verification_status = 'pending';
-    }
-
-    // Check if profile exists
-    if (landlordProfile) {
-      const { error } = await supabase
-        .from('landlord_profiles')
-        .update(updates)
-        .eq('user_id', user.id);
-      if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        setSavingVerification(false);
-        return;
-      }
-    } else {
-      const { error } = await supabase
-        .from('landlord_profiles')
-        .insert({ user_id: user.id, ...updates });
-      if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        setSavingVerification(false);
-        return;
-      }
-    }
-
-    setSavingVerification(false);
-    toast({ title: submit ? 'Submitted for review!' : 'Details saved' });
-    queryClient.invalidateQueries({ queryKey: ['landlord-profile'] });
   };
 
   const getStatusConfig = () => {
@@ -227,108 +163,12 @@ export default function LandlordProfilePage() {
           </Card>
 
           {/* Verification Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" /> Verification Details
-              </CardTitle>
-              <CardDescription>
-                {isVerified
-                  ? 'Your account is verified'
-                  : 'Provide your details and documents to get verified'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isRejected && landlordProfile?.verification_notes && (
-                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
-                  <strong>Rejection reason:</strong> {landlordProfile.verification_notes}
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="idNumber">National ID Number *</Label>
-                <Input
-                  id="idNumber"
-                  value={idNumber}
-                  onChange={e => setIdNumber(e.target.value)}
-                  placeholder="e.g., 12345678"
-                  disabled={isPending || isVerified}
-                />
-              </div>
-              <div>
-                <Label htmlFor="kraPin">KRA PIN *</Label>
-                <Input
-                  id="kraPin"
-                  value={kraPin}
-                  onChange={e => setKraPin(e.target.value)}
-                  placeholder="e.g., A001234567Z"
-                  disabled={isPending || isVerified}
-                />
-              </div>
-              <div>
-                <Label htmlFor="businessPhone">Business Phone *</Label>
-                <Input
-                  id="businessPhone"
-                  value={businessPhone}
-                  onChange={e => setBusinessPhone(e.target.value)}
-                  placeholder="e.g., 0722123456"
-                  disabled={isPending || isVerified}
-                />
-              </div>
-
-              <div>
-                <Label className="mb-2 block">Verification Documents *</Label>
-                <DocumentUpload
-                  documents={documents}
-                  onDocumentsChange={setDocuments}
-                  maxDocuments={5}
-                  disabled={isPending || isVerified}
-                />
-              </div>
-
-              {!isVerified && !isPending && (
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleSaveVerification(false)}
-                    disabled={savingVerification}
-                    className="flex-1"
-                  >
-                    Save Draft
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => handleSaveVerification(true)}
-                    disabled={savingVerification}
-                    className="flex-1 gap-2"
-                  >
-                    {savingVerification ? <Loader2 className="w-4 h-4 animate-spin" /> : <BadgeCheck className="w-4 h-4" />}
-                    Submit for Review
-                  </Button>
-                </div>
-              )}
-
-              {isPending && (
-                <div className="p-3 rounded-lg bg-[hsl(var(--gold))]/10 border border-[hsl(var(--gold))]/20 text-sm text-center">
-                  <Clock className="w-5 h-5 mx-auto mb-1 text-[hsl(var(--gold))]" />
-                  Your verification is under review
-                </div>
-              )}
-
-              {isVerified && (
-                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm text-center text-primary">
-                  <CheckCircle className="w-5 h-5 mx-auto mb-1" />
-                  Account verified
-                  {landlordProfile?.verified_at && (
-                    <p className="text-xs mt-1 text-muted-foreground">
-                      on {format(new Date(landlordProfile.verified_at), 'MMM d, yyyy')}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <VerificationDetailsCard
+            landlordProfile={landlordProfile}
+            isVerified={isVerified}
+            isPending={isPending}
+            isRejected={isRejected}
+          />
         </div>
 
         {/* Subscription Card */}
