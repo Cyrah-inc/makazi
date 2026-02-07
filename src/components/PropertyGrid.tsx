@@ -14,6 +14,9 @@ interface PropertyGridProps {
   isLoadingCommute?: boolean;
   showCommuteBadge?: boolean;
   isLoading?: boolean;
+  // Near me
+  distances?: Record<string, number>;
+  showDistanceBadge?: boolean;
 }
 
 const PropertyGrid = ({ 
@@ -27,6 +30,8 @@ const PropertyGrid = ({
   isLoadingCommute,
   showCommuteBadge = false,
   isLoading = false,
+  distances,
+  showDistanceBadge = false,
 }: PropertyGridProps) => {
   if (isLoading) {
     return (
@@ -77,6 +82,8 @@ const PropertyGrid = ({
               commuteDestination={commuteDestination}
               isLoadingCommute={isLoadingCommute}
               showCommuteBadge={showCommuteBadge}
+              distanceKm={distances?.[property.id]}
+              showDistanceBadge={showDistanceBadge}
             />
           </div>
         ))}

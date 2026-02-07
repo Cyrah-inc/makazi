@@ -19,6 +19,9 @@ interface PropertyCardProps {
   commuteDestination?: string;
   isLoadingCommute?: boolean;
   showCommuteBadge?: boolean;
+  // Near me
+  distanceKm?: number | null;
+  showDistanceBadge?: boolean;
 }
 
 const PropertyCard = ({ 
@@ -29,6 +32,8 @@ const PropertyCard = ({
   commuteDestination = '',
   isLoadingCommute = false,
   showCommuteBadge = false,
+  distanceKm,
+  showDistanceBadge = false,
 }: PropertyCardProps) => {
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -48,6 +53,7 @@ const PropertyCard = ({
   };
 
   const { price, label } = getPrice();
+  const showBadge = showDistanceBadge || showCommuteBadge;
 
   return (
     <Link to={`/property/${property.id}`} className="block group">
@@ -110,20 +116,32 @@ const PropertyCard = ({
 
         {/* Content */}
         <div className="p-4 space-y-3">
-          {/* Price and Commute Badge */}
+          {/* Price and Badge */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-baseline gap-1">
               <span className="text-xl font-heading font-bold text-primary">{price}</span>
               {label && <span className="text-sm text-muted-foreground">{label}</span>}
             </div>
-            {showCommuteBadge && commuteDestination && (
-              <CommuteBadge
-                minutes={commuteTime}
-                mode={commuteMode}
-                destination={commuteDestination}
-                isLoading={isLoadingCommute}
-                noLocation={!property.latitude || !property.longitude}
-              />
+            {showBadge && (
+              showDistanceBadge ? (
+                <CommuteBadge
+                  distanceKm={distanceKm}
+                  mode={commuteMode}
+                  destination=""
+                  badgeMode="nearme"
+                  isLoading={isLoadingCommute}
+                  noLocation={!property.latitude || !property.longitude}
+                />
+              ) : showCommuteBadge && commuteDestination ? (
+                <CommuteBadge
+                  minutes={commuteTime}
+                  mode={commuteMode}
+                  destination={commuteDestination}
+                  badgeMode="commute"
+                  isLoading={isLoadingCommute}
+                  noLocation={!property.latitude || !property.longitude}
+                />
+              ) : null
             )}
           </div>
 
