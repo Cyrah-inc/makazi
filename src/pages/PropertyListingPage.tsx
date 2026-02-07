@@ -4,12 +4,19 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PropertyGrid from '@/components/PropertyGrid';
 import PropertyFilters from '@/components/PropertyFilters';
-import CommuteChecker, { CommuteSettings, TransportMode } from '@/components/CommuteChecker';
+import CommuteChecker, { CommuteSettings, TransportMode, LocationFilterMode, NearMeSettings } from '@/components/CommuteChecker';
 import CommuteBar from '@/components/CommuteBar';
 import { useProperties } from '@/hooks/useProperties';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { haversineDistance, formatDistance } from '@/lib/geoUtils';
 import { PropertyPurpose, PropertyFilter, PROPERTY_TYPES } from '@/types/property';
-import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search, ShoppingCart, Home, Palmtree, Car, Bus, PersonStanding, X } from 'lucide-react';
+import { SlidersHorizontal, Grid3X3, List, Map, Loader2, Search, ShoppingCart, Home, Palmtree, Car, Bus, PersonStanding, X, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const browseTabs = [
   { purpose: 'buy' as PropertyPurpose, label: 'Buy', href: '/buy', icon: ShoppingCart },
@@ -32,12 +39,6 @@ const formatTime = (minutes: number): string => {
   return mins > 0 ? `${hrs}h ${mins}m` : `${hrs} hour${hrs > 1 ? 's' : ''}`;
 };
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-
 interface PropertyListingPageProps {
   purpose: PropertyPurpose;
   title: string;
@@ -53,6 +54,9 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Location filter mode
+  const [filterMode, setFilterMode] = useState<LocationFilterMode>('nearme');
+
   // Commute state
   const [commuteSettings, setCommuteSettings] = useState<CommuteSettings>({
     destination: '',
@@ -63,21 +67,85 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   const [isLoadingCommute, setIsLoadingCommute] = useState(false);
   const [commuteActive, setCommuteActive] = useState(false);
 
-  // Fetch real properties from Supabase - don't require location by default
+  // Near Me state
+  const [nearMeSettings, setNearMeSettings] = useState<NearMeSettings>({ maxDistanceKm: 15 });
+  const [nearMeActive, setNearMeActive] = useState(false);
+  const geo = useGeolocation();
+
+  // Fetch properties
   const { data: properties = [], isLoading, error } = useProperties(purpose, false);
 
-  // Clear commute handler
-  const handleClearCommute = useCallback(() => {
+  // Calculate distances client-side when we have user location
+  const distances = useMemo(() => {
+    if (!geo.latitude || !geo.longitude) return {};
+    const result: Record<string, number> = {};
+    properties.forEach(p => {
+      if (p.latitude && p.longitude) {
+        result[p.id] = haversineDistance(geo.latitude!, geo.longitude!, p.latitude, p.longitude);
+      }
+    });
+    return result;
+  }, [geo.latitude, geo.longitude, properties]);
+
+  // Handle Near Me activation
+  const handleNearMeActivate = useCallback(() => {
+    if (nearMeActive) {
+      // Toggle off
+      setNearMeActive(false);
+      geo.clearLocation();
+      return;
+    }
+    // Clear commute when activating near me
+    setCommuteActive(false);
+    setCommuteTimes({});
+
+    geo.requestLocation();
+    // We set nearMeActive once location arrives
+  }, [nearMeActive, geo]);
+
+  // Auto-activate near me when location is received
+  useMemo(() => {
+    if (geo.latitude && geo.longitude && !nearMeActive && !commuteActive) {
+      setNearMeActive(true);
+      const count = properties.filter(p => {
+        if (!p.latitude || !p.longitude) return false;
+        const dist = haversineDistance(geo.latitude!, geo.longitude!, p.latitude, p.longitude);
+        return dist <= nearMeSettings.maxDistanceKm;
+      }).length;
+      toast.success(`Found ${count} properties within ${formatDistance(nearMeSettings.maxDistanceKm)}`);
+    }
+  }, [geo.latitude, geo.longitude]);
+
+  // Clear all location filters
+  const handleClearLocationFilter = useCallback(() => {
     setCommuteActive(false);
     setCommuteTimes({});
     setCommuteSettings(prev => ({ ...prev, destination: '' }));
-  }, []);
+    setNearMeActive(false);
+    geo.clearLocation();
+  }, [geo]);
+
+  // Handle filter mode change
+  const handleFilterModeChange = useCallback((mode: LocationFilterMode) => {
+    setFilterMode(mode);
+    // Clear the other mode when switching
+    if (mode === 'nearme') {
+      setCommuteActive(false);
+      setCommuteTimes({});
+    } else {
+      setNearMeActive(false);
+      geo.clearLocation();
+    }
+  }, [geo]);
 
   // Calculate real commute times using Google Distance Matrix API
   const handleCommuteSearch = useCallback(async () => {
     if (!commuteSettings.destination.trim()) return;
     
-    // Filter properties with valid coordinates
+    // Clear near me when using commute
+    setNearMeActive(false);
+    geo.clearLocation();
+
     const propertiesWithLocation = properties.filter(
       p => p.latitude !== undefined && p.longitude !== undefined
     );
@@ -89,7 +157,7 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
 
     setIsLoadingCommute(true);
     setCommuteActive(true);
-    setCommuteTimes({}); // Clear previous times
+    setCommuteTimes({});
 
     try {
       const { data, error } = await supabase.functions.invoke('calculate-commute', {
@@ -134,7 +202,7 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
     } finally {
       setIsLoadingCommute(false);
     }
-  }, [commuteSettings.destination, commuteSettings.mode, properties]);
+  }, [commuteSettings.destination, commuteSettings.mode, properties, geo]);
 
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
@@ -154,15 +222,35 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                    purpose === 'rent' ? property.monthlyRent : property.nightlyRate;
       if (filters.minPrice && price && price < filters.minPrice) return false;
       if (filters.maxPrice && price && price > filters.maxPrice) return false;
+
+      // Commute filter
       if (commuteActive && commuteTimes[property.id] !== undefined) {
         if (commuteTimes[property.id] > commuteSettings.maxMinutes) return false;
       }
+
+      // Near Me filter
+      if (nearMeActive && geo.latitude && geo.longitude) {
+        if (!property.latitude || !property.longitude) return false;
+        const dist = distances[property.id];
+        if (dist === undefined || dist > nearMeSettings.maxDistanceKm) return false;
+      }
+
       return true;
     });
-  }, [filters, properties, purpose, commuteActive, commuteTimes, commuteSettings.maxMinutes]);
+  }, [filters, properties, purpose, commuteActive, commuteTimes, commuteSettings.maxMinutes, nearMeActive, geo.latitude, geo.longitude, distances, nearMeSettings.maxDistanceKm]);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...filteredProperties];
+
+    // When near me is active, default sort by distance
+    if (nearMeActive && !filters.sortBy) {
+      return sorted.sort((a, b) => {
+        const distA = distances[a.id] ?? Infinity;
+        const distB = distances[b.id] ?? Infinity;
+        return distA - distB;
+      });
+    }
+
     switch (filters.sortBy) {
       case 'price-asc':
         return sorted.sort((a, b) => {
@@ -183,7 +271,7 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
       default:
         return sorted;
     }
-  }, [filteredProperties, filters.sortBy, purpose]);
+  }, [filteredProperties, filters.sortBy, purpose, nearMeActive, distances]);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -193,6 +281,23 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   };
 
   const ModeIcon = getModeIcon(commuteSettings.mode);
+  const anyLocationActive = commuteActive || nearMeActive;
+
+  // Common location filter props
+  const locationFilterProps = {
+    filterMode,
+    onFilterModeChange: handleFilterModeChange,
+    settings: commuteSettings,
+    onChange: setCommuteSettings,
+    onSearch: handleCommuteSearch,
+    isLoading: isLoadingCommute,
+    nearMeSettings,
+    onNearMeSettingsChange: setNearMeSettings,
+    onNearMeActivate: handleNearMeActivate,
+    isNearMeLoading: geo.isLoading,
+    isNearMeActive: nearMeActive,
+    nearMeError: geo.error,
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -260,15 +365,12 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
           </div>
         </div>
 
-        {/* Mobile/Tablet Commute Bar - below sticky header, scrolls with content */}
+        {/* Mobile/Tablet Commute Bar */}
         <div className="lg:hidden mt-3 mb-4">
           <CommuteBar
-            settings={commuteSettings}
-            onChange={setCommuteSettings}
-            onSearch={handleCommuteSearch}
-            isLoading={isLoadingCommute}
+            {...locationFilterProps}
             isActive={commuteActive}
-            onClear={handleClearCommute}
+            onClear={handleClearLocationFilter}
           />
         </div>
 
@@ -295,14 +397,9 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Desktop Filters */}
             <aside className="hidden lg:block w-72 shrink-0 space-y-6">
-              {/* Commute Checker - Highlighted card */}
+              {/* Location Filter - Highlighted card */}
               <div className="rounded-xl border-2 border-primary/20 bg-primary/5 overflow-hidden">
-                <CommuteChecker
-                  settings={commuteSettings}
-                  onChange={setCommuteSettings}
-                  onSearch={handleCommuteSearch}
-                  isLoading={isLoadingCommute}
-                />
+                <CommuteChecker {...locationFilterProps} />
               </div>
               
               {/* Property Filters */}
@@ -383,14 +480,23 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                   </div>
                 </div>
 
-                {/* Active Commute Indicator Chip */}
-                {commuteActive && commuteSettings.destination && (
+                {/* Active Location Filter Chip */}
+                {anyLocationActive && (
                   <div className="flex items-center">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                      <ModeIcon className="h-3.5 w-3.5" />
-                      <span>Within {formatTime(commuteSettings.maxMinutes)} of {commuteSettings.destination}</span>
+                      {nearMeActive ? (
+                        <>
+                          <Navigation className="h-3.5 w-3.5" />
+                          <span>Within {formatDistance(nearMeSettings.maxDistanceKm)} of you</span>
+                        </>
+                      ) : (
+                        <>
+                          <ModeIcon className="h-3.5 w-3.5" />
+                          <span>Within {formatTime(commuteSettings.maxMinutes)} of {commuteSettings.destination}</span>
+                        </>
+                      )}
                       <button
-                        onClick={handleClearCommute}
+                        onClick={handleClearLocationFilter}
                         className="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
                       >
                         <X className="h-3 w-3" />
@@ -424,6 +530,8 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
                   commuteDestination={commuteSettings.destination}
                   isLoadingCommute={isLoadingCommute}
                   showCommuteBadge={commuteActive || isLoadingCommute}
+                  distances={distances}
+                  showDistanceBadge={nearMeActive}
                 />
               )}
             </div>
