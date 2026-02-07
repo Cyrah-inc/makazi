@@ -133,9 +133,12 @@ const PropertyCard = ({
           </h3>
 
           {/* Location */}
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4 shrink-0" />
-            <span className="truncate">{property.town}, {property.county}</span>
+          <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <span className="block truncate">{property.address}</span>
+              <span className="block truncate text-xs">{property.town}, {property.county}</span>
+            </div>
           </div>
 
           {/* Features */}
