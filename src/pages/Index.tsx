@@ -1,15 +1,35 @@
+import { useState, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import HeroSearch from '@/components/HeroSearch';
+import HeroSearch, { HeroFilters } from '@/components/HeroSearch';
 import PropertyGrid from '@/components/PropertyGrid';
 import LocationsSection from '@/components/LocationsSection';
 import FeaturesSection from '@/components/FeaturesSection';
 import CTASection from '@/components/CTASection';
-import { useFeaturedProperties } from '@/hooks/useProperties';
-import { Loader2 } from 'lucide-react';
+import { useHomeProperties, HomeFilters } from '@/hooks/useProperties';
+
+const purposeLabels = {
+  buy: 'For Sale',
+  rent: 'For Rent',
+  airbnb: 'Airbnb Stays',
+};
 
 const Index = () => {
-  const { data: featuredProperties = [], isLoading } = useFeaturedProperties();
+  const [filters, setFilters] = useState<HomeFilters>({ purpose: 'buy' });
+
+  const handleFiltersChange = useCallback((heroFilters: HeroFilters) => {
+    setFilters({
+      purpose: heroFilters.purpose,
+      search: heroFilters.search || undefined,
+      county: heroFilters.county || undefined,
+      propertyType: heroFilters.propertyType || undefined,
+    });
+  }, []);
+
+  const { data: properties = [], isLoading } = useHomeProperties(filters);
+
+  const activeLabel = filters.purpose ? purposeLabels[filters.purpose] : 'Featured';
+  const hasActiveFilters = !!(filters.search || (filters.county && filters.county !== 'all') || (filters.propertyType && filters.propertyType !== 'all'));
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -37,32 +57,25 @@ const Index = () => {
             </div>
 
             <div className="animate-fade-in-up delay-300">
-              <HeroSearch />
+              <HeroSearch onFiltersChange={handleFiltersChange} />
             </div>
-
           </div>
         </section>
 
-
-        {/* Featured Properties */}
+        {/* Properties Section - driven by hero filters */}
         <section className="py-16 md:py-24 bg-muted/30">
           <div className="container">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : featuredProperties.length > 0 ? (
-              <PropertyGrid 
-                properties={featuredProperties}
-                title="Featured Properties"
-                subtitle="Hand-picked properties by our team for exceptional value and quality"
-              />
-            ) : (
-              <div className="text-center py-16">
-                <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-2">Featured Properties</h2>
-                <p className="text-muted-foreground">No properties available yet. Check back soon!</p>
-              </div>
-            )}
+            <PropertyGrid 
+              properties={properties}
+              isLoading={isLoading}
+              title={`${activeLabel} Properties`}
+              subtitle={
+                hasActiveFilters
+                  ? `Showing filtered results${filters.county && filters.county !== 'all' ? ` in ${filters.county}` : ''}`
+                  : `Browse top properties ${filters.purpose === 'buy' ? 'for sale' : filters.purpose === 'rent' ? 'for rent' : 'for short stays'} across Kenya`
+              }
+              emptyMessage={`No ${activeLabel.toLowerCase()} properties found. Try adjusting your filters.`}
+            />
           </div>
         </section>
 

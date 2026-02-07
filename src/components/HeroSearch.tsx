@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,20 +6,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, MapPin, Home } from 'lucide-react';
 import { KENYA_COUNTIES, PropertyPurpose } from '@/types/property';
 
-interface HeroSearchProps {
-  onSearch?: (filters: { search: string; county: string; purpose: PropertyPurpose }) => void;
+export interface HeroFilters {
+  search: string;
+  county: string;
+  purpose: PropertyPurpose;
+  propertyType: string;
 }
 
-const HeroSearch = ({ onSearch }: HeroSearchProps) => {
+interface HeroSearchProps {
+  onFiltersChange?: (filters: HeroFilters) => void;
+}
+
+const HeroSearch = ({ onFiltersChange }: HeroSearchProps) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [county, setCounty] = useState('');
   const [purpose, setPurpose] = useState<PropertyPurpose>('buy');
+  const [propertyType, setPropertyType] = useState('all');
+
+  // Emit filter changes on every interaction
+  useEffect(() => {
+    onFiltersChange?.({ search, county, purpose, propertyType });
+  }, [purpose, county, propertyType, search, onFiltersChange]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (search) params.set('q', search);
-    if (county) params.set('county', county);
+    if (county && county !== 'all') params.set('county', county);
+    if (propertyType && propertyType !== 'all') params.set('type', propertyType);
     params.set('purpose', purpose);
     
     navigate(`/${purpose}?${params.toString()}`);
@@ -84,7 +98,7 @@ const HeroSearch = ({ onSearch }: HeroSearchProps) => {
           {/* Property Type */}
           <div className="flex items-center gap-3 px-4 py-2 md:min-w-[180px]">
             <Home className="h-5 w-5 text-muted-foreground shrink-0" />
-            <Select defaultValue="all">
+            <Select value={propertyType} onValueChange={setPropertyType}>
               <SelectTrigger className="border-0 h-auto p-0 focus:ring-0 focus:ring-offset-0">
                 <SelectValue placeholder="Property Type" />
               </SelectTrigger>
@@ -92,7 +106,10 @@ const HeroSearch = ({ onSearch }: HeroSearchProps) => {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="apartment">Apartment</SelectItem>
                 <SelectItem value="house">House</SelectItem>
+                <SelectItem value="maisonette">Maisonette</SelectItem>
+                <SelectItem value="bungalow">Bungalow</SelectItem>
                 <SelectItem value="villa">Villa</SelectItem>
+                <SelectItem value="townhouse">Townhouse</SelectItem>
                 <SelectItem value="land">Land</SelectItem>
                 <SelectItem value="commercial">Commercial</SelectItem>
               </SelectContent>
