@@ -1,313 +1,250 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Building2, Home, TrendingUp, DollarSign, Search, Loader2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
-const amenitiesList = [
-  'Parking', 'Swimming Pool', 'Gym', 'Security', 'Garden', 
-  'Balcony', 'Air Conditioning', 'Furnished', 'WiFi', 'Laundry'
-];
+interface LandlordListing {
+  landlord_id: string;
+  landlord_name: string | null;
+  landlord_email: string | null;
+  total: number;
+  approved: number;
+  pending: number;
+  sale: number;
+  rent: number;
+  airbnb: number;
+  verification_status: string;
+  subscription_status: string | null;
+}
 
-export default function AdminListingsPage() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+async function fetchListingsOverview() {
+  const [propertiesRes, profilesRes, landlordProfilesRes, subscriptionsRes] = await Promise.all([
+    supabase.from('properties').select('id, landlord_id, property_type, status'),
+    supabase.from('profiles').select('user_id, full_name, email'),
+    supabase.from('landlord_profiles').select('user_id, verification_status'),
+    supabase.from('subscriptions').select('user_id, status, expires_at').order('created_at', { ascending: false }),
+  ]);
+
+  const properties = propertiesRes.data || [];
+  const profileMap = new Map((profilesRes.data || []).map(p => [p.user_id, p]));
+  const verificationMap = new Map((landlordProfilesRes.data || []).map(lp => [lp.user_id, lp.verification_status]));
   
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    property_type: 'rent' as 'sale' | 'rent' | 'airbnb',
-    price: '',
-    bedrooms: '1',
-    bathrooms: '1',
-    area_sqft: '',
-    address: '',
-    city: '',
-    state: '',
-    amenities: [] as string[],
-    status: 'approved' as 'pending' | 'approved',
+  // Get latest subscription per user
+  const subMap = new Map<string, string>();
+  (subscriptionsRes.data || []).forEach(s => {
+    if (!subMap.has(s.user_id)) {
+      subMap.set(s.user_id, s.status);
+    }
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user?.id) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to add a property',
-        variant: 'destructive',
-      });
-      return;
+  // Group by landlord
+  const landlordMap = new Map<string, LandlordListing>();
+  properties.forEach(p => {
+    let entry = landlordMap.get(p.landlord_id);
+    if (!entry) {
+      const profile = profileMap.get(p.landlord_id);
+      entry = {
+        landlord_id: p.landlord_id,
+        landlord_name: profile?.full_name || null,
+        landlord_email: profile?.email || null,
+        total: 0, approved: 0, pending: 0, sale: 0, rent: 0, airbnb: 0,
+        verification_status: verificationMap.get(p.landlord_id) || 'unverified',
+        subscription_status: subMap.get(p.landlord_id) || null,
+      };
+      landlordMap.set(p.landlord_id, entry);
     }
+    entry.total++;
+    if (p.status === 'approved') entry.approved++;
+    if (p.status === 'pending') entry.pending++;
+    if (p.property_type === 'sale') entry.sale++;
+    if (p.property_type === 'rent') entry.rent++;
+    if (p.property_type === 'airbnb') entry.airbnb++;
+  });
 
-    setIsLoading(true);
+  const listings = Array.from(landlordMap.values()).sort((a, b) => b.total - a.total);
 
-    const { error } = await supabase.from('properties').insert({
-      landlord_id: user.id,
-      title: formData.title,
-      description: formData.description,
-      property_type: formData.property_type,
-      price: parseFloat(formData.price),
-      bedrooms: parseInt(formData.bedrooms),
-      bathrooms: parseInt(formData.bathrooms),
-      area_sqft: formData.area_sqft ? parseInt(formData.area_sqft) : null,
-      address: formData.address,
-      city: formData.city,
-      state: formData.state,
-      amenities: formData.amenities,
-      status: formData.status,
-    });
+  const totalCount = properties.length;
+  const saleCount = properties.filter(p => p.property_type === 'sale').length;
+  const rentCount = properties.filter(p => p.property_type === 'rent').length;
+  const airbnbCount = properties.filter(p => p.property_type === 'airbnb').length;
 
-    setIsLoading(false);
+  return { listings, totalCount, saleCount, rentCount, airbnbCount };
+}
 
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Property created!',
-        description: formData.status === 'approved' ? 'Property is now live.' : 'Property submitted for review.',
-      });
-      navigate('/admin/properties');
-    }
+const verificationBadge = (status: string) => {
+  const colors: Record<string, string> = {
+    verified: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    unverified: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+    rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   };
+  return <Badge variant="secondary" className={colors[status] || ''}>{status}</Badge>;
+};
 
-  const toggleAmenity = (amenity: string) => {
-    setFormData(prev => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter(a => a !== amenity)
-        : [...prev.amenities, amenity]
-    }));
+const subBadge = (status: string | null) => {
+  if (!status) return <Badge variant="secondary" className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">None</Badge>;
+  const colors: Record<string, string> = {
+    active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    expired: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   };
+  return <Badge variant="secondary" className={colors[status] || ''}>{status}</Badge>;
+};
+
+export default function AdminListingsPage() {
+  const [search, setSearch] = useState('');
+  const [verFilter, setVerFilter] = useState('all');
+  const [subFilter, setSubFilter] = useState('all');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-listings-overview'],
+    queryFn: fetchListingsOverview,
+  });
+
+  const filtered = (data?.listings || []).filter(l => {
+    const matchSearch = !search ||
+      l.landlord_name?.toLowerCase().includes(search.toLowerCase()) ||
+      l.landlord_email?.toLowerCase().includes(search.toLowerCase());
+    const matchVer = verFilter === 'all' || l.verification_status === verFilter;
+    const matchSub = subFilter === 'all' || (l.subscription_status || 'none') === subFilter;
+    return matchSearch && matchVer && matchSub;
+  });
 
   return (
     <AdminLayout>
-      <div className="p-8 max-w-3xl mx-auto">
-        {/* Header */}
+      <div className="p-8">
         <div className="mb-8">
-          <Link to="/admin/properties" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Properties
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Plus className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-heading font-bold text-foreground">Add New Listing</h1>
-              <p className="text-muted-foreground mt-1">Create a property listing as an admin</p>
-            </div>
-          </div>
+          <h1 className="text-3xl font-heading font-bold text-foreground">Listings Overview</h1>
+          <p className="text-muted-foreground mt-1">Property listings grouped by landlord</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Property title and description</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Property Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g., Modern 3 Bedroom Apartment in Kilimani"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe the property..."
-                  rows={4}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="type">Listing Type *</Label>
-                  <Select value={formData.property_type} onValueChange={(value: 'sale' | 'rent' | 'airbnb') => setFormData(prev => ({ ...prev, property_type: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sale">For Sale</SelectItem>
-                      <SelectItem value="rent">For Rent</SelectItem>
-                      <SelectItem value="airbnb">Airbnb</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="price">Price (KES) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="e.g., 50000"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="status">Publish Status</Label>
-                <Select value={formData.status} onValueChange={(value: 'pending' | 'approved') => setFormData(prev => ({ ...prev, status: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="approved">Publish Immediately</SelectItem>
-                    <SelectItem value="pending">Save as Draft (Pending)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Property Details</CardTitle>
-              <CardDescription>Bedrooms, bathrooms, and size</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="bedrooms">Bedrooms</Label>
-                  <Select value={formData.bedrooms} onValueChange={(value) => setFormData(prev => ({ ...prev, bedrooms: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6].map(n => (
-                        <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="bathrooms">Bathrooms</Label>
-                  <Select value={formData.bathrooms} onValueChange={(value) => setFormData(prev => ({ ...prev, bathrooms: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="area">Area (sq ft)</Label>
-                  <Input
-                    id="area"
-                    type="number"
-                    value={formData.area_sqft}
-                    onChange={(e) => setFormData(prev => ({ ...prev, area_sqft: e.target.value }))}
-                    placeholder="e.g., 1200"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Location</CardTitle>
-              <CardDescription>Where is the property located?</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="address">Address *</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="e.g., 123 Ngong Road"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                    placeholder="e.g., Nairobi"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="state">County/State</Label>
-                  <Input
-                    id="state"
-                    value={formData.state}
-                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                    placeholder="e.g., Nairobi County"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Amenities</CardTitle>
-              <CardDescription>Select available amenities</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {amenitiesList.map(amenity => (
-                  <div key={amenity} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={amenity}
-                      checked={formData.amenities.includes(amenity)}
-                      onCheckedChange={() => toggleAmenity(amenity)}
-                    />
-                    <Label htmlFor={amenity} className="font-normal cursor-pointer">{amenity}</Label>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex gap-4">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => navigate('/admin/properties')}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Property'
-              )}
-            </Button>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        </form>
+        ) : (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Listings</CardTitle>
+                  <Building2 className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{data?.totalCount ?? 0}</div></CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">For Sale</CardTitle>
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{data?.saleCount ?? 0}</div></CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">For Rent</CardTitle>
+                  <Home className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{data?.rentCount ?? 0}</div></CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Airbnb</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-purple-600" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{data?.airbnbCount ?? 0}</div></CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Search by landlord name or email..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+              </div>
+              <Select value={verFilter} onValueChange={setVerFilter}>
+                <SelectTrigger className="w-[170px]"><SelectValue placeholder="Verification" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Verification</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="unverified">Unverified</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={subFilter} onValueChange={setSubFilter}>
+                <SelectTrigger className="w-[170px]"><SelectValue placeholder="Subscription" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subscriptions</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Table */}
+            <div className="bg-card rounded-lg border border-border overflow-x-auto">
+              {filtered.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">No landlords found</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Landlord</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Approved</TableHead>
+                      <TableHead>Pending</TableHead>
+                      <TableHead>Sale / Rent / Airbnb</TableHead>
+                      <TableHead>Verification</TableHead>
+                      <TableHead>Subscription</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map(l => (
+                      <TableRow key={l.landlord_id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{l.landlord_name || 'Unknown'}</p>
+                            <p className="text-xs text-muted-foreground">{l.landlord_email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-bold">{l.total}</TableCell>
+                        <TableCell>{l.approved}</TableCell>
+                        <TableCell>{l.pending}</TableCell>
+                        <TableCell>
+                          <span className="text-sm">{l.sale} / {l.rent} / {l.airbnb}</span>
+                        </TableCell>
+                        <TableCell>{verificationBadge(l.verification_status)}</TableCell>
+                        <TableCell>{subBadge(l.subscription_status)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to={`/admin/properties?landlord=${l.landlord_id}`}>
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              View
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </AdminLayout>
   );
