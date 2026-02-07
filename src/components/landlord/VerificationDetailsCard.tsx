@@ -1,19 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
-import { SingleDocumentUpload } from './SingleDocumentUpload';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { SingleDocumentUpload } from "./SingleDocumentUpload";
 import {
-  Shield, Loader2, BadgeCheck, CheckCircle, Clock, XCircle, AlertCircle,
-  CreditCard as IdCardIcon, FileCheck2
-} from 'lucide-react';
-import { format } from 'date-fns';
+  Shield,
+  Loader2,
+  BadgeCheck,
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle,
+  CreditCard as IdCardIcon,
+  FileCheck2,
+} from "lucide-react";
+import { format } from "date-fns";
 
 interface VerificationDetailsCardProps {
   landlordProfile: any;
@@ -23,24 +30,27 @@ interface VerificationDetailsCardProps {
 }
 
 export function VerificationDetailsCard({
-  landlordProfile, isVerified, isPending, isRejected,
+  landlordProfile,
+  isVerified,
+  isPending,
+  isRejected,
 }: VerificationDetailsCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [idNumber, setIdNumber] = useState('');
-  const [kraPin, setKraPin] = useState('');
-  const [businessPhone, setBusinessPhone] = useState('');
+  const [idNumber, setIdNumber] = useState("");
+  const [kraPin, setKraPin] = useState("");
+  const [businessPhone, setBusinessPhone] = useState("");
   const [idDocument, setIdDocument] = useState<string | null>(null);
   const [kraDocument, setKraDocument] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (landlordProfile) {
-      setIdNumber(landlordProfile.id_number || '');
-      setKraPin(landlordProfile.kra_pin || '');
-      setBusinessPhone(landlordProfile.business_phone || '');
+      setIdNumber(landlordProfile.id_number || "");
+      setKraPin(landlordProfile.kra_pin || "");
+      setBusinessPhone(landlordProfile.business_phone || "");
 
       // Map documents array: index 0 = ID doc, index 1 = KRA doc
       const docs = landlordProfile.documents || [];
@@ -57,17 +67,25 @@ export function VerificationDetailsCard({
 
     if (submit) {
       if (!idNumber || !idDocument) {
-        toast({ title: 'Incomplete', description: 'Please enter your ID number and upload your ID document', variant: 'destructive' });
+        toast({
+          title: "Incomplete",
+          description: "Please enter your ID number and upload your ID document",
+          variant: "destructive",
+        });
         setSaving(false);
         return;
       }
       if (!kraPin || !kraDocument) {
-        toast({ title: 'Incomplete', description: 'Please enter your KRA PIN and upload the tax compliance certificate', variant: 'destructive' });
+        toast({
+          title: "Incomplete",
+          description: "Please enter your KRA PIN and upload relevant KRA Documents",
+          variant: "destructive",
+        });
         setSaving(false);
         return;
       }
       if (!businessPhone) {
-        toast({ title: 'Incomplete', description: 'Please enter your business phone number', variant: 'destructive' });
+        toast({ title: "Incomplete", description: "Please enter your business phone number", variant: "destructive" });
         setSaving(false);
         return;
       }
@@ -79,32 +97,27 @@ export function VerificationDetailsCard({
       business_phone: businessPhone,
       documents,
     };
-    if (submit) updates.verification_status = 'pending';
+    if (submit) updates.verification_status = "pending";
 
     if (landlordProfile) {
-      const { error } = await supabase
-        .from('landlord_profiles')
-        .update(updates)
-        .eq('user_id', user.id);
+      const { error } = await supabase.from("landlord_profiles").update(updates).eq("user_id", user.id);
       if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        toast({ title: "Error", description: error.message, variant: "destructive" });
         setSaving(false);
         return;
       }
     } else {
-      const { error } = await supabase
-        .from('landlord_profiles')
-        .insert({ user_id: user.id, ...updates });
+      const { error } = await supabase.from("landlord_profiles").insert({ user_id: user.id, ...updates });
       if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        toast({ title: "Error", description: error.message, variant: "destructive" });
         setSaving(false);
         return;
       }
     }
 
     setSaving(false);
-    toast({ title: submit ? 'Submitted for review!' : 'Details saved' });
-    queryClient.invalidateQueries({ queryKey: ['landlord-profile'] });
+    toast({ title: submit ? "Submitted for review!" : "Details saved" });
+    queryClient.invalidateQueries({ queryKey: ["landlord-profile"] });
   };
 
   const isDisabled = isPending || isVerified;
@@ -116,9 +129,7 @@ export function VerificationDetailsCard({
           <Shield className="w-5 h-5" /> Verification Details
         </CardTitle>
         <CardDescription>
-          {isVerified
-            ? 'Your account is verified'
-            : 'Complete each step to get verified and start listing properties'}
+          {isVerified ? "Your account is verified" : "Complete each step to get verified and start listing properties"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -145,7 +156,7 @@ export function VerificationDetailsCard({
               <Input
                 id="idNumber"
                 value={idNumber}
-                onChange={e => setIdNumber(e.target.value)}
+                onChange={(e) => setIdNumber(e.target.value)}
                 placeholder="e.g., 12345678"
                 disabled={isDisabled}
               />
@@ -180,7 +191,7 @@ export function VerificationDetailsCard({
               <Input
                 id="kraPin"
                 value={kraPin}
-                onChange={e => setKraPin(e.target.value)}
+                onChange={(e) => setKraPin(e.target.value)}
                 placeholder="e.g., A001234567Z"
                 disabled={isDisabled}
               />
@@ -212,7 +223,7 @@ export function VerificationDetailsCard({
             <Input
               id="businessPhone"
               value={businessPhone}
-              onChange={e => setBusinessPhone(e.target.value)}
+              onChange={(e) => setBusinessPhone(e.target.value)}
               placeholder="e.g., 0722123456"
               disabled={isDisabled}
             />
@@ -231,12 +242,7 @@ export function VerificationDetailsCard({
             >
               Save Draft
             </Button>
-            <Button
-              type="button"
-              onClick={() => handleSave(true)}
-              disabled={saving}
-              className="flex-1 gap-2"
-            >
+            <Button type="button" onClick={() => handleSave(true)} disabled={saving} className="flex-1 gap-2">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BadgeCheck className="w-4 h-4" />}
               Submit for Review
             </Button>
@@ -256,7 +262,7 @@ export function VerificationDetailsCard({
             Account verified
             {landlordProfile?.verified_at && (
               <p className="text-xs mt-1 text-muted-foreground">
-                on {format(new Date(landlordProfile.verified_at), 'MMM d, yyyy')}
+                on {format(new Date(landlordProfile.verified_at), "MMM d, yyyy")}
               </p>
             )}
           </div>
