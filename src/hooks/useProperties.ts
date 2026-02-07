@@ -194,3 +194,61 @@ export const useFeaturedProperties = (requireLocation: boolean = false) => {
     },
   });
 };
+
+export interface HomeFilters {
+  purpose?: PropertyPurpose;
+  search?: string;
+  county?: string;
+  propertyType?: string;
+}
+
+export const useHomeProperties = (filters: HomeFilters) => {
+  return useQuery({
+    queryKey: ['properties', 'home', filters],
+    queryFn: async (): Promise<Property[]> => {
+      let query = supabase
+        .from('properties')
+        .select('*')
+        .eq('status', 'approved');
+
+      // Filter by purpose (maps to property_type in DB)
+      if (filters.purpose) {
+        const dbType = mapPurposeToPropertyType(filters.purpose);
+        query = query.eq('property_type', dbType);
+      }
+
+      // Filter by county (stored in 'state' column)
+      if (filters.county && filters.county !== 'all') {
+        query = query.ilike('state', `%${filters.county}%`);
+      }
+
+      // Filter by property category
+      if (filters.propertyType && filters.propertyType !== 'all') {
+        query = query.eq('property_category', filters.propertyType);
+      }
+
+      // Search by title, address, or city
+      if (filters.search && filters.search.trim()) {
+        const term = `%${filters.search.trim()}%`;
+        query = query.or(`title.ilike.${term},address.ilike.${term},city.ilike.${term}`);
+      }
+
+      query = query.order('views_count', { ascending: false }).limit(12);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching home properties:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      const profileMap = await fetchLandlordProfiles(data.map((p) => p.landlord_id));
+
+      return data.map((dbProperty) => transformProperty(dbProperty, profileMap));
+    },
+  });
+};
