@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LandlordLayout } from '@/components/landlord/LandlordLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,10 +15,15 @@ import { formatCurrency, formatFullPrice, formatDate } from '@/lib/formatters';
 import { getBookingRelativeLabel } from '@/lib/bookingUtils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
+import { useLandlordProfile } from '@/hooks/useLandlordProfile';
+import { VerificationBanner } from '@/components/landlord/VerificationBanner';
+import { SubscriptionPaymentDialog } from '@/components/landlord/SubscriptionPaymentDialog';
 
 export default function LandlordDashboard() {
   const { user } = useAuth();
   const { data: bookings } = useLandlordBookings();
+  const { landlordProfile, needsSubscription } = useLandlordProfile();
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   const { data: properties, isLoading } = useQuery({
     queryKey: ['landlord-properties', user?.id],
@@ -91,6 +97,16 @@ export default function LandlordDashboard() {
   return (
     <LandlordLayout>
       <div className="space-y-6">
+        {/* Verification / Subscription Banner */}
+        {landlordProfile && (
+          <VerificationBanner
+            verificationStatus={landlordProfile.verification_status}
+            verificationNotes={landlordProfile.verification_notes}
+            needsSubscription={needsSubscription}
+            onSubscribe={() => setSubscriptionOpen(true)}
+          />
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -298,6 +314,7 @@ export default function LandlordDashboard() {
           </CardContent>
         </Card>
       </div>
+      <SubscriptionPaymentDialog open={subscriptionOpen} onOpenChange={setSubscriptionOpen} />
     </LandlordLayout>
   );
 }

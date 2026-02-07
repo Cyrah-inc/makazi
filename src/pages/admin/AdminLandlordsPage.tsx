@@ -4,422 +4,318 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { 
-  Search, 
-  MoreHorizontal, 
-  Ban, 
-  CheckCircle,
-  Building2,
-  Loader2,
-  RefreshCw,
-  Eye,
-  Mail,
-  Phone,
-  Home,
-  Star,
-  TrendingUp,
-  Users,
-  BadgeCheck
+import {
+  Search, Ban, CheckCircle, Building2, Loader2, RefreshCw, Eye, Mail, Phone, Home, Star,
+  TrendingUp, Users, BadgeCheck, XCircle, FileText, Image, ExternalLink, CreditCard,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
-type UserStatus = 'active' | 'suspended' | 'pending';
-
-interface LandlordProfile {
-  id: string;
+interface LandlordData {
   user_id: string;
-  email: string | null;
   full_name: string | null;
+  email: string | null;
   phone: string | null;
-  status: UserStatus;
+  status: string;
   created_at: string;
-  // Mock metrics - in production these would come from properties table
+  avatar_url: string | null;
+  // From landlord_profiles
+  id_number: string | null;
+  kra_pin: string | null;
+  business_phone: string | null;
+  documents: string[];
+  verification_status: string;
+  verification_notes: string | null;
+  verified_at: string | null;
+  // Computed
   propertyCount: number;
   totalViews: number;
-  averageRating: number;
-  verified: boolean;
+  averageRating: number | null;
+  // Subscription
+  subscriptionStatus: string | null;
+  subscriptionExpiry: string | null;
 }
 
-const statusColors = {
-  active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  suspended: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+const verificationColors: Record<string, string> = {
+  verified: 'bg-primary/10 text-primary',
+  pending: 'bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold-foreground))]',
+  rejected: 'bg-destructive/10 text-destructive',
+  unverified: 'bg-muted text-muted-foreground',
 };
 
 export default function AdminLandlordsPage() {
-  const [landlords, setLandlords] = useState<LandlordProfile[]>([]);
+  const [landlords, setLandlords] = useState<LandlordData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [verifiedFilter, setVerifiedFilter] = useState<string>('all');
+  const [verificationFilter, setVerificationFilter] = useState<string>('all');
+  const [selectedLandlord, setSelectedLandlord] = useState<LandlordData | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [verifyNotes, setVerifyNotes] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchLandlords = async () => {
     setLoading(true);
     try {
-      // Fetch all users with landlord role
-      const { data: landlordRoles, error: rolesError } = await supabase
+      // Get landlord user IDs
+      const { data: roles } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('role', 'landlord');
+      const landlordIds = roles?.map(r => r.user_id) || [];
+      if (!landlordIds.length) { setLandlords([]); setLoading(false); return; }
 
-      if (rolesError) throw rolesError;
+      // Fetch profiles, landlord_profiles, properties, reviews, subscriptions in parallel
+      const [profilesRes, lpRes, propsRes, reviewsRes, subsRes] = await Promise.all([
+        supabase.from('profiles').select('*').in('user_id', landlordIds),
+        supabase.from('landlord_profiles').select('*').in('user_id', landlordIds),
+        supabase.from('properties').select('id, landlord_id, views_count, status').in('landlord_id', landlordIds),
+        supabase.from('reviews').select('landlord_id, rating').in('landlord_id', landlordIds),
+        supabase.from('subscriptions').select('*').in('user_id', landlordIds),
+      ]);
 
-      const landlordUserIds = landlordRoles?.map(r => r.user_id) || [];
+      const profiles = profilesRes.data || [];
+      const lps = lpRes.data || [];
+      const props = propsRes.data || [];
+      const reviews = reviewsRes.data || [];
+      const subs = subsRes.data || [];
 
-      if (landlordUserIds.length === 0) {
-        setLandlords([]);
-        setLoading(false);
-        return;
-      }
+      const combined: LandlordData[] = profiles.map(p => {
+        const lp = lps.find(l => l.user_id === p.user_id);
+        const landlordProps = props.filter(pr => pr.landlord_id === p.user_id);
+        const landlordReviews = reviews.filter(r => r.landlord_id === p.user_id);
+        const sub = subs.find(s => s.user_id === p.user_id);
 
-      // Fetch profiles for landlords
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('user_id', landlordUserIds)
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Add mock metrics (in production, these would come from properties/reviews tables)
-      const landlordsWithMetrics: LandlordProfile[] = (profiles || []).map((profile, index) => ({
-        ...profile,
-        status: profile.status as UserStatus,
-        propertyCount: Math.floor(Math.random() * 15) + 1,
-        totalViews: Math.floor(Math.random() * 5000) + 100,
-        averageRating: (Math.random() * 2 + 3).toFixed(1) as unknown as number,
-        verified: index % 3 !== 0, // Mock: 2/3 are verified
-      }));
-
-      setLandlords(landlordsWithMetrics);
-    } catch (error: any) {
-      toast({
-        title: 'Error fetching landlords',
-        description: error.message,
-        variant: 'destructive',
+        return {
+          user_id: p.user_id,
+          full_name: p.full_name,
+          email: p.email,
+          phone: p.phone,
+          status: p.status,
+          created_at: p.created_at,
+          avatar_url: p.avatar_url,
+          id_number: lp?.id_number || null,
+          kra_pin: lp?.kra_pin || null,
+          business_phone: lp?.business_phone || null,
+          documents: (lp?.documents as string[]) || [],
+          verification_status: lp?.verification_status || 'unverified',
+          verification_notes: lp?.verification_notes || null,
+          verified_at: lp?.verified_at || null,
+          propertyCount: landlordProps.filter(pr => ['approved', 'pending'].includes(pr.status)).length,
+          totalViews: landlordProps.reduce((s, pr) => s + (pr.views_count || 0), 0),
+          averageRating: landlordReviews.length
+            ? landlordReviews.reduce((s, r) => s + r.rating, 0) / landlordReviews.length
+            : null,
+          subscriptionStatus: sub?.status || null,
+          subscriptionExpiry: sub?.expires_at || null,
+        };
       });
+
+      setLandlords(combined);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchLandlords();
-  }, []);
+  useEffect(() => { fetchLandlords(); }, []);
 
-  const updateLandlordStatus = async (userId: string, newStatus: UserStatus) => {
+  const handleVerify = async (userId: string, action: 'verified' | 'rejected') => {
+    setActionLoading(true);
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update({ status: newStatus })
+        .from('landlord_profiles')
+        .update({
+          verification_status: action,
+          verification_notes: action === 'rejected' ? verifyNotes : null,
+          verified_at: action === 'verified' ? new Date().toISOString() : null,
+          verified_by: action === 'verified' ? user?.id : null,
+        })
         .eq('user_id', userId);
 
       if (error) throw error;
 
-      toast({
-        title: 'Status updated',
-        description: `Landlord ${newStatus === 'suspended' ? 'suspended' : 'activated'}`,
-      });
-
-      setLandlords((prev) =>
-        prev.map((l) => (l.user_id === userId ? { ...l, status: newStatus } : l))
-      );
-    } catch (error: any) {
-      toast({
-        title: 'Error updating status',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: action === 'verified' ? 'Landlord verified!' : 'Verification rejected' });
+      setDetailOpen(false);
+      setVerifyNotes('');
+      fetchLandlords();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const toggleVerification = (userId: string) => {
-    // In production, this would update a verified field in the database
-    setLandlords((prev) =>
-      prev.map((l) => (l.user_id === userId ? { ...l, verified: !l.verified } : l))
-    );
-    
-    const landlord = landlords.find(l => l.user_id === userId);
-    toast({
-      title: landlord?.verified ? 'Verification removed' : 'Landlord verified',
-      description: landlord?.verified 
-        ? 'Landlord verification has been removed' 
-        : 'Landlord has been verified successfully',
-    });
-  };
-
-  // Filter landlords
-  const filteredLandlords = landlords.filter((landlord) => {
-    const matchesSearch =
-      !searchQuery ||
-      landlord.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      landlord.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus = statusFilter === 'all' || landlord.status === statusFilter;
-    const matchesVerified = 
-      verifiedFilter === 'all' || 
-      (verifiedFilter === 'verified' && landlord.verified) ||
-      (verifiedFilter === 'unverified' && !landlord.verified);
-
-    return matchesSearch && matchesStatus && matchesVerified;
+  const filteredLandlords = landlords.filter(l => {
+    const matchesSearch = !searchQuery ||
+      l.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesVerification = verificationFilter === 'all' || l.verification_status === verificationFilter;
+    return matchesSearch && matchesVerification;
   });
 
-  // Summary stats
-  const totalLandlords = landlords.length;
-  const verifiedLandlords = landlords.filter(l => l.verified).length;
-  const activeLandlords = landlords.filter(l => l.status === 'active').length;
-  const totalProperties = landlords.reduce((sum, l) => sum + l.propertyCount, 0);
+  const stats = {
+    total: landlords.length,
+    verified: landlords.filter(l => l.verification_status === 'verified').length,
+    pending: landlords.filter(l => l.verification_status === 'pending').length,
+    subscribed: landlords.filter(l => l.subscriptionStatus === 'active').length,
+  };
+
+  const getSubBadge = (l: LandlordData) => {
+    if (l.subscriptionStatus === 'active' && l.subscriptionExpiry && new Date(l.subscriptionExpiry) > new Date()) {
+      return <Badge className="bg-primary/10 text-primary text-xs">Subscribed</Badge>;
+    }
+    return <Badge variant="secondary" className="text-xs">Free</Badge>;
+  };
 
   return (
     <AdminLayout>
-      <div className="p-8">
-        {/* Header */}
+      <div className="p-4 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">Landlords</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage landlord accounts and verify their profiles
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Landlords</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Manage landlord verification and accounts</p>
           </div>
           <Button onClick={fetchLandlords} variant="outline" className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            Refresh
+            <RefreshCw className="w-4 h-4" /> Refresh
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Landlords
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalLandlords}</div>
-            </CardContent>
+            <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Verified
-              </CardTitle>
-              <BadgeCheck className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Verified</CardTitle>
+              <BadgeCheck className="h-4 w-4 text-primary" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{verifiedLandlords}</div>
-              <p className="text-xs text-muted-foreground">
-                {totalLandlords > 0 ? Math.round((verifiedLandlords / totalLandlords) * 100) : 0}% of total
-              </p>
-            </CardContent>
+            <CardContent><div className="text-2xl font-bold text-primary">{stats.verified}</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+              <TrendingUp className="h-4 w-4 text-accent" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeLandlords}</div>
-              <p className="text-xs text-muted-foreground">
-                {totalLandlords > 0 ? Math.round((activeLandlords / totalLandlords) * 100) : 0}% of total
-              </p>
-            </CardContent>
+            <CardContent><div className="text-2xl font-bold text-accent">{stats.pending}</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Properties
-              </CardTitle>
-              <Home className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Subscribed</CardTitle>
+              <CreditCard className="h-4 w-4 text-primary" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalProperties}</div>
-              <p className="text-xs text-muted-foreground">
-                ~{totalLandlords > 0 ? Math.round(totalProperties / totalLandlords) : 0} per landlord
-              </p>
-            </CardContent>
+            <CardContent><div className="text-2xl font-bold">{stats.subscribed}</div></CardContent>
           </Card>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+            <Input placeholder="Search by name or email..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
-            <SelectTrigger className="w-[150px]">
+          <Select value={verificationFilter} onValueChange={setVerificationFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Verification" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="unverified">Unverified</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="verified">Verified</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Landlords Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        {/* Table */}
+        <div className="bg-card rounded-lg border border-border overflow-x-auto">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : filteredLandlords.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No landlords found
-            </div>
+            <div className="text-center py-12 text-muted-foreground">No landlords found</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Landlord</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Properties</TableHead>
-                  <TableHead>Performance</TableHead>
-                  <TableHead>Joined</TableHead>
+                  <TableHead>Verification</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead className="hidden md:table-cell">Properties</TableHead>
+                  <TableHead className="hidden lg:table-cell">Rating</TableHead>
+                  <TableHead className="hidden lg:table-cell">Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLandlords.map((landlord) => (
-                  <TableRow key={landlord.id}>
+                {filteredLandlords.map(l => (
+                  <TableRow key={l.user_id}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Building2 className="w-5 h-5 text-primary" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{l.full_name || 'No name'}</p>
+                          {l.verification_status === 'verified' && <BadgeCheck className="w-4 h-4 text-primary" />}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground">
-                              {landlord.full_name || 'No name'}
-                            </p>
-                            {landlord.verified && (
-                              <BadgeCheck className="w-4 h-4 text-blue-500" />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            {landlord.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="w-3 h-3" />
-                                {landlord.email}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Mail className="w-3 h-3" /> {l.email}
+                        </p>
+                        {l.business_phone && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {l.business_phone}
+                          </p>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={statusColors[landlord.status]}
-                      >
-                        {landlord.status}
+                      <Badge className={cn('text-xs', verificationColors[l.verification_status] || verificationColors.unverified)}>
+                        {l.verification_status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Home className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{landlord.propertyCount}</span>
+                    <TableCell>{getSubBadge(l)}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex items-center gap-1">
+                        <Home className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="font-medium">{l.propertyCount}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                          <span className="text-sm font-medium">{landlord.averageRating}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Eye className="w-3 h-3" />
-                          {landlord.totalViews.toLocaleString()} views
-                        </div>
-                      </div>
+                    <TableCell className="hidden lg:table-cell">
+                      {l.averageRating ? (
+                        <span className="flex items-center gap-1">
+                          <Star className="w-3 h-3 text-[hsl(var(--gold))] fill-[hsl(var(--gold))]" />
+                          {l.averageRating.toFixed(1)}
+                        </span>
+                      ) : <span className="text-muted-foreground text-xs">N/A</span>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {format(new Date(landlord.created_at), 'MMM d, yyyy')}
+                    <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
+                      {format(new Date(l.created_at), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => toggleVerification(landlord.user_id)}>
-                            <BadgeCheck className="w-4 h-4 mr-2" />
-                            {landlord.verified ? 'Remove Verification' : 'Verify Landlord'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Properties
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel>Account Status</DropdownMenuLabel>
-                          {landlord.status === 'suspended' ? (
-                            <DropdownMenuItem
-                              onClick={() => updateLandlordStatus(landlord.user_id, 'active')}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                              Activate Account
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() => updateLandlordStatus(landlord.user_id, 'suspended')}
-                              className="text-red-600"
-                            >
-                              <Ban className="w-4 h-4 mr-2" />
-                              Suspend Account
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedLandlord(l); setDetailOpen(true); setVerifyNotes(''); }}>
+                        <Eye className="w-4 h-4 mr-1" /> View
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -428,10 +324,140 @@ export default function AdminLandlordsPage() {
           )}
         </div>
 
-        {/* Results Count */}
         <p className="text-sm text-muted-foreground mt-4">
           Showing {filteredLandlords.length} of {landlords.length} landlords
         </p>
+
+        {/* Detail Modal */}
+        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+            {selectedLandlord && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="font-heading">{selectedLandlord.full_name || 'Landlord Details'}</DialogTitle>
+                  <DialogDescription>{selectedLandlord.email}</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 pt-2">
+                  {/* Info grid */}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Phone</p>
+                      <p className="font-medium">{selectedLandlord.phone || selectedLandlord.business_phone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Business Phone</p>
+                      <p className="font-medium">{selectedLandlord.business_phone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">ID Number</p>
+                      <p className="font-medium">{selectedLandlord.id_number || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">KRA PIN</p>
+                      <p className="font-medium">{selectedLandlord.kra_pin || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Properties</p>
+                      <p className="font-medium">{selectedLandlord.propertyCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Avg Rating</p>
+                      <p className="font-medium">{selectedLandlord.averageRating?.toFixed(1) || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  {/* Verification status */}
+                  <div className="flex items-center gap-2">
+                    <Badge className={cn('text-sm', verificationColors[selectedLandlord.verification_status])}>
+                      {selectedLandlord.verification_status}
+                    </Badge>
+                    {getSubBadge(selectedLandlord)}
+                  </div>
+
+                  {/* Documents */}
+                  {selectedLandlord.documents.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-2">Documents ({selectedLandlord.documents.length})</p>
+                      <div className="space-y-2">
+                        {selectedLandlord.documents.map((doc, i) => (
+                          <a
+                            key={i}
+                            href={doc}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                          >
+                            {doc.match(/\.(jpg|jpeg|png)$/i) ? (
+                              <img src={doc} alt="Doc" className="w-10 h-10 rounded object-cover shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
+                                <FileText className="w-5 h-5 text-accent" />
+                              </div>
+                            )}
+                            <span className="text-sm truncate flex-1">Document {i + 1}</span>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Verify / Reject actions */}
+                  {selectedLandlord.verification_status === 'pending' && (
+                    <div className="space-y-3 pt-2 border-t border-border">
+                      <Label>Admin Notes (optional for approval, required for rejection)</Label>
+                      <Textarea
+                        value={verifyNotes}
+                        onChange={e => setVerifyNotes(e.target.value)}
+                        placeholder="Reason for rejection..."
+                        rows={2}
+                      />
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => handleVerify(selectedLandlord.user_id, 'verified')}
+                          disabled={actionLoading}
+                          className="flex-1 gap-2"
+                        >
+                          {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                          Approve
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => {
+                            if (!verifyNotes) {
+                              toast({ title: 'Notes required', description: 'Please provide a reason for rejection', variant: 'destructive' });
+                              return;
+                            }
+                            handleVerify(selectedLandlord.user_id, 'rejected');
+                          }}
+                          disabled={actionLoading}
+                          className="flex-1 gap-2"
+                        >
+                          {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedLandlord.verification_status === 'verified' && (
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm text-primary text-center">
+                      <CheckCircle className="w-5 h-5 mx-auto mb-1" />
+                      Verified {selectedLandlord.verified_at && `on ${format(new Date(selectedLandlord.verified_at), 'MMM d, yyyy')}`}
+                    </div>
+                  )}
+
+                  {selectedLandlord.verification_status === 'rejected' && selectedLandlord.verification_notes && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+                      <strong>Rejected:</strong> {selectedLandlord.verification_notes}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

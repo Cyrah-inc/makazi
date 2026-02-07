@@ -36,6 +36,7 @@ const UserBookingsPage = lazy(() => import("./pages/user/UserBookingsPage"));
 const LandlordAirbnbPage = lazy(() => import("./pages/landlord/LandlordAirbnbPage"));
 const UserBookingDetailPage = lazy(() => import("./pages/user/UserBookingDetailPage"));
 const LandlordBookingDetailPage = lazy(() => import("./pages/landlord/LandlordBookingDetailPage"));
+const LandlordProfilePage = lazy(() => import("./pages/landlord/LandlordProfilePage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App = () => (
                   <Route path="/dashboard/bookings/:id" element={<UserBookingDetailPage />} />
                   <Route path="/landlord/airbnb-bookings" element={<LandlordAirbnbPage />} />
                   <Route path="/landlord/airbnb-bookings/:id" element={<LandlordBookingDetailPage />} />
+                  <Route path="/landlord/profile" element={<LandlordProfilePage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
