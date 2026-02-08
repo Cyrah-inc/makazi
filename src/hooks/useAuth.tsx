@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -23,8 +23,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const roleFetchedForRef = useRef<string | null>(null);
 
   const fetchUserRole = async (userId: string) => {
+    // Deduplicate: skip if we already fetched for this user
+    if (roleFetchedForRef.current === userId) return;
+    roleFetchedForRef.current = userId;
+
     const { data, error } = await supabase
       .from('user_roles')
       .select('role')
@@ -39,6 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let initialSessionHandled = false;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -46,31 +53,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer Supabase calls with setTimeout
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
+          // Only fetch role on sign in or initial — not on token refresh
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            setTimeout(() => fetchUserRole(session.user.id), 0);
+          }
         } else {
           setRole(null);
+          roleFetchedForRef.current = null;
         }
         setLoading(false);
+        initialSessionHandled = true;
       }
     );
 
-    // THEN check for existing session
+    // Fallback: check for existing session if onAuthStateChange hasn't fired
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
+      if (!initialSessionHandled) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserRole(session.user.id);
+        }
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    roleFetchedForRef.current = null; // Reset for new sign-in
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
@@ -91,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setRole(null);
+    roleFetchedForRef.current = null;
   };
 
   const value = {
