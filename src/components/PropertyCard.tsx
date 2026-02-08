@@ -1,10 +1,10 @@
+import React, { memo, useState } from 'react';
 import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star, ImageOff } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';
 import CommuteBadge from './CommuteBadge';
@@ -75,6 +75,7 @@ const PropertyCard = ({
               src={imageUrl}
               alt={property.title}
               loading="lazy"
+              decoding="async"
               className={cn(
                 "w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 transition-transform",
                 imageStatus === 'loaded' ? "opacity-100" : "opacity-0"
@@ -198,4 +199,4 @@ const PropertyCard = ({
   );
 };
 
-export default PropertyCard;
+export default memo(PropertyCard);

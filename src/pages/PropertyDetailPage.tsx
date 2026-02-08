@@ -30,7 +30,7 @@ const PropertyDetailPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('properties')
-        .select('*')
+        .select('id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,landlord_id,latitude,longitude,created_at,updated_at,status')
         .eq('id', id)
         .eq('status', 'approved')
         .maybeSingle();
