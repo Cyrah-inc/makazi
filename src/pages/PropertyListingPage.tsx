@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -104,8 +104,14 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
   }, [nearMeActive, geo]);
 
   // Auto-activate near me when location is received
-  useMemo(() => {
+  const prevGeoRef = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })[0];
+  useEffect(() => {
     if (geo.latitude && geo.longitude && !nearMeActive && !commuteActive) {
+      // Only fire once per new location
+      if (prevGeoRef.lat === geo.latitude && prevGeoRef.lng === geo.longitude) return;
+      prevGeoRef.lat = geo.latitude;
+      prevGeoRef.lng = geo.longitude;
+
       setNearMeActive(true);
       const count = properties.filter(p => {
         if (!p.latitude || !p.longitude) return false;
@@ -114,7 +120,7 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
       }).length;
       toast.success(`Found ${count} properties within ${formatDistance(nearMeSettings.maxDistanceKm)}`);
     }
-  }, [geo.latitude, geo.longitude]);
+  }, [geo.latitude, geo.longitude, nearMeActive, commuteActive, properties, nearMeSettings.maxDistanceKm]);
 
   // Clear all location filters
   const handleClearLocationFilter = useCallback(() => {

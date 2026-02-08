@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -8,17 +8,9 @@ export function useFavorites() {
   const { toast } = useToast();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchedForRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchFavorites();
-    } else {
-      setFavorites([]);
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     if (!user?.id) return;
 
     const { data, error } = await supabase
@@ -32,11 +24,24 @@ export function useFavorites() {
       setFavorites(data.map((f) => f.property_id));
     }
     setLoading(false);
-  };
+  }, [user?.id]);
 
-  const isFavorite = (propertyId: string) => favorites.includes(propertyId);
+  useEffect(() => {
+    if (user?.id) {
+      // Only fetch once per user session
+      if (fetchedForRef.current === user.id) return;
+      fetchedForRef.current = user.id;
+      fetchFavorites();
+    } else {
+      setFavorites([]);
+      setLoading(false);
+      fetchedForRef.current = null;
+    }
+  }, [user?.id, fetchFavorites]);
 
-  const toggleFavorite = async (propertyId: string) => {
+  const isFavorite = useCallback((propertyId: string) => favorites.includes(propertyId), [favorites]);
+
+  const toggleFavorite = useCallback(async (propertyId: string) => {
     if (!user?.id) {
       toast({
         title: 'Sign in required',
@@ -46,10 +51,9 @@ export function useFavorites() {
       return;
     }
 
-    const isFav = isFavorite(propertyId);
+    const isFav = favorites.includes(propertyId);
 
     if (isFav) {
-      // Remove from favorites
       const { error } = await supabase
         .from('favorites')
         .delete()
@@ -57,46 +61,36 @@ export function useFavorites() {
         .eq('property_id', propertyId);
 
       if (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to remove from favorites',
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'Failed to remove from favorites', variant: 'destructive' });
       } else {
         setFavorites((prev) => prev.filter((id) => id !== propertyId));
-        toast({
-          title: 'Removed from favorites',
-          description: 'Property removed from your saved list',
-        });
+        toast({ title: 'Removed from favorites', description: 'Property removed from your saved list' });
       }
     } else {
-      // Add to favorites
       const { error } = await supabase.from('favorites').insert({
         user_id: user.id,
         property_id: propertyId,
       });
 
       if (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to add to favorites',
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'Failed to add to favorites', variant: 'destructive' });
       } else {
         setFavorites((prev) => [...prev, propertyId]);
-        toast({
-          title: 'Added to favorites',
-          description: 'Property saved to your favorites',
-        });
+        toast({ title: 'Added to favorites', description: 'Property saved to your favorites' });
       }
     }
-  };
+  }, [user?.id, favorites, toast]);
+
+  const refetch = useCallback(async () => {
+    fetchedForRef.current = null; // Reset dedup to force refresh
+    await fetchFavorites();
+  }, [fetchFavorites]);
 
   return {
     favorites,
     loading,
     isFavorite,
     toggleFavorite,
-    refetch: fetchFavorites,
+    refetch,
   };
 }
