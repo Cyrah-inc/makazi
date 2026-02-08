@@ -73,7 +73,7 @@ const PropertyGrid = ({
           <div 
             key={property.id} 
             className="animate-fade-in-up opacity-0"
-            style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+            style={{ animationDelay: `${Math.min(index * 50, 400)}ms`, animationFillMode: 'forwards' }}
           >
             <PropertyCard 
               property={property}

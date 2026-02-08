@@ -1,7 +1,7 @@
 import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star, ImageOff } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
@@ -19,7 +19,6 @@ interface PropertyCardProps {
   commuteDestination?: string;
   isLoadingCommute?: boolean;
   showCommuteBadge?: boolean;
-  // Near me
   distanceKm?: number | null;
   showDistanceBadge?: boolean;
 }
@@ -36,7 +35,7 @@ const PropertyCard = ({
   showDistanceBadge = false,
 }: PropertyCardProps) => {
   const { isFavorite, toggleFavorite } = useFavoritesContext();
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
   const favorited = isFavorite(property.id);
 
   const getPrice = () => {
@@ -54,6 +53,7 @@ const PropertyCard = ({
 
   const { price, label } = getPrice();
   const showBadge = showDistanceBadge || showCommuteBadge;
+  const imageUrl = getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality);
 
   return (
     <Link to={`/property/${property.id}`} className="block group">
@@ -65,16 +65,24 @@ const PropertyCard = ({
       >
         {/* Image */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          <img
-            src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)}
-            alt={property.title}
-            loading="lazy"
-            className={cn(
-              "w-full h-full object-cover transition-all duration-500 group-hover:scale-105",
-              imageLoaded ? "opacity-100" : "opacity-0"
-            )}
-            onLoad={() => setImageLoaded(true)}
-          />
+          {imageStatus === 'error' ? (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-muted text-muted-foreground">
+              <ImageOff className="w-8 h-8 mb-1" />
+              <span className="text-xs">No image</span>
+            </div>
+          ) : (
+            <img
+              src={imageUrl}
+              alt={property.title}
+              loading="lazy"
+              className={cn(
+                "w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 transition-transform",
+                imageStatus === 'loaded' ? "opacity-100" : "opacity-0"
+              )}
+              onLoad={() => setImageStatus('loaded')}
+              onError={() => setImageStatus('error')}
+            />
+          )}
           
           {/* Overlay badges */}
           <div className="absolute top-3 left-3 flex flex-wrap gap-2">
