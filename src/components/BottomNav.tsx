@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Search, Heart, MessageSquare, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +13,7 @@ const navItems = [
   { href: '/dashboard', icon: User, label: 'Profile', requiresAuth: true },
 ];
 
-export function BottomNav() {
+function BottomNavInner() {
   const location = useLocation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -61,3 +62,5 @@ export function BottomNav() {
     </nav>
   );
 }
+
+export const BottomNav = memo(BottomNavInner);

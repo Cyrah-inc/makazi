@@ -128,9 +128,11 @@ export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolea
   return useQuery({
     queryKey: ['properties', purpose, requireLocation],
     queryFn: async (): Promise<Property[]> => {
+      const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
+
       let query = supabase
         .from('properties')
-        .select('*')
+        .select(LISTING_COLUMNS)
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
       
@@ -166,9 +168,11 @@ export const useFeaturedProperties = (requireLocation: boolean = false) => {
   return useQuery({
     queryKey: ['properties', 'featured', requireLocation],
     queryFn: async (): Promise<Property[]> => {
+      const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
+
       let query = supabase
         .from('properties')
-        .select('*')
+        .select(LISTING_COLUMNS)
         .eq('status', 'approved')
         .order('views_count', { ascending: false })
         .limit(8);
@@ -206,9 +210,11 @@ export const useHomeProperties = (filters: HomeFilters) => {
   return useQuery({
     queryKey: ['properties', 'home', filters],
     queryFn: async (): Promise<Property[]> => {
+      const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
+
       let query = supabase
         .from('properties')
-        .select('*')
+        .select(LISTING_COLUMNS)
         .eq('status', 'approved');
 
       // Filter by purpose (maps to property_type in DB)
