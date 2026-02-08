@@ -41,7 +41,16 @@ const LandlordBookingDetailPage = lazy(() => import("./pages/landlord/LandlordBo
 const LandlordProfilePage = lazy(() => import("./pages/landlord/LandlordProfilePage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,   // 5 minutes — data stays fresh, no refetch on mount
+      gcTime: 10 * 60 * 1000,     // 10 minutes — keep unused data in cache
+      refetchOnWindowFocus: false, // Don't refetch when user tabs back
+      retry: 1,                   // Only retry once on failure
+    },
+  },
+});
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center">
