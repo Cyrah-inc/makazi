@@ -1,7 +1,8 @@
 import { useCallback, useState, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Loader2, Satellite, Map } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PropertyMapProps {
@@ -22,6 +23,8 @@ const PropertyMapInner = ({
   apiKey
 }: PropertyMapProps & { apiKey: string }) => {
   const [showInfoWindow, setShowInfoWindow] = useState(false);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [mapType, setMapType] = useState<string>('roadmap');
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -30,15 +33,21 @@ const PropertyMapInner = ({
 
   const containerStyle = {
     width: '100%',
-    height,
+    height: '100%',
     borderRadius: '0.5rem',
   };
 
   const center = { lat: latitude, lng: longitude };
 
   const onLoad = useCallback((map: google.maps.Map) => {
-    // Optional: Add any map configuration here
+    setMap(map);
   }, []);
+
+  const toggleMapType = () => {
+    const next = mapType === 'roadmap' ? 'hybrid' : 'roadmap';
+    setMapType(next);
+    map?.setMapTypeId(next);
+  };
 
   if (loadError) {
     return (
@@ -65,17 +74,19 @@ const PropertyMapInner = ({
   }
 
   return (
-    <div className="rounded-lg overflow-hidden border border-border">
+    <div className="relative rounded-lg overflow-hidden border border-border" style={{ height }}>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={center}
-        zoom={15}
+        zoom={16}
         onLoad={onLoad}
         options={{
           streetViewControl: true,
-          mapTypeControl: true,
+          mapTypeControl: false,
           fullscreenControl: true,
           zoomControl: true,
+          gestureHandling: 'cooperative',
+          mapTypeId: mapType as google.maps.MapTypeId,
         }}
       >
         <Marker
@@ -95,6 +106,29 @@ const PropertyMapInner = ({
           </InfoWindow>
         )}
       </GoogleMap>
+
+      {/* Map Type Toggle */}
+      <div className="absolute top-3 left-3 z-10">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={toggleMapType}
+          className="shadow-md bg-background/90 backdrop-blur-sm hover:bg-background gap-1.5 text-xs h-8 px-2.5"
+        >
+          {mapType === 'roadmap' ? (
+            <>
+              <Satellite className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Satellite</span>
+            </>
+          ) : (
+            <>
+              <Map className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Map</span>
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
@@ -115,13 +149,11 @@ export const PropertyMap = ({
     const fetchApiKey = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('get-maps-key');
-        
         if (error) {
           console.error('Error fetching maps key:', error);
           setError('Failed to load Google Maps');
           return;
         }
-        
         if (data?.apiKey) {
           setApiKey(data.apiKey);
         } else {
@@ -134,7 +166,6 @@ export const PropertyMap = ({
         setIsLoading(false);
       }
     };
-
     fetchApiKey();
   }, []);
 
@@ -163,7 +194,6 @@ export const PropertyMap = ({
     );
   }
 
-  // Only render the map component after we have the API key
   return (
     <PropertyMapInner
       latitude={latitude}

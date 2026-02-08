@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, Search, Loader2, Navigation } from 'lucide-react';
+import { MapPin, Search, Loader2, Navigation, Satellite, Map, CheckCircle2, Crosshair } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 interface LocationPickerProps {
   latitude?: number;
@@ -13,17 +14,8 @@ interface LocationPickerProps {
   onLocationChange: (lat: number, lng: number, address?: string) => void;
 }
 
-const containerStyle = {
-  width: '100%',
-  height: '300px',
-  borderRadius: '0.5rem',
-};
-
 // Default center (Nairobi, Kenya)
-const defaultCenter = {
-  lat: -1.2921,
-  lng: 36.8219,
-};
+const defaultCenter = { lat: -1.2921, lng: 36.8219 };
 
 // Libraries array must be static to prevent reloads
 const libraries: ("places")[] = ['places'];
@@ -41,12 +33,22 @@ const LocationPickerMap = ({
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+  const [mapType, setMapType] = useState<google.maps.MapTypeId | string>('roadmap');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
     libraries,
   });
+
+  const containerStyle = {
+    width: '100%',
+    height: '100%',
+    borderRadius: '0.5rem',
+  };
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
@@ -56,22 +58,38 @@ const LocationPickerMap = ({
     setMap(null);
   }, []);
 
+  // Reverse geocode to get address
+  const reverseGeocode = useCallback((lat: number, lng: number) => {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === 'OK' && results?.[0]) {
+        const addr = results[0].formatted_address;
+        setResolvedAddress(addr);
+        onLocationChange(lat, lng, addr);
+      } else {
+        setResolvedAddress(null);
+        onLocationChange(lat, lng);
+      }
+    });
+  }, [onLocationChange]);
+
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (e.latLng) {
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
       setMarker({ lat, lng });
-      onLocationChange(lat, lng);
-      
-      // Reverse geocode to get address
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-        if (status === 'OK' && results?.[0]) {
-          onLocationChange(lat, lng, results[0].formatted_address);
-        }
-      });
+      reverseGeocode(lat, lng);
     }
-  }, [onLocationChange]);
+  }, [reverseGeocode]);
+
+  const handleMarkerDragEnd = useCallback((e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setMarker({ lat, lng });
+      reverseGeocode(lat, lng);
+    }
+  }, [reverseGeocode]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !map) return;
@@ -79,66 +97,95 @@ const LocationPickerMap = ({
     setIsSearching(true);
     const geocoder = new google.maps.Geocoder();
     
+    // Try exact query first, then with Kenya suffix
     geocoder.geocode(
-      { address: searchQuery + ', Kenya' },
+      { address: searchQuery },
       (results, status) => {
-        setIsSearching(false);
         if (status === 'OK' && results?.[0]) {
           const location = results[0].geometry.location;
           const lat = location.lat();
           const lng = location.lng();
+          const addr = results[0].formatted_address;
           
           setMarker({ lat, lng });
+          setResolvedAddress(addr);
           map.panTo({ lat, lng });
-          map.setZoom(15);
-          onLocationChange(lat, lng, results[0].formatted_address);
+          map.setZoom(17);
+          onLocationChange(lat, lng, addr);
+          setIsSearching(false);
+        } else {
+          // Retry with Kenya suffix
+          geocoder.geocode(
+            { address: searchQuery + ', Kenya' },
+            (results2, status2) => {
+              setIsSearching(false);
+              if (status2 === 'OK' && results2?.[0]) {
+                const location = results2[0].geometry.location;
+                const lat = location.lat();
+                const lng = location.lng();
+                const addr = results2[0].formatted_address;
+                
+                setMarker({ lat, lng });
+                setResolvedAddress(addr);
+                map.panTo({ lat, lng });
+                map.setZoom(17);
+                onLocationChange(lat, lng, addr);
+              }
+            }
+          );
         }
       }
     );
   };
 
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-
   const handleGetCurrentLocation = () => {
-    if (navigator.geolocation) {
-      setIsGettingLocation(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setMarker({ lat, lng });
-          map?.panTo({ lat, lng });
-          map?.setZoom(17); // Higher zoom for better accuracy
-          onLocationChange(lat, lng);
-          
-          // Reverse geocode
-          const geocoder = new google.maps.Geocoder();
-          geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-            if (status === 'OK' && results?.[0]) {
-              onLocationChange(lat, lng, results[0].formatted_address);
-            }
-          });
-          setIsGettingLocation(false);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setIsGettingLocation(false);
-        },
-        {
-          enableHighAccuracy: true, // Request high accuracy GPS
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
+    if (!navigator.geolocation) return;
+    
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setMarker({ lat, lng });
+        map?.panTo({ lat, lng });
+        map?.setZoom(18);
+        reverseGeocode(lat, lng);
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setIsGettingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
+  const handleCenterOnMarker = () => {
+    if (marker && map) {
+      map.panTo(marker);
+      map.setZoom(18);
     }
   };
 
-  // Update marker if props change
+  const toggleMapType = () => {
+    const next = mapType === 'roadmap' ? 'hybrid' : 'roadmap';
+    setMapType(next);
+    map?.setMapTypeId(next);
+  };
+
+  // Update marker if props change externally
   useEffect(() => {
     if (latitude && longitude) {
       setMarker({ lat: latitude, lng: longitude });
     }
   }, [latitude, longitude]);
+
+  // Resolve address on initial load if marker exists but no address
+  useEffect(() => {
+    if (isLoaded && marker && !resolvedAddress) {
+      reverseGeocode(marker.lat, marker.lng);
+    }
+  }, [isLoaded, marker, resolvedAddress, reverseGeocode]);
 
   if (loadError) {
     return (
@@ -164,42 +211,49 @@ const LocationPickerMap = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Search Bar */}
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
-            placeholder="Search for a location in Kenya..."
+            ref={searchInputRef}
+            placeholder="Search address, landmark, or area..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
+            className="h-10"
           />
         </div>
         <Button 
           type="button" 
           variant="outline" 
+          size="icon"
           onClick={handleSearch}
           disabled={isSearching}
+          title="Search location"
+          className="h-10 w-10 shrink-0"
         >
           {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
         </Button>
         <Button 
           type="button" 
           variant="outline" 
+          size="icon"
           onClick={handleGetCurrentLocation}
           disabled={isGettingLocation}
-          title="Use my current location (high accuracy)"
+          title="Use my current GPS location"
+          className="h-10 w-10 shrink-0"
         >
           {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
         </Button>
       </div>
 
-      {/* Map */}
-      <div className="rounded-lg overflow-hidden border border-border">
+      {/* Map Container */}
+      <div className="relative rounded-lg overflow-hidden border border-border" style={{ height: 'clamp(300px, 50vw, 420px)' }}>
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={marker || defaultCenter}
-          zoom={marker ? 15 : 12}
+          zoom={marker ? 17 : 12}
           onLoad={onLoad}
           onUnmount={onUnmount}
           onClick={handleMapClick}
@@ -207,41 +261,89 @@ const LocationPickerMap = ({
             streetViewControl: false,
             mapTypeControl: false,
             fullscreenControl: true,
+            zoomControl: true,
+            gestureHandling: 'greedy',
+            mapTypeId: mapType as google.maps.MapTypeId,
           }}
         >
           {marker && (
             <Marker
               position={marker}
               draggable
-              onDragEnd={(e) => {
-                if (e.latLng) {
-                  const lat = e.latLng.lat();
-                  const lng = e.latLng.lng();
-                  setMarker({ lat, lng });
-                  onLocationChange(lat, lng);
-                }
-              }}
+              onDragEnd={handleMarkerDragEnd}
+              animation={google.maps.Animation.DROP}
             />
           )}
         </GoogleMap>
+
+        {/* Map Controls Overlay */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={toggleMapType}
+            className="shadow-md bg-background/90 backdrop-blur-sm hover:bg-background gap-1.5 text-xs h-8 px-2.5"
+          >
+            {mapType === 'roadmap' ? (
+              <>
+                <Satellite className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Satellite</span>
+              </>
+            ) : (
+              <>
+                <Map className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Map</span>
+              </>
+            )}
+          </Button>
+          {marker && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleCenterOnMarker}
+              className="shadow-md bg-background/90 backdrop-blur-sm hover:bg-background gap-1.5 text-xs h-8 px-2.5"
+              title="Center on pin"
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Center</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Tap hint when no marker */}
+        {!marker && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+            <div className="bg-background/90 backdrop-blur-sm text-foreground text-xs px-3 py-1.5 rounded-full shadow-md border border-border flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+              Tap the map to pin location
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Coordinates Display */}
-      {marker && (
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Label className="text-muted-foreground">Latitude:</Label>
-            <span className="font-mono">{marker.lat.toFixed(6)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Label className="text-muted-foreground">Longitude:</Label>
-            <span className="font-mono">{marker.lng.toFixed(6)}</span>
+      {/* Resolved Address Confirmation */}
+      {resolvedAddress && marker && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">Pinned Location</p>
+            <p className="text-xs text-muted-foreground mt-0.5 break-words">{resolvedAddress}</p>
           </div>
         </div>
       )}
 
+      {/* Coordinates Display */}
+      {marker && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>Lat: <span className="font-mono text-foreground">{marker.lat.toFixed(6)}</span></span>
+          <span>Lng: <span className="font-mono text-foreground">{marker.lng.toFixed(6)}</span></span>
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground">
-        Click on the map to pin the property location, or search for an address. You can also drag the marker to adjust.
+        Search for an address, use GPS, or tap the map to pin. Drag the marker to fine-tune. Use satellite view for better accuracy.
       </p>
     </div>
   );
@@ -257,13 +359,11 @@ export const LocationPicker = ({ latitude, longitude, onLocationChange }: Locati
     const fetchApiKey = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('get-maps-key');
-        
         if (error) {
           console.error('Error fetching maps key:', error);
           setError('Failed to load Google Maps');
           return;
         }
-        
         if (data?.apiKey) {
           setApiKey(data.apiKey);
         } else {
@@ -276,7 +376,6 @@ export const LocationPicker = ({ latitude, longitude, onLocationChange }: Locati
         setIsLoading(false);
       }
     };
-
     fetchApiKey();
   }, []);
 
@@ -303,7 +402,6 @@ export const LocationPicker = ({ latitude, longitude, onLocationChange }: Locati
     );
   }
 
-  // Only render the map component after we have the API key
   return (
     <LocationPickerMap
       latitude={latitude}
