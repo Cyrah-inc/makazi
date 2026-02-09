@@ -11,6 +11,8 @@ import {
   MessageSquare, Clock, CheckCircle, Heart, Building2, ArrowRight, 
   User, Camera, Mail, Phone, Pencil, Save, X, Loader2, CalendarDays, DollarSign, MapPin
 } from 'lucide-react';
+import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton';
+import { StatsCardSkeleton } from '@/components/skeletons/StatsCardSkeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGuestBookings } from '@/hooks/useBookings';
@@ -201,8 +203,13 @@ export default function UserDashboard() {
   if (profileLoading) {
     return (
       <UserLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="max-w-6xl mx-auto space-y-6">
+          <ProfileSkeleton />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <StatsCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       </UserLayout>
     );

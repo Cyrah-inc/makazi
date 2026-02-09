@@ -3,7 +3,8 @@ import { UserLayout } from '@/components/user/UserLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Loader2, MapPin, Bed, Bath, Trash2, Eye } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Trash2, Eye } from 'lucide-react';
+import { FavoriteCardSkeleton } from '@/components/skeletons/ListSkeletons';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -83,8 +84,10 @@ export default function UserFavoritesPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <FavoriteCardSkeleton key={i} />
+            ))}
           </div>
         ) : properties.length === 0 ? (
           <Card>

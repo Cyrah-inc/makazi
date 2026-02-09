@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MessageSquare, Clock, CheckCircle, XCircle, Building2, ArrowRight } from 'lucide-react';
+import { InquiryCardSkeleton } from '@/components/skeletons/ListSkeletons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
@@ -112,7 +113,11 @@ export default function UserInquiriesPage() {
 
         {/* Inquiries List */}
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <InquiryCardSkeleton key={i} />
+            ))}
+          </div>
         ) : filteredInquiries.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">

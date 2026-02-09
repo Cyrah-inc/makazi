@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building2, Eye, Plus, Clock, CheckCircle, XCircle, CalendarDays, DollarSign, Users, Star } from 'lucide-react';
+import { StatsCardCompactSkeleton } from '@/components/skeletons/StatsCardSkeleton';
+import { DashboardListItemSkeleton } from '@/components/skeletons/ListSkeletons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useLandlordBookings } from '@/hooks/useBookings';
@@ -275,7 +277,11 @@ export default function LandlordDashboard() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <DashboardListItemSkeleton key={i} />
+                ))}
+              </div>
             ) : recentProperties.length === 0 ? (
               <div className="text-center py-8">
                 <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />

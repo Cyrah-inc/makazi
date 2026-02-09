@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Building2, Eye, Search, Plus, Clock, CheckCircle, XCircle, Pencil, Trash2, Heart } from 'lucide-react';
+import { PropertyManagementCardSkeleton } from '@/components/skeletons/ListSkeletons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
@@ -168,7 +169,11 @@ export default function LandlordPropertiesPage() {
 
         {/* Properties Grid */}
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading...</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <PropertyManagementCardSkeleton key={i} />
+            ))}
+          </div>
         ) : filteredProperties.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
