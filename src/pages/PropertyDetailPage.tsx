@@ -14,8 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   MapPin, Bed, Bath, Car, Maximize, Heart, Share2, Phone, 
   Calendar, ChevronLeft, ChevronRight, Star,
-  Shield, Eye, Home, CheckCircle2, Loader2
+  Shield, Eye, Home, CheckCircle2
 } from 'lucide-react';
+import { PropertyDetailSkeleton } from '@/components/skeletons/PropertyDetailSkeleton';
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
@@ -72,15 +73,7 @@ const PropertyDetailPage = () => {
   } : null;
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
-    );
+    return <PropertyDetailSkeleton />;
   }
 
   if (!property) {

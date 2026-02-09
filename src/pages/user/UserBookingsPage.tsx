@@ -12,7 +12,8 @@ import { getBookingRelativeLabel } from '@/lib/bookingUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, CalendarDays, MapPin, ArrowRight } from 'lucide-react';
+import { CalendarDays, MapPin, ArrowRight } from 'lucide-react';
+import { BookingCardSkeleton } from '@/components/skeletons/ListSkeletons';
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 import { Link } from 'react-router-dom';
@@ -77,8 +78,10 @@ const UserBookingsPage = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <BookingCardSkeleton key={i} />
+            ))}
           </div>
         ) : !filtered?.length ? (
           <Card>
