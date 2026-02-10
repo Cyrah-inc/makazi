@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Property, PropertyPurpose, PropertyType } from '@/types/property';
 import { Tables } from '@/integrations/supabase/types';
 
-type DbProperty = Tables<'properties'> & {
+export type DbProperty = Tables<'properties'> & {
   sale_price?: number | null;
   monthly_rent?: number | null;
   nightly_rate?: number | null;
@@ -54,12 +54,12 @@ const determinePurposes = (dbProperty: DbProperty): PropertyPurpose[] => {
   return purposes;
 };
 
-interface ProfileMap {
+export interface ProfileMap {
   [userId: string]: { full_name: string | null; avatar_url: string | null };
 }
 
 // Batch-fetch all landlord profiles in a single query (fixes N+1)
-const fetchLandlordProfiles = async (landlordIds: string[]): Promise<ProfileMap> => {
+export const fetchLandlordProfiles = async (landlordIds: string[]): Promise<ProfileMap> => {
   if (landlordIds.length === 0) return {};
 
   const uniqueIds = [...new Set(landlordIds)];
@@ -76,7 +76,7 @@ const fetchLandlordProfiles = async (landlordIds: string[]): Promise<ProfileMap>
 };
 
 // Transform database property to frontend Property type (sync, no DB calls)
-const transformProperty = (
+export const transformProperty = (
   dbProperty: DbProperty,
   profileMap: ProfileMap
 ): Property => {
@@ -124,12 +124,12 @@ const transformProperty = (
   };
 };
 
+export const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
+
 export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolean = false) => {
   return useQuery({
     queryKey: ['properties', purpose, requireLocation],
     queryFn: async (): Promise<Property[]> => {
-      const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
-
       let query = supabase
         .from('properties')
         .select(LISTING_COLUMNS)
@@ -168,8 +168,6 @@ export const useFeaturedProperties = (requireLocation: boolean = false) => {
   return useQuery({
     queryKey: ['properties', 'featured', requireLocation],
     queryFn: async (): Promise<Property[]> => {
-      const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
-
       let query = supabase
         .from('properties')
         .select(LISTING_COLUMNS)
@@ -210,8 +208,6 @@ export const useHomeProperties = (filters: HomeFilters) => {
   return useQuery({
     queryKey: ['properties', 'home', filters],
     queryFn: async (): Promise<Property[]> => {
-      const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
-
       let query = supabase
         .from('properties')
         .select(LISTING_COLUMNS)
