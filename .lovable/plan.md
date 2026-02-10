@@ -1,200 +1,82 @@
 
 
-# Admin Revenue, Listings Management, Airbnb Admin & Real Dashboard Stats
+# Homepage Redesign: Category-Based Property Discovery
 
 ## Overview
+Transform the homepage from a single filtered grid into an Airbnb-inspired browsing experience with multiple curated property sections, each telling a different story. The hero stays compact with search, and below it users scroll through distinct, visually engaging categories.
 
-This plan covers four major changes to the admin panel:
+## New Homepage Layout (top to bottom)
 
-1. **Revenue Page** -- A new admin page to track subscription revenue and Airbnb booking commissions (10% service fees), with summary stats and a transaction table.
-2. **Listings Page Redesign** -- Replace the current "Add Listing" form with a proper listings overview showing total property counts grouped by landlord, with filters and search.
-3. **Airbnb Management Page** -- A new admin page showing all Airbnb bookings across all landlords with stats, filters, and detail views.
-4. **Real Dashboard Stats** -- Replace the hardcoded mock numbers on the admin dashboard with live data from Supabase (users, landlords, properties, bookings, views, revenue).
+1. **Hero Section** -- Keep existing but make it more compact (less vertical padding)
+2. **Trending Homes** -- Most viewed properties across all types (sorted by `views_count`)
+3. **Near You** -- Properties in the user's county (detected via geolocation, using existing `useGeolocation` hook). Falls back to "Popular in Nairobi" if location unavailable
+4. **Exotic Getaways** -- Airbnb properties in coastal/scenic counties (Kwale/Diani, Kilifi/Watamu, Narok/Maasai Mara, Nakuru/Naivasha, Laikipia)
+5. **Prime Land & Plots** -- Land listings across Kenya, highlighting investment opportunities
+6. **Urban Apartments** -- Apartments for rent in major cities (Nairobi, Mombasa, Kisumu)
+7. **Family Homes for Sale** -- Houses, villas, bungalows, maisonettes for sale
+8. **Popular Locations** -- Keep existing LocationsSection (visual county grid)
+9. **Why Choose Makazi** -- Keep existing FeaturesSection
+10. **CTA Section** -- Keep existing
 
----
+## Key Design Decisions
 
-## 1. Admin Revenue Page
+- Each category section is a **horizontal scrollable carousel** (not a full grid) -- this is the Airbnb pattern that lets users browse quickly without endless scrolling
+- Each section has a title, subtitle, and a "See all" link that navigates to the relevant listing page with pre-applied filters
+- Categories fetch data independently with React Query (cached, parallel, no waterfall)
+- Sections with zero results are automatically hidden
+- The existing `HeroSearch` is kept but the single `PropertyGrid` below it is removed in favor of the category sections
 
-**New file**: `src/pages/admin/AdminRevenuePage.tsx`
+## Technical Plan
 
-### Content
+### 1. New hook: `useHomeSections` (src/hooks/useHomeSections.ts)
+Create targeted React Query hooks for each homepage section. Each fetches a small set (6-8 properties) with specific filters:
 
-- **Stats cards** at the top:
-  - Total Revenue (subscriptions + Airbnb service fees combined)
-  - Subscription Revenue (sum of all subscription payments with status = active)
-  - Airbnb Commissions (sum of `service_fee` from bookings with status in [paid, checked_in, completed])
-  - Active Subscribers (count of subscriptions with active status and valid expiry)
+- `useTrendingProperties()` -- `ORDER BY views_count DESC LIMIT 8`
+- `useNearbyProperties(county)` -- `WHERE state ILIKE county LIMIT 8`
+- `useExoticGetaways()` -- `WHERE property_type = 'airbnb' AND state IN (coastal/scenic counties) LIMIT 8`
+- `useLandListings()` -- `WHERE property_category = 'land' LIMIT 8`
+- `useUrbanApartments()` -- `WHERE property_category = 'apartment' AND property_type = 'rent' LIMIT 8`
+- `useFamilyHomes()` -- `WHERE property_type = 'sale' AND property_category IN ('house','villa','bungalow','maisonette') LIMIT 8`
 
-- **Revenue breakdown tabs** (using Tabs component):
-  - **Subscriptions Tab**: Table of all subscription records showing landlord name, email, plan, amount (KES 2,000), payment method, status, start/expiry dates
-  - **Airbnb Commissions Tab**: Table of all bookings showing guest name, property title, landlord name, total amount, service fee (platform commission), booking status, dates
+All reuse the existing `transformProperty` and `fetchLandlordProfiles` helpers. Lightweight column selection (same `LISTING_COLUMNS` pattern already in use).
 
-- **Filters**: Search by landlord name, filter by status (active/expired for subscriptions; paid/checked_in/completed for bookings)
+### 2. New component: `PropertyCarousel` (src/components/PropertyCarousel.tsx)
+A reusable horizontal scroll section:
+- Section title + subtitle + "See all" link
+- Horizontally scrollable row of `PropertyCard` components with snap scrolling
+- Left/right scroll arrows on desktop (hidden on mobile where swipe works naturally)
+- Shows `PropertyCardSkeleton` items while loading
+- Renders nothing if the query returns zero results
 
-### Data Sources
-- `subscriptions` table joined with `profiles` for landlord name/email
-- `bookings` table joined with `profiles` (guest + landlord) and `properties` for property title
-- All fetched via admin RLS policies (already in place)
+### 3. Refactored `Index.tsx`
+- Keep `Navbar`, hero with `HeroSearch`, `Footer`
+- Remove the single `PropertyGrid` section
+- Replace with a series of `PropertyCarousel` sections, each wired to its respective hook
+- Use the geolocation hook to detect the user's county for the "Near You" section
+- The hero search button still navigates to `/buy`, `/rent`, or `/airbnb` listing pages with filters (existing behavior)
 
----
+### 4. County detection for "Near You"
+- Use existing `useGeolocation` hook to get lat/lng
+- Reverse-geocode to county using a simple mapping of county center coordinates (no API call needed -- use a static lookup of Kenya county bounding boxes)
+- If geolocation is denied or unavailable, default to "Popular in Nairobi"
 
-## 2. Listings Page Redesign
+### 5. Exotic locations mapping
+Define a curated list of scenic/exotic Kenyan destinations for the Airbnb section:
+- Diani Beach (Kwale)
+- Watamu / Malindi (Kilifi)
+- Maasai Mara (Narok)
+- Lake Naivasha (Nakuru)
+- Nanyuki / Laikipia
+- Lamu
 
-**Modified file**: `src/pages/admin/AdminListingsPage.tsx`
+### Files to Create
+- `src/hooks/useHomeSections.ts` -- All category-specific query hooks
+- `src/components/PropertyCarousel.tsx` -- Reusable horizontal scroll section
 
-Replace the current "Add New Listing" form with a **Listings Overview** page that shows:
+### Files to Modify
+- `src/pages/Index.tsx` -- Replace single grid with multiple carousel sections
+- `src/hooks/useProperties.ts` -- Export `transformProperty`, `fetchLandlordProfiles`, and `LISTING_COLUMNS` so the new hooks can reuse them
 
-### Content
-
-- **Stats cards**: Total Listings, For Sale count, For Rent count, Airbnb count
-- **Landlord Listings Table**: Grouped or flat view showing:
-  - Landlord name and email
-  - Number of properties (total, approved, pending)
-  - Listing types breakdown (sale/rent/airbnb counts)
-  - Verification status badge
-  - Subscription status badge
-  - "View Properties" button that links to `/admin/properties?landlord={id}` (filtered)
-- **Search and filters**: Search by landlord name, filter by verification status, filter by subscription status
-
-### Data Sources
-- `properties` table grouped by `landlord_id`
-- `profiles` for landlord name/email
-- `landlord_profiles` for verification status
-- `subscriptions` for subscription status
-
----
-
-## 3. Admin Airbnb Management Page
-
-**New file**: `src/pages/admin/AdminAirbnbPage.tsx`
-
-### Content
-
-- **Stats cards**:
-  - Total Airbnb Listings (properties with type = airbnb)
-  - Total Bookings (all bookings count)
-  - Platform Revenue (sum of service fees from paid/checked_in/completed bookings)
-  - Active Check-ins (bookings with status = checked_in)
-
-- **Bookings Table**: All bookings across all landlords with:
-  - Guest name and email
-  - Property title and city
-  - Landlord name
-  - Check-in / Check-out dates
-  - Total amount and platform fee
-  - Payment method (M-Pesa/Stripe)
-  - Status with color-coded badges
-  - Booking date
-- **Filters**: Search by guest/landlord/property name, filter by status, filter by payment method
-
-### Data Sources
-- `bookings` table (admin can see all via RLS)
-- `profiles` for guest and landlord details
-- `properties` for property title/city
-
----
-
-## 4. Real Dashboard Stats
-
-**Modified file**: `src/pages/admin/AdminDashboard.tsx`
-
-Replace all hardcoded values with real database queries:
-
-- **Total Users**: Count from `profiles` table
-- **Active Landlords**: Count from `user_roles` where role = landlord
-- **Total Properties**: Count from `properties` table
-- **Total Views**: Sum of `views_count` from `properties` table
-- **Properties for Sale**: Count where property_type = sale and status = approved
-- **Properties for Rent**: Count where property_type = rent and status = approved
-- **Airbnb Listings**: Count where property_type = airbnb and status = approved
-
-All fetched in a single `useQuery` hook with parallel Supabase calls.
-
-**Modified file**: `src/components/admin/RecentActivity.tsx`
-
-Replace mock activities with real data:
-- Recent property submissions (from `properties` ordered by created_at desc, limit 5)
-- Recent user signups (from `profiles` ordered by created_at desc, limit 5)
-- Combine and sort by timestamp, show relative time using `formatDistanceToNow`
-
----
-
-## 5. Sidebar Updates
-
-**Modified file**: `src/components/admin/AdminSidebar.tsx`
-
-Update the sidebar navigation items:
-- Keep: Dashboard, Users, Landlords, Properties
-- Rename "Listings" to "Listings Overview" (same path `/admin/listings`)
-- Add: "Airbnb" with a CalendarDays icon -> `/admin/airbnb`
-- Add: "Revenue" with a DollarSign icon -> `/admin/revenue`
-- Remove or keep Analytics and Settings as placeholders
-
----
-
-## 6. Route Updates
-
-**Modified file**: `src/App.tsx`
-
-Add new routes:
-- `/admin/revenue` -> `AdminRevenuePage`
-- `/admin/airbnb` -> `AdminAirbnbPage`
-
----
-
-## Technical Details
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `src/pages/admin/AdminRevenuePage.tsx` | Revenue tracking for subscriptions and Airbnb commissions |
-| `src/pages/admin/AdminAirbnbPage.tsx` | Admin-level Airbnb booking management |
-
-### Modified Files
-
-| File | Changes |
-|------|---------|
-| `src/pages/admin/AdminDashboard.tsx` | Replace hardcoded stats with live Supabase queries |
-| `src/components/admin/RecentActivity.tsx` | Replace mock data with real recent activities |
-| `src/pages/admin/AdminListingsPage.tsx` | Replace form with listings overview grouped by landlord |
-| `src/components/admin/AdminSidebar.tsx` | Add Revenue and Airbnb nav items |
-| `src/App.tsx` | Add `/admin/revenue` and `/admin/airbnb` routes |
-
-### Data Architecture
-
-All admin queries rely on existing RLS policies that grant admins SELECT access to all tables. No database changes are needed.
-
-```text
-Admin Dashboard
-  +-- profiles (count = total users)
-  +-- user_roles (count landlords)
-  +-- properties (count, sum views, group by type)
-  +-- bookings (for recent activity)
-
-Revenue Page
-  +-- subscriptions (all records, joined with profiles)
-  +-- bookings (service_fee sums, joined with profiles + properties)
-
-Listings Overview
-  +-- properties (grouped by landlord_id)
-  +-- profiles (landlord name/email)
-  +-- landlord_profiles (verification status)
-  +-- subscriptions (subscription status)
-
-Airbnb Management
-  +-- bookings (all records)
-  +-- profiles (guest + landlord details)
-  +-- properties (title, city, type)
-```
-
-### Component Patterns
-
-All new pages follow the existing admin page pattern:
-- Wrapped in `AdminLayout`
-- Stats cards at top using the existing `Card` component pattern (matching `AdminPropertiesPage` style)
-- Table with search + filters below
-- Loading state with `Loader2` spinner
-- Empty state with descriptive message
-- Responsive: tables scroll horizontally on mobile, stats grid adapts from 2-col to 4-col
+### No Database Changes Required
+All categories can be queried using existing columns (`views_count`, `property_type`, `state`, `property_category`). No schema changes needed.
 
