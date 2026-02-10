@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -44,14 +44,14 @@ const Index = () => {
   const urban = useUrbanApartments();
   const family = useFamilyHomes();
 
-  const handleSearch = (filters: HeroFilters) => {
+  const handleSearch = useCallback((filters: HeroFilters) => {
     const params = new URLSearchParams();
     if (filters.search) params.set('q', filters.search);
     if (filters.county && filters.county !== 'all') params.set('county', filters.county);
     if (filters.propertyType && filters.propertyType !== 'all') params.set('type', filters.propertyType);
     params.set('purpose', filters.purpose);
     navigate(`/${filters.purpose}?${params.toString()}`);
-  };
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -78,7 +78,7 @@ const Index = () => {
             </div>
 
             <div className="animate-fade-in-up delay-300">
-              <HeroSearch onFiltersChange={handleSearch} />
+              <HeroSearch />
             </div>
           </div>
         </section>
