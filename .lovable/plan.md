@@ -1,82 +1,73 @@
 
 
-# Homepage Redesign: Category-Based Property Discovery
+# Add Category Carousels to Buy, Rent, and Airbnb Pages
 
 ## Overview
-Transform the homepage from a single filtered grid into an Airbnb-inspired browsing experience with multiple curated property sections, each telling a different story. The hero stays compact with search, and below it users scroll through distinct, visually engaging categories.
+Add curated, horizontally scrollable category carousels to each listing page (Buy, Rent, Airbnb), similar to the homepage redesign. The carousels appear above the existing filter + grid section, giving users quick access to popular subcategories. Each page gets its own tailored set of categories.
 
-## New Homepage Layout (top to bottom)
+## Category Sections Per Page
 
-1. **Hero Section** -- Keep existing but make it more compact (less vertical padding)
-2. **Trending Homes** -- Most viewed properties across all types (sorted by `views_count`)
-3. **Near You** -- Properties in the user's county (detected via geolocation, using existing `useGeolocation` hook). Falls back to "Popular in Nairobi" if location unavailable
-4. **Exotic Getaways** -- Airbnb properties in coastal/scenic counties (Kwale/Diani, Kilifi/Watamu, Narok/Maasai Mara, Nakuru/Naivasha, Laikipia)
-5. **Prime Land & Plots** -- Land listings across Kenya, highlighting investment opportunities
-6. **Urban Apartments** -- Apartments for rent in major cities (Nairobi, Mombasa, Kisumu)
-7. **Family Homes for Sale** -- Houses, villas, bungalows, maisonettes for sale
-8. **Popular Locations** -- Keep existing LocationsSection (visual county grid)
-9. **Why Choose Makazi** -- Keep existing FeaturesSection
-10. **CTA Section** -- Keep existing
+### Buy Page (`/buy`)
+1. **Trending for Sale** -- Most viewed sale properties
+2. **Houses for Sale** -- Houses, villas, bungalows, maisonettes
+3. **Land & Plots** -- Land category properties for sale
+4. **Commercial & Industrial** -- Commercial properties for sale
+5. **Apartments for Sale** -- Apartments listed for sale
+6. **Townhouses & Maisonettes** -- Townhouses and maisonettes for sale
 
-## Key Design Decisions
+### Rent Page (`/rent`)
+1. **Trending Rentals** -- Most viewed rental properties
+2. **Apartments for Rent** -- Apartments in major cities
+3. **Houses for Rent** -- Houses, villas, bungalows for rent
+4. **Luxury Rentals** -- High-end rentals (top-priced)
+5. **Furnished Homes** -- Properties with "Furnished" amenity
+6. **Near You** -- Rentals in user's detected county (geolocation)
 
-- Each category section is a **horizontal scrollable carousel** (not a full grid) -- this is the Airbnb pattern that lets users browse quickly without endless scrolling
-- Each section has a title, subtitle, and a "See all" link that navigates to the relevant listing page with pre-applied filters
-- Categories fetch data independently with React Query (cached, parallel, no waterfall)
-- Sections with zero results are automatically hidden
-- The existing `HeroSearch` is kept but the single `PropertyGrid` below it is removed in favor of the category sections
+### Airbnb Page (`/airbnb`)
+1. **Trending Staycations** -- Most viewed Airbnb listings
+2. **Airbnb Near Me** -- Stays in user's detected county (geolocation)
+3. **Luxury Stays** -- Top-priced Airbnb properties
+4. **Exotic Getaways** -- Airbnb in scenic counties (Diani, Watamu, Mara, Lamu)
+5. **Beach Vibes** -- Coastal counties (Kwale, Kilifi, Mombasa, Lamu)
+6. **Safari & Wildlife** -- Narok, Laikipia, Nakuru, Samburu
 
 ## Technical Plan
 
-### 1. New hook: `useHomeSections` (src/hooks/useHomeSections.ts)
-Create targeted React Query hooks for each homepage section. Each fetches a small set (6-8 properties) with specific filters:
+### 1. New hooks file: `src/hooks/useBuySections.ts`
+Exports 6 hooks, all reusing the shared `fetchAndTransform` pattern from `useHomeSections.ts`. Each targets `property_type = 'sale'` with different `property_category` or sorting filters.
 
-- `useTrendingProperties()` -- `ORDER BY views_count DESC LIMIT 8`
-- `useNearbyProperties(county)` -- `WHERE state ILIKE county LIMIT 8`
-- `useExoticGetaways()` -- `WHERE property_type = 'airbnb' AND state IN (coastal/scenic counties) LIMIT 8`
-- `useLandListings()` -- `WHERE property_category = 'land' LIMIT 8`
-- `useUrbanApartments()` -- `WHERE property_category = 'apartment' AND property_type = 'rent' LIMIT 8`
-- `useFamilyHomes()` -- `WHERE property_type = 'sale' AND property_category IN ('house','villa','bungalow','maisonette') LIMIT 8`
+### 2. New hooks file: `src/hooks/useRentSections.ts`
+Exports 6 hooks targeting `property_type = 'rent'`. Includes a "Luxury Rentals" hook sorted by price descending, and a "Near You" hook using geolocation county detection.
 
-All reuse the existing `transformProperty` and `fetchLandlordProfiles` helpers. Lightweight column selection (same `LISTING_COLUMNS` pattern already in use).
+### 3. New hooks file: `src/hooks/useAirbnbSections.ts`
+Exports 6 hooks targeting `property_type = 'airbnb'`. Includes curated county lists for beach, safari, and exotic categories.
 
-### 2. New component: `PropertyCarousel` (src/components/PropertyCarousel.tsx)
-A reusable horizontal scroll section:
-- Section title + subtitle + "See all" link
-- Horizontally scrollable row of `PropertyCard` components with snap scrolling
-- Left/right scroll arrows on desktop (hidden on mobile where swipe works naturally)
-- Shows `PropertyCardSkeleton` items while loading
-- Renders nothing if the query returns zero results
+### 4. Refactor `fetchAndTransform` to shared location
+Move the `fetchAndTransform` helper and `STALE_TIME` constant out of `useHomeSections.ts` into a shared utility so all section hooks can reuse it without duplication.
 
-### 3. Refactored `Index.tsx`
-- Keep `Navbar`, hero with `HeroSearch`, `Footer`
-- Remove the single `PropertyGrid` section
-- Replace with a series of `PropertyCarousel` sections, each wired to its respective hook
-- Use the geolocation hook to detect the user's county for the "Near You" section
-- The hero search button still navigates to `/buy`, `/rent`, or `/airbnb` listing pages with filters (existing behavior)
+### 5. Update `PropertyListingPage.tsx`
+- Accept an optional `categorySections` prop (a React node rendered above the filter/grid area)
+- This keeps the component generic while letting each page inject its own carousels
 
-### 4. County detection for "Near You"
-- Use existing `useGeolocation` hook to get lat/lng
-- Reverse-geocode to county using a simple mapping of county center coordinates (no API call needed -- use a static lookup of Kenya county bounding boxes)
-- If geolocation is denied or unavailable, default to "Popular in Nairobi"
+### 6. Update `BuyPage.tsx`, `RentPage.tsx`, `AirbnbPage.tsx`
+Each page becomes a small component that:
+- Calls its page-specific section hooks
+- Optionally calls `useGeolocation` + `detectCounty` (for Rent and Airbnb "Near You" sections)
+- Renders a set of `PropertyCarousel` components
+- Passes them as the `categorySections` prop to `PropertyListingPage`
 
-### 5. Exotic locations mapping
-Define a curated list of scenic/exotic Kenyan destinations for the Airbnb section:
-- Diani Beach (Kwale)
-- Watamu / Malindi (Kilifi)
-- Maasai Mara (Narok)
-- Lake Naivasha (Nakuru)
-- Nanyuki / Laikipia
-- Lamu
+## Files to Create
+- `src/hooks/useBuySections.ts`
+- `src/hooks/useRentSections.ts`
+- `src/hooks/useAirbnbSections.ts`
 
-### Files to Create
-- `src/hooks/useHomeSections.ts` -- All category-specific query hooks
-- `src/components/PropertyCarousel.tsx` -- Reusable horizontal scroll section
+## Files to Modify
+- `src/hooks/useHomeSections.ts` -- Export `fetchAndTransform` and `STALE_TIME` for reuse
+- `src/pages/PropertyListingPage.tsx` -- Add `categorySections` prop slot above the grid
+- `src/pages/BuyPage.tsx` -- Wire up Buy-specific carousels
+- `src/pages/RentPage.tsx` -- Wire up Rent-specific carousels with geolocation
+- `src/pages/AirbnbPage.tsx` -- Wire up Airbnb-specific carousels with geolocation
 
-### Files to Modify
-- `src/pages/Index.tsx` -- Replace single grid with multiple carousel sections
-- `src/hooks/useProperties.ts` -- Export `transformProperty`, `fetchLandlordProfiles`, and `LISTING_COLUMNS` so the new hooks can reuse them
-
-### No Database Changes Required
-All categories can be queried using existing columns (`views_count`, `property_type`, `state`, `property_category`). No schema changes needed.
+## No Database Changes Required
+All queries use existing columns (`property_type`, `property_category`, `state`, `price`, `views_count`, `amenities`).
 
