@@ -43,9 +43,10 @@ interface PropertyListingPageProps {
   purpose: PropertyPurpose;
   title: string;
   subtitle: string;
+  categorySections?: React.ReactNode;
 }
 
-const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPageProps) => {
+const PropertyListingPage = ({ purpose, title, subtitle, categorySections }: PropertyListingPageProps) => {
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<PropertyFilter>({
     purpose,
@@ -379,6 +380,9 @@ const PropertyListingPage = ({ purpose, title, subtitle }: PropertyListingPagePr
             onClear={handleClearLocationFilter}
           />
         </div>
+
+        {/* Category Carousels */}
+        {categorySections}
 
         {/* Header with Search */}
         <section className="container mb-6">
