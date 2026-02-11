@@ -8,10 +8,10 @@ import {
   DbProperty,
 } from './useProperties';
 
-const STALE_TIME = 5 * 60 * 1000; // 5 min
+export const STALE_TIME = 5 * 60 * 1000; // 5 min
 
 // Helper: run a query and transform results
-const fetchAndTransform = async (
+export const fetchAndTransform = async (
   queryBuilder: ReturnType<ReturnType<typeof supabase.from>['select']>
 ): Promise<Property[]> => {
   const { data, error } = await queryBuilder;
