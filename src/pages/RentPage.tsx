@@ -9,9 +9,11 @@ import {
   useFurnishedRentals,
   useRentalsNearYou,
 } from '@/hooks/useRentSections';
+import { useProperties } from '@/hooks/useProperties';
 import { detectCounty } from '@/hooks/useHomeSections';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { TrendingUp, Building, Home, Gem, Sofa, Navigation } from 'lucide-react';
+import { formatPrice } from '@/lib/formatters';
+import { TrendingUp, Building, Home, Gem, Sofa, Navigation, Key } from 'lucide-react';
 
 const RentPage = () => {
   const geo = useGeolocation();
@@ -26,6 +28,18 @@ const RentPage = () => {
   const luxury = useLuxuryRentals();
   const furnished = useFurnishedRentals();
   const nearby = useRentalsNearYou(county);
+  const { data: properties = [] } = useProperties('rent', false);
+
+  const stats = useMemo(() => {
+    const avgRent = properties.length > 0
+      ? properties.reduce((sum, p) => sum + (p.monthlyRent || 0), 0) / properties.length
+      : 0;
+    return [
+      { label: 'Available', value: properties.length.toLocaleString() },
+      { label: 'Avg. Rent', value: avgRent > 0 ? formatPrice(avgRent) + '/mo' : '—' },
+      { label: 'Counties', value: new Set(properties.map(p => p.county)).size.toString() },
+    ];
+  }, [properties]);
 
   const sections = (
     <>
@@ -87,6 +101,8 @@ const RentPage = () => {
       purpose="rent"
       title="Properties for Rent"
       subtitle="Discover long-term rentals that match your lifestyle"
+      heroIcon={<Key className="h-5 w-5" />}
+      heroStats={stats}
       categorySections={sections}
     />
   );

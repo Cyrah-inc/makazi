@@ -9,9 +9,11 @@ import {
   useBeachVibes,
   useSafariStays,
 } from '@/hooks/useAirbnbSections';
+import { useProperties } from '@/hooks/useProperties';
 import { detectCounty } from '@/hooks/useHomeSections';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { TrendingUp, Navigation, Gem, Mountain, Waves, Binoculars } from 'lucide-react';
+import { formatPrice } from '@/lib/formatters';
+import { TrendingUp, Navigation, Gem, Mountain, Waves, Binoculars, Palmtree } from 'lucide-react';
 
 const AirbnbPage = () => {
   const geo = useGeolocation();
@@ -26,6 +28,18 @@ const AirbnbPage = () => {
   const exotic = useExoticStays();
   const beach = useBeachVibes();
   const safari = useSafariStays();
+  const { data: properties = [] } = useProperties('airbnb', false);
+
+  const stats = useMemo(() => {
+    const avgRate = properties.length > 0
+      ? properties.reduce((sum, p) => sum + (p.nightlyRate || 0), 0) / properties.length
+      : 0;
+    return [
+      { label: 'Stays', value: properties.length.toLocaleString() },
+      { label: 'From', value: avgRate > 0 ? formatPrice(Math.min(...properties.map(p => p.nightlyRate || Infinity))) + '/night' : '—' },
+      { label: 'Locations', value: new Set(properties.map(p => p.county)).size.toString() },
+    ];
+  }, [properties]);
 
   const sections = (
     <>
@@ -86,7 +100,9 @@ const AirbnbPage = () => {
     <PropertyListingPage
       purpose="airbnb"
       title="Short-term Stays"
-      subtitle="Book unique vacation rentals and experiences"
+      subtitle="Book unique vacation rentals and experiences across Kenya"
+      heroIcon={<Palmtree className="h-5 w-5" />}
+      heroStats={stats}
       categorySections={sections}
     />
   );

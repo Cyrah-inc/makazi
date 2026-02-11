@@ -8,7 +8,10 @@ import {
   useApartmentsForSale,
   useTownhousesForSale,
 } from '@/hooks/useBuySections';
-import { TrendingUp, Home, MapPin, Building2, Building, Castle } from 'lucide-react';
+import { useProperties } from '@/hooks/useProperties';
+import { formatPrice } from '@/lib/formatters';
+import { TrendingUp, Home, MapPin, Building2, Building, Castle, ShoppingCart } from 'lucide-react';
+import { useMemo } from 'react';
 
 const BuyPage = () => {
   const trending = useTrendingForSale();
@@ -17,6 +20,18 @@ const BuyPage = () => {
   const commercial = useCommercialForSale();
   const apartments = useApartmentsForSale();
   const townhouses = useTownhousesForSale();
+  const { data: properties = [] } = useProperties('buy', false);
+
+  const stats = useMemo(() => {
+    const avgPrice = properties.length > 0
+      ? properties.reduce((sum, p) => sum + (p.salePrice || 0), 0) / properties.length
+      : 0;
+    return [
+      { label: 'Listed', value: properties.length.toLocaleString() },
+      { label: 'Avg. Price', value: avgPrice > 0 ? formatPrice(avgPrice) : '—' },
+      { label: 'Counties', value: new Set(properties.map(p => p.county)).size.toString() },
+    ];
+  }, [properties]);
 
   const sections = (
     <>
@@ -76,6 +91,8 @@ const BuyPage = () => {
       purpose="buy"
       title="Properties for Sale"
       subtitle="Find your dream home or investment property in Kenya"
+      heroIcon={<ShoppingCart className="h-5 w-5" />}
+      heroStats={stats}
       categorySections={sections}
     />
   );
