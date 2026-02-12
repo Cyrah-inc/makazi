@@ -8,12 +8,15 @@ import {
   useExoticStays,
   useBeachVibes,
   useSafariStays,
+  useBudgetStays,
+  useMountainRetreats,
+  useCityBreaks,
 } from '@/hooks/useAirbnbSections';
 import { useProperties } from '@/hooks/useProperties';
 import { detectCounty } from '@/hooks/useHomeSections';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { formatPrice } from '@/lib/formatters';
-import { TrendingUp, Navigation, Gem, Mountain, Waves, Binoculars, Palmtree } from 'lucide-react';
+import { TrendingUp, Navigation, Gem, Mountain, Waves, Binoculars, Palmtree, Coins, MountainSnow, Building } from 'lucide-react';
 
 const AirbnbPage = () => {
   const geo = useGeolocation();
@@ -28,6 +31,9 @@ const AirbnbPage = () => {
   const exotic = useExoticStays();
   const beach = useBeachVibes();
   const safari = useSafariStays();
+  const budget = useBudgetStays();
+  const mountain = useMountainRetreats();
+  const cityBreaks = useCityBreaks();
   const { data: properties = [] } = useProperties('airbnb', false);
 
   const stats = useMemo(() => {
@@ -70,12 +76,28 @@ const AirbnbPage = () => {
         icon={<Gem className="h-5 w-5 text-primary" />}
       />
       <PropertyCarousel
+        title="Budget-Friendly Stays"
+        subtitle="Great value getaways that won't break the bank"
+        properties={budget.data ?? []}
+        isLoading={budget.isLoading}
+        seeAllLink="/airbnb"
+        icon={<Coins className="h-5 w-5 text-primary" />}
+      />
+      <PropertyCarousel
         title="Exotic Getaways"
         subtitle="Maasai Mara, Naivasha, Laikipia & more"
         properties={exotic.data ?? []}
         isLoading={exotic.isLoading}
         seeAllLink="/airbnb"
         icon={<Mountain className="h-5 w-5 text-primary" />}
+      />
+      <PropertyCarousel
+        title="Mountain Retreats"
+        subtitle="Highland escapes in Nyeri, Meru & the Rift Valley"
+        properties={mountain.data ?? []}
+        isLoading={mountain.isLoading}
+        seeAllLink="/airbnb"
+        icon={<MountainSnow className="h-5 w-5 text-primary" />}
       />
       <PropertyCarousel
         title="Beach Vibes"
@@ -92,6 +114,14 @@ const AirbnbPage = () => {
         isLoading={safari.isLoading}
         seeAllLink="/airbnb"
         icon={<Binoculars className="h-5 w-5 text-primary" />}
+      />
+      <PropertyCarousel
+        title="City Breaks"
+        subtitle="Urban adventures in Nairobi, Mombasa, Kisumu & Nakuru"
+        properties={cityBreaks.data ?? []}
+        isLoading={cityBreaks.isLoading}
+        seeAllLink="/airbnb"
+        icon={<Building className="h-5 w-5 text-primary" />}
       />
     </>
   );
