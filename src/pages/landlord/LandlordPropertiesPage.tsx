@@ -5,7 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Eye, Search, Plus, Clock, CheckCircle, XCircle, Pencil, Trash2, Heart } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Building2, Eye, Search, Plus, Clock, CheckCircle, XCircle, Pencil, Trash2, Heart, Home, LandPlot, BedDouble, Palmtree, LayoutGrid } from 'lucide-react';
 import { PropertyManagementCardSkeleton } from '@/components/skeletons/ListSkeletons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,11 +28,28 @@ interface PropertyWithFavorites {
   state: string | null;
   price: number;
   property_type: string;
+  property_category: string | null;
   status: string;
   images: string[] | null;
   views_count: number;
   favorites_count: number;
 }
+
+type CategoryTab = {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
+  filter: (p: PropertyWithFavorites) => boolean;
+};
+
+const CATEGORY_TABS: CategoryTab[] = [
+  { value: 'all', label: 'All Properties', icon: <LayoutGrid className="w-4 h-4" />, filter: () => true },
+  { value: 'sale', label: 'Homes on the Market', icon: <Home className="w-4 h-4" />, filter: p => p.property_type === 'sale' && p.property_category !== 'land' && p.property_category !== 'commercial' },
+  { value: 'land', label: 'Land & Plots', icon: <LandPlot className="w-4 h-4" />, filter: p => p.property_type === 'sale' && p.property_category === 'land' },
+  { value: 'commercial', label: 'Commercial Spaces', icon: <Building2 className="w-4 h-4" />, filter: p => p.property_type === 'sale' && p.property_category === 'commercial' },
+  { value: 'rent', label: 'Rental Portfolio', icon: <BedDouble className="w-4 h-4" />, filter: p => p.property_type === 'rent' },
+  { value: 'airbnb', label: 'Short-term Stays', icon: <Palmtree className="w-4 h-4" />, filter: p => p.property_type === 'airbnb' },
+];
 
 export default function LandlordPropertiesPage() {
   const { user } = useAuth();
@@ -40,6 +58,7 @@ export default function LandlordPropertiesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('all');
 
   const { data: properties, isLoading, refetch } = useQuery({
     queryKey: ['landlord-properties', user?.id],
@@ -65,6 +84,7 @@ export default function LandlordPropertiesPage() {
 
       return (data || []).map(property => ({
         ...property,
+        property_category: property.property_category || null,
         favorites_count: favoritesCount[property.id] || 0,
       }));
     },
@@ -152,90 +172,101 @@ export default function LandlordPropertiesPage() {
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-36">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="sale">For Sale</SelectItem>
-                  <SelectItem value="rent">For Rent</SelectItem>
-                  <SelectItem value="airbnb">Airbnb</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Properties Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <PropertyManagementCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : filteredProperties.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No properties found</p>
-              <Link to="/landlord/add-property">
-                <Button className="mt-4">Add Your First Property</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredProperties.map((property) => (
-              <Card key={property.id} className="overflow-hidden group hover:shadow-md transition-shadow">
-                <div className="aspect-video bg-muted relative">
-                  {property.images?.[0] ? (
-                    <img src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)} alt={property.title} loading="lazy" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Building2 className="w-12 h-12 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2">
-                    {getStatusBadge(property.status)}
+        {/* Categorized Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full flex-wrap h-auto gap-1 bg-muted/50 p-1.5">
+            {CATEGORY_TABS.map(tab => {
+              const count = filteredProperties.filter(tab.filter).length;
+              return (
+                <TabsTrigger key={tab.value} value={tab.value} className="gap-2 data-[state=active]:bg-background">
+                  {tab.icon}
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">{count}</Badge>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          {CATEGORY_TABS.map(tab => {
+            const tabProperties = filteredProperties.filter(tab.filter);
+            return (
+              <TabsContent key={tab.value} value={tab.value}>
+                {isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <PropertyManagementCardSkeleton key={i} />
+                    ))}
                   </div>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold truncate">{property.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">{property.city}, {property.state}</p>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="font-bold text-primary">{formatCurrency(property.price)}</span>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        {property.views_count}
-                      </div>
-                      <div className="flex items-center gap-1 text-accent">
-                        <Heart className="w-3 h-3 fill-current" />
-                        {property.favorites_count}
-                      </div>
-                    </div>
+                ) : tabProperties.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No {tab.label.toLowerCase()} found</p>
+                      <Link to="/landlord/add-property">
+                        <Button className="mt-4">Add Your First Property</Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {tabProperties.map((property) => (
+                      <Card key={property.id} className="overflow-hidden group hover:shadow-md transition-shadow">
+                        <div className="aspect-video bg-muted relative">
+                          {property.images?.[0] ? (
+                            <img src={getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality)} alt={property.title} loading="lazy" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Building2 className="w-12 h-12 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2">
+                            {getStatusBadge(property.status)}
+                          </div>
+                        </div>
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold truncate">{property.title}</h3>
+                          <p className="text-sm text-muted-foreground mb-3">{property.city}, {property.state}</p>
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="font-bold text-primary">{formatCurrency(property.price)}</span>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                {property.views_count}
+                              </div>
+                              <div className="flex items-center gap-1 text-accent">
+                                <Heart className="w-3 h-3 fill-current" />
+                                {property.favorites_count}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Link to={`/landlord/edit-property/${property.id}`} className="flex-1">
+                              <Button variant="outline" className="w-full gap-2" size="sm">
+                                <Pencil className="w-3 h-3" /> Edit
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteId(property.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                  <div className="flex gap-2">
-                    <Link to={`/landlord/edit-property/${property.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full gap-2" size="sm">
-                        <Pencil className="w-3 h-3" /> Edit
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeleteId(property.id)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                )}
+              </TabsContent>
+            );
+          })}
+        </Tabs>
 
         {/* Delete Confirmation */}
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

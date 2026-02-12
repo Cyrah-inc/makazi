@@ -69,6 +69,7 @@ interface PropertyWithLandlord {
   title: string;
   description: string | null;
   property_type: PropertyType;
+  property_category: string | null;
   status: PropertyStatus;
   price: number;
   bedrooms: number;
@@ -86,6 +87,23 @@ interface PropertyWithLandlord {
   landlord_email: string | null;
   favorites_count: number;
 }
+
+type CategoryCard = {
+  label: string;
+  icon: React.ReactNode;
+  typeFilter: string;
+  categoryFilter: string;
+  color: string;
+};
+
+const CATEGORY_CARDS: CategoryCard[] = [
+  { label: 'Homes for Sale', icon: <Home className="w-4 h-4" />, typeFilter: 'sale', categoryFilter: 'house', color: 'text-blue-600' },
+  { label: 'Land & Plots', icon: <MapPin className="w-4 h-4" />, typeFilter: 'sale', categoryFilter: 'land', color: 'text-green-600' },
+  { label: 'Commercial', icon: <Building2 className="w-4 h-4" />, typeFilter: 'sale', categoryFilter: 'commercial', color: 'text-orange-600' },
+  { label: 'Rental Homes', icon: <Home className="w-4 h-4" />, typeFilter: 'rent', categoryFilter: 'house', color: 'text-purple-600' },
+  { label: 'Rental Apartments', icon: <Building2 className="w-4 h-4" />, typeFilter: 'rent', categoryFilter: 'apartment', color: 'text-indigo-600' },
+  { label: 'Airbnb Stays', icon: <Heart className="w-4 h-4" />, typeFilter: 'airbnb', categoryFilter: 'all', color: 'text-pink-600' },
+];
 
 const statusColors: Record<PropertyStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
@@ -113,6 +131,7 @@ export default function AdminPropertiesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<string | null>(null);
   const [previewProperty, setPreviewProperty] = useState<PropertyWithLandlord | null>(null);
@@ -158,6 +177,7 @@ export default function AdminPropertiesPage() {
         return {
           ...property,
           property_type: property.property_type as PropertyType,
+          property_category: property.property_category || null,
           status: property.status as PropertyStatus,
           images: property.images || [],
           amenities: property.amenities || [],
@@ -238,6 +258,28 @@ export default function AdminPropertiesPage() {
     }
   };
 
+  const getCategoryCount = (card: CategoryCard) => {
+    return properties.filter(p => {
+      const matchesType = p.property_type === card.typeFilter;
+      if (card.categoryFilter === 'all') return matchesType;
+      if (card.categoryFilter === 'house') {
+        return matchesType && ['house', 'villa', 'bungalow', 'maisonette', 'townhouse'].includes(p.property_category || '');
+      }
+      return matchesType && p.property_category === card.categoryFilter;
+    }).length;
+  };
+
+  const handleCategoryClick = (card: CategoryCard) => {
+    setTypeFilter(card.typeFilter);
+    setCategoryFilter(card.categoryFilter);
+    setStatusFilter('all');
+  };
+
+  const clearCategoryFilter = () => {
+    setTypeFilter('all');
+    setCategoryFilter('all');
+  };
+
   // Filter properties
   const filteredProperties = properties.filter((property) => {
     const matchesSearch =
@@ -250,7 +292,16 @@ export default function AdminPropertiesPage() {
     const matchesStatus = statusFilter === 'all' || property.status === statusFilter;
     const matchesType = typeFilter === 'all' || property.property_type === typeFilter;
 
-    return matchesSearch && matchesStatus && matchesType;
+    let matchesCategory = true;
+    if (categoryFilter !== 'all') {
+      if (categoryFilter === 'house') {
+        matchesCategory = ['house', 'villa', 'bungalow', 'maisonette', 'townhouse'].includes(property.property_category || '');
+      } else {
+        matchesCategory = property.property_category === categoryFilter;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesType && matchesCategory;
   });
 
   // Summary stats
@@ -338,6 +389,28 @@ export default function AdminPropertiesPage() {
               <p className="text-xs text-muted-foreground">All properties</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Category Breakdown */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+          {CATEGORY_CARDS.map((card) => {
+            const isActive = typeFilter === card.typeFilter && categoryFilter === card.categoryFilter;
+            return (
+              <Card
+                key={card.label}
+                className={`cursor-pointer transition-all hover:shadow-md ${isActive ? 'ring-2 ring-primary' : ''}`}
+                onClick={() => isActive ? clearCategoryFilter() : handleCategoryClick(card)}
+              >
+                <CardContent className="p-3 flex items-center gap-2">
+                  <span className={card.color}>{card.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground truncate">{card.label}</p>
+                    <p className="text-lg font-bold">{getCategoryCount(card)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Filters */}

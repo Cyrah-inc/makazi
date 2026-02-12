@@ -115,3 +115,60 @@ export const useSafariStays = () =>
       ),
     staleTime: STALE_TIME,
   });
+
+// 7. Budget-Friendly Stays — cheapest nightly rate
+export const useBudgetStays = () =>
+  useQuery({
+    queryKey: ['airbnb', 'budget'],
+    queryFn: () =>
+      fetchAndTransform(
+        supabase
+          .from('properties')
+          .select(LISTING_COLUMNS)
+          .eq('status', 'approved')
+          .eq('property_type', 'airbnb')
+          .order('nightly_rate', { ascending: true, nullsFirst: false })
+          .limit(8)
+      ),
+    staleTime: STALE_TIME,
+  });
+
+// 8. Mountain Retreats — highland counties
+const HIGHLAND_COUNTIES = ['Nyeri', 'Nyandarua', 'Meru', 'Kericho', 'Elgeyo-Marakwet'];
+
+export const useMountainRetreats = () =>
+  useQuery({
+    queryKey: ['airbnb', 'mountain'],
+    queryFn: () =>
+      fetchAndTransform(
+        supabase
+          .from('properties')
+          .select(LISTING_COLUMNS)
+          .eq('status', 'approved')
+          .eq('property_type', 'airbnb')
+          .in('state', HIGHLAND_COUNTIES)
+          .order('views_count', { ascending: false })
+          .limit(8)
+      ),
+    staleTime: STALE_TIME,
+  });
+
+// 9. City Breaks — major urban centres
+const CITY_NAMES = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru'];
+
+export const useCityBreaks = () =>
+  useQuery({
+    queryKey: ['airbnb', 'city'],
+    queryFn: () =>
+      fetchAndTransform(
+        supabase
+          .from('properties')
+          .select(LISTING_COLUMNS)
+          .eq('status', 'approved')
+          .eq('property_type', 'airbnb')
+          .in('city', CITY_NAMES)
+          .order('views_count', { ascending: false })
+          .limit(8)
+      ),
+    staleTime: STALE_TIME,
+  });
