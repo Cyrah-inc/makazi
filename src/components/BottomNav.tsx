@@ -9,7 +9,7 @@ const navItems = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/rent', icon: Search, label: 'Browse', matchPaths: ['/rent', '/buy', '/airbnb'] },
   { href: '/dashboard/favorites', icon: Heart, label: 'Saved', requiresAuth: true },
-  { href: '/dashboard/messages', icon: MessageSquare, label: 'Messages', requiresAuth: true },
+  { href: '/dashboard/chats', icon: MessageSquare, label: 'Chats', requiresAuth: true },
   { href: '/dashboard', icon: User, label: 'Profile', requiresAuth: true },
 ];
 
