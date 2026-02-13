@@ -30,10 +30,12 @@ const AddPropertyPage = lazy(() => import("./pages/landlord/AddPropertyPage"));
 const EditPropertyPage = lazy(() => import("./pages/landlord/EditPropertyPage"));
 const LandlordInquiriesPage = lazy(() => import("./pages/landlord/LandlordInquiriesPage"));
 const LandlordMessagesPage = lazy(() => import("./pages/landlord/LandlordMessagesPage"));
+const LandlordChatsPage = lazy(() => import("./pages/landlord/LandlordChatsPage"));
 const UserDashboard = lazy(() => import("./pages/user/UserDashboard"));
 const UserInquiriesPage = lazy(() => import("./pages/user/UserInquiriesPage"));
 const UserFavoritesPage = lazy(() => import("./pages/user/UserFavoritesPage"));
 const UserMessagesPage = lazy(() => import("./pages/user/UserMessagesPage"));
+const UserChatsPage = lazy(() => import("./pages/user/UserChatsPage"));
 const UserBookingsPage = lazy(() => import("./pages/user/UserBookingsPage"));
 const LandlordAirbnbPage = lazy(() => import("./pages/landlord/LandlordAirbnbPage"));
 const UserBookingDetailPage = lazy(() => import("./pages/user/UserBookingDetailPage"));
@@ -85,9 +87,11 @@ const App = () => (
                   <Route path="/landlord/edit-property/:id" element={<EditPropertyPage />} />
                   <Route path="/landlord/inquiries" element={<LandlordInquiriesPage />} />
                   <Route path="/landlord/messages" element={<LandlordMessagesPage />} />
+                  <Route path="/landlord/chats" element={<LandlordChatsPage />} />
                   <Route path="/dashboard" element={<UserDashboard />} />
                   <Route path="/dashboard/messages" element={<UserMessagesPage />} />
                   <Route path="/dashboard/inquiries" element={<UserInquiriesPage />} />
+                  <Route path="/dashboard/chats" element={<UserChatsPage />} />
                   <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
                   <Route path="/dashboard/bookings" element={<UserBookingsPage />} />
                   <Route path="/dashboard/bookings/:id" element={<UserBookingDetailPage />} />

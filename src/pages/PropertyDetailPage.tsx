@@ -6,7 +6,8 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { InquiryForm } from '@/components/InquiryForm';
+import { InlineChatInput } from '@/components/chat/InlineChatInput';
+import { WhatsAppButton } from '@/components/chat/WhatsAppButton';
 import { PropertyMap } from '@/components/PropertyMap';
 import { BookingDialog } from '@/components/booking/BookingDialog';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
@@ -40,6 +41,29 @@ const PropertyDetailPage = () => {
       return data;
     },
     enabled: !!id,
+  });
+
+  // Fetch landlord phone for WhatsApp
+  const { data: landlordPhone } = useQuery({
+    queryKey: ['landlord-phone', dbProperty?.landlord_id],
+    queryFn: async () => {
+      const landlordId = dbProperty!.landlord_id;
+      // Try landlord_profiles.business_phone first
+      const { data: lp } = await supabase
+        .from('landlord_profiles')
+        .select('business_phone')
+        .eq('user_id', landlordId)
+        .maybeSingle();
+      if (lp?.business_phone) return lp.business_phone;
+      // Fallback to profiles.phone
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('user_id', landlordId)
+        .maybeSingle();
+      return p?.phone || null;
+    },
+    enabled: !!dbProperty?.landlord_id,
   });
 
   // Transform DB property to display format
@@ -339,21 +363,19 @@ const PropertyDetailPage = () => {
                       )}
 
                       <div className="space-y-3">
-                        {property.landlordId ? (
-                          <InquiryForm
+                        {property.landlordId && (
+                          <InlineChatInput
                             propertyId={property.id}
                             landlordId={property.landlordId}
                             propertyTitle={property.title}
                           />
-                        ) : (
-                          <Button variant="hero" size="lg" className="w-full gap-2">
-                            Contact Landlord
-                          </Button>
                         )}
-                        <Button variant="outline" size="lg" className="w-full gap-2">
-                          <Phone className="h-5 w-5" />
-                          Call Now
-                        </Button>
+                        {landlordPhone && (
+                          <WhatsAppButton
+                            phone={landlordPhone}
+                            propertyTitle={property.title}
+                          />
+                        )}
                         {property.purposes.includes('airbnb') && property.nightlyRate && (
                           <BookingDialog
                             propertyId={property.id}

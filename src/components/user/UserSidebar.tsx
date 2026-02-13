@@ -1,13 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageSquare, Heart, User, LogOut, Mail, CalendarDays } from 'lucide-react';
+import { Home, MessageSquare, Heart, User, LogOut, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', icon: User, label: 'My Profile' },
   { href: '/dashboard/bookings', icon: CalendarDays, label: 'My Bookings' },
-  { href: '/dashboard/messages', icon: Mail, label: 'Messages' },
-  { href: '/dashboard/inquiries', icon: MessageSquare, label: 'My Inquiries' },
+  { href: '/dashboard/chats', icon: MessageSquare, label: 'Chats' },
   { href: '/dashboard/favorites', icon: Heart, label: 'Saved Properties' },
 ];
 
