@@ -1,126 +1,72 @@
 
-# Redesign: Jiji-Inspired Chat System + WhatsApp Integration
 
-## Overview
-Merge the separate "Messages" and "Inquiries" systems into a single, unified chat experience inspired by Jiji.co.ke. On Jiji, when you tap "Chat" on a listing, it opens a conversation thread tied to that product -- no separate inbox/inquiries distinction. We'll replicate this pattern. Additionally, property detail pages for Buy and Rent listings will get a WhatsApp "Chat with us" button that opens a pre-filled WhatsApp message to the landlord.
+# Push Notifications, Typing Indicators, Chat Notifications, and WhatsApp Phone Field
 
-## What Changes
+## 1. Browser Push Notifications for New Messages
 
-### 1. Property Detail Page -- Jiji-Style "Start Chat" + WhatsApp Button
-Replace the current `InquiryForm` dialog with a streamlined inline chat input (like Jiji's "Start chatting to buy this product" bar) and add a WhatsApp button:
+Create a `useChatNotifications` hook that runs globally (mounted in `App.tsx`). It will:
+- Request browser notification permission on first login via `Notification.requestPermission()`
+- Subscribe to Supabase realtime `INSERT` events on the `messages` table filtered by `recipient_id=eq.{userId}`
+- When a new message arrives and the user is NOT on the chat page for that conversation, show a browser `Notification` with the sender's name and message preview
+- Clicking the notification navigates to `/dashboard/chats?c={conversationId}`
+- Only fires when `document.hidden === true` (tab not focused) or user is on a different page
 
-- **Inline Chat Bar**: A text input with a send button directly in the sidebar card. Typing and sending creates a new conversation thread (or appends to an existing one for the same property+user pair).
-- **WhatsApp Button**: A green "Chat on WhatsApp" button that opens `https://wa.me/{phone}?text={pre-filled message}` in a new tab. The phone number comes from the landlord's profile (`business_phone` from `landlord_profiles` table, or `phone` from `profiles` table).
-- **Quick Prompt Chips**: Pre-filled message suggestions like "Is this still available?", "Can I schedule a viewing?", "What's the best price?" -- tapping one fills the input.
+**Files to create:**
+- `src/hooks/useChatNotifications.ts`
 
-### 2. Unified Chat System (Replace Messages + Inquiries Pages)
-Merge the user's `/dashboard/messages` and `/dashboard/inquiries` pages into a single `/dashboard/chats` page. Same for landlord: merge `/landlord/messages` and `/landlord/inquiries` into `/landlord/chats`.
+**Files to modify:**
+- `src/App.tsx` -- mount the hook inside the `AuthProvider` via a small `<ChatNotificationsProvider />` component
 
-**Chat List View (left panel)**:
-- Each conversation is grouped by property + other user pair
-- Shows property thumbnail, other user's name, last message preview, timestamp, unread badge
-- Conversations sorted by most recent message
+## 2. Real-Time Typing Indicators
 
-**Chat Thread View (right panel / full screen on mobile)**:
-- Bubble-style message thread (sent messages right-aligned, received left-aligned)
-- Property context card pinned at the top of the thread
-- Text input at the bottom with send button
-- Real-time updates via Supabase subscription
+Use Supabase Realtime **Presence** (broadcast channel) to share typing state between conversation participants. No database changes needed.
 
-### 3. Data Layer Changes
-The existing `messages` table already has `sender_id`, `recipient_id`, `property_id`, `content`, `subject`, `is_read`, and `created_at`. We'll use it as the conversation store. Inquiries from the `inquiries` table remain for legacy data but new conversations go through `messages`.
+**How it works:**
+- When user types in the chat input, broadcast a `typing` event on a presence channel `typing-{conversationId}`
+- Debounce: send typing=true on keystroke, auto-clear after 2 seconds of inactivity
+- The other participant listens on the same channel and shows a "typing..." indicator below the messages
 
-**New database migration**: Add a `conversation_id` column to `messages` to group messages into threads. A conversation is uniquely identified by `(property_id, participant_1, participant_2)`.
+**Files to create:**
+- `src/hooks/useTypingIndicator.ts` -- handles broadcasting and listening for typing events
 
-New table: `conversations`
-- `id` (uuid, PK)
-- `property_id` (uuid, nullable)
-- `participant_1` (uuid) -- always the lesser UUID for consistency
-- `participant_2` (uuid)
-- `last_message_at` (timestamptz)
-- `last_message_preview` (text)
-- `created_at` (timestamptz)
+**Files to modify:**
+- `src/components/chat/ChatThread.tsx` -- add typing indicator UI below messages, call the hook on input changes
 
-RLS policies:
-- SELECT: where auth.uid() = participant_1 OR auth.uid() = participant_2
-- INSERT: where auth.uid() = participant_1 OR auth.uid() = participant_2
+## 3. Chat Notification Badge (Unread Count in Nav)
 
-Update `messages` table: add `conversation_id` (uuid, FK to conversations).
+Show an unread message count badge on the "Chats" nav item in sidebars and bottom nav.
 
-### 4. Navigation Updates
-- **User Sidebar**: Replace "Messages" and "My Inquiries" with a single "Chats" item
-- **Landlord Sidebar**: Replace "Messages" and "Inquiries" with a single "Chats" item
-- **Bottom Nav**: "Messages" label stays but routes to `/dashboard/chats`
-- **Routes**: Add `/dashboard/chats` and `/landlord/chats`, keep old routes as redirects
+**Files to create:**
+- `src/hooks/useUnreadCount.ts` -- subscribes to realtime message inserts and queries unread count from `messages` table where `recipient_id = user.id AND is_read = false`
 
-## Technical Details
+**Files to modify:**
+- `src/components/BottomNav.tsx` -- show red badge with count on the Chats icon
+- `src/components/user/UserSidebar.tsx` -- show badge next to "Chats" nav item
+- `src/components/landlord/LandlordSidebar.tsx` -- show badge next to "Chats" nav item
 
-### Database Migration
-Create `conversations` table and add `conversation_id` to `messages`:
+## 4. Landlord Business Phone in Profile (WhatsApp Enablement)
 
+The `business_phone` field already exists in the `landlord_profiles` table and is already editable in the `VerificationDetailsCard` component. The `PropertyDetailPage` already queries for it and conditionally shows the `WhatsAppButton`. No database changes needed.
+
+However, the current RLS on `landlord_profiles` only allows landlords and admins to SELECT their own profiles. The `PropertyDetailPage` fetches the landlord's `business_phone` as a regular user, which will fail due to RLS.
+
+**Fix needed:** Add an RLS policy allowing authenticated users to read the `business_phone` column from `landlord_profiles` for verified landlords. Since Postgres RLS is row-level (not column-level), we'll add a SELECT policy that allows any authenticated user to read rows where `verification_status = 'verified'`.
+
+**Database migration:**
 ```sql
-CREATE TABLE conversations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id uuid REFERENCES properties(id) ON DELETE SET NULL,
-  participant_1 uuid NOT NULL,
-  participant_2 uuid NOT NULL,
-  last_message_at timestamptz DEFAULT now(),
-  last_message_preview text,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(property_id, participant_1, participant_2)
-);
-
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own conversations"
-  ON conversations FOR SELECT
-  USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
-
-CREATE POLICY "Users can create conversations"
-  ON conversations FOR INSERT
-  WITH CHECK (auth.uid() = participant_1 OR auth.uid() = participant_2);
-
-CREATE POLICY "Users can update own conversations"
-  ON conversations FOR UPDATE
-  USING (auth.uid() = participant_1 OR auth.uid() = participant_2);
-
-CREATE POLICY "Admins can view all conversations"
-  ON conversations FOR SELECT
-  USING (has_role(auth.uid(), 'admin'));
-
-ALTER TABLE messages ADD COLUMN conversation_id uuid REFERENCES conversations(id);
+CREATE POLICY "Public can view verified landlord profiles"
+  ON landlord_profiles FOR SELECT
+  USING (verification_status = 'verified');
 ```
 
-### Files to Create
-- `src/components/chat/ChatList.tsx` -- Conversation list component (property thumbnail, last message, unread count)
-- `src/components/chat/ChatThread.tsx` -- Bubble-style message thread with input
-- `src/components/chat/ChatPropertyCard.tsx` -- Small property context card at top of thread
-- `src/components/chat/QuickPrompts.tsx` -- Quick message chips ("Is this available?", etc.)
-- `src/components/chat/WhatsAppButton.tsx` -- Green WhatsApp CTA button
-- `src/components/chat/InlineChatInput.tsx` -- Inline chat bar for property detail sidebar
-- `src/hooks/useConversations.ts` -- Hook for fetching/managing conversations
-- `src/hooks/useChat.ts` -- Hook for fetching messages in a thread + sending
-- `src/pages/user/UserChatsPage.tsx` -- Unified user chat page
-- `src/pages/landlord/LandlordChatsPage.tsx` -- Unified landlord chat page
+## Technical Summary
 
-### Files to Modify
-- `src/pages/PropertyDetailPage.tsx` -- Replace InquiryForm with InlineChatInput + WhatsAppButton + QuickPrompts
-- `src/components/user/UserSidebar.tsx` -- Merge Messages + Inquiries into single "Chats" nav item
-- `src/components/landlord/LandlordSidebar.tsx` -- Merge Messages + Inquiries into single "Chats" nav item
-- `src/components/BottomNav.tsx` -- Update Messages link to /dashboard/chats
-- `src/App.tsx` -- Add new chat routes, redirect old message/inquiry routes
-- `src/types/message.ts` -- Add Conversation type
+| Change | Type | Files |
+|--------|------|-------|
+| Browser push notifications | New hook + provider | `useChatNotifications.ts`, `App.tsx` |
+| Typing indicators | New hook + UI update | `useTypingIndicator.ts`, `ChatThread.tsx` |
+| Unread badge in nav | New hook + UI updates | `useUnreadCount.ts`, `BottomNav.tsx`, `UserSidebar.tsx`, `LandlordSidebar.tsx` |
+| WhatsApp RLS fix | DB migration | Migration SQL |
 
-### WhatsApp Integration
-The WhatsApp button constructs a URL like:
-```
-https://wa.me/254XXXXXXXXX?text=Hi, I'm interested in [Property Title] listed on Makazi. Is it still available?
-```
-The phone number is fetched from `landlord_profiles.business_phone` or `profiles.phone`. If no phone is available, the WhatsApp button is hidden and only in-app chat is shown.
+No new tables or columns are required. One new RLS policy is needed for the WhatsApp feature to work correctly.
 
-### Chat Thread UI (Jiji-inspired)
-- Messages displayed as chat bubbles (green/primary for sent, gray/muted for received)
-- Timestamps shown between message groups (grouped by day)
-- Property card pinned at top showing thumbnail, title, price
-- Input bar fixed at bottom with text field + send icon
-- Mobile: full-screen thread view with back arrow; Desktop: side-by-side list + thread
