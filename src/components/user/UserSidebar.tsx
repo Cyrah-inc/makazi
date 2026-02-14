@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageSquare, Heart, User, LogOut, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 
 const navItems = [
   { href: '/dashboard', icon: User, label: 'My Profile' },
@@ -18,6 +19,7 @@ export function UserSidebar({ onNavigate }: UserSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
+  const unreadCount = useUnreadCount();
 
   const handleNavClick = () => {
     onNavigate?.();
@@ -61,7 +63,12 @@ export function UserSidebar({ onNavigate }: UserSidebarProps) {
               )}
             >
               <item.icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
+              <span className="font-medium flex-1">{item.label}</span>
+              {item.label === 'Chats' && unreadCount > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </Link>
           );
         })}

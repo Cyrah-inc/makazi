@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { BottomNav } from "@/components/BottomNav";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
+import { ChatNotificationsProvider } from "@/components/ChatNotificationsProvider";
 
 // Lazy-loaded pages for code splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -59,6 +60,7 @@ const PageLoader = () => <PageSkeleton />;
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <ChatNotificationsProvider />
       <FavoritesProvider>
         <TooltipProvider>
           <Toaster />
