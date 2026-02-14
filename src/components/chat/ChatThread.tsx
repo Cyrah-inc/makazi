@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChatPropertyCard } from './ChatPropertyCard';
 import { cn } from '@/lib/utils';
 import { Send, Loader2, ArrowLeft, MessageSquare } from 'lucide-react';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { format, isToday, isYesterday } from 'date-fns';
 import type { Conversation } from '@/types/conversation';
 
@@ -28,6 +29,7 @@ export function ChatThread({ conversation, onBack }: ChatThreadProps) {
   const { messages, loading, sendMessage } = useChat(conversation?.id || null);
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { isOtherTyping, sendTyping } = useTypingIndicator(conversation?.id || null);
 
   useEffect(() => {
     // Scroll to bottom on new messages
@@ -142,6 +144,16 @@ export function ChatThread({ conversation, onBack }: ChatThreadProps) {
             </div>
           ))
         )}
+        {isOtherTyping && (
+          <div className="flex items-center gap-2 px-2">
+            <div className="flex gap-1">
+              <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
+              <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
+              <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
+            </div>
+            <span className="text-xs text-muted-foreground">typing...</span>
+          </div>
+        )}
       </div>
 
       {/* Input */}
@@ -150,7 +162,7 @@ export function ChatThread({ conversation, onBack }: ChatThreadProps) {
           <Input
             placeholder="Type a message..."
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => { setInput(e.target.value); sendTyping(); }}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             disabled={sending}
           />

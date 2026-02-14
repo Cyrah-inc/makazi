@@ -4,6 +4,7 @@ import { Home, Search, Heart, MessageSquare, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
@@ -17,6 +18,7 @@ function BottomNavInner() {
   const location = useLocation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const unreadCount = useUnreadCount();
 
   // Don't render on desktop or in dashboard pages (they have their own nav)
   const isDashboardPage = location.pathname.startsWith('/dashboard') || 
@@ -51,7 +53,14 @@ function BottomNavInner() {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <item.icon className={cn('w-5 h-5', isActive && 'scale-110')} strokeWidth={isActive ? 2.5 : 2} />
+              <div className="relative">
+                <item.icon className={cn('w-5 h-5', isActive && 'scale-110')} strokeWidth={isActive ? 2.5 : 2} />
+                {item.label === 'Chats' && unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
               <span className={cn('text-[10px] font-medium', isActive && 'font-semibold')}>
                 {item.label}
               </span>

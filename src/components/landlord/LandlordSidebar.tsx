@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useLandlordProfile } from '@/hooks/useLandlordProfile';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 
 const navGroups = [
   {
@@ -44,6 +45,7 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { landlordProfile } = useLandlordProfile();
+  const unreadCount = useUnreadCount();
 
   const verificationBadge = (status?: string) => {
     if (!status || status === 'unverified') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-accent/10 text-accent">Unverified</Badge>;
@@ -102,6 +104,11 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
                   >
                     <item.icon className="w-[18px] h-[18px] shrink-0" />
                     <span className="font-medium text-sm flex-1">{item.label}</span>
+                    {item.label === 'Chats' && unreadCount > 0 && (
+                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                     {item.href === '/landlord/profile' && verificationBadge(landlordProfile?.verification_status)}
                     {!isActive && item.href !== '/landlord/profile' && (
                       <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />
