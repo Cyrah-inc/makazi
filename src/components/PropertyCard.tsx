@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';
 import CommuteBadge from './CommuteBadge';
-import { TransportMode } from './CommuteChecker';
+import { TransportMode } from './LocationFilterBar';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 interface PropertyCardProps {

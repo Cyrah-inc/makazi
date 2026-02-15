@@ -1,7 +1,7 @@
 import { Car, Bus, PersonStanding, MapPinOff, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TransportMode } from './CommuteChecker';
+import { TransportMode } from './LocationFilterBar';
 
 type BadgeMode = 'commute' | 'nearme';
 
