@@ -1,72 +1,137 @@
 
 
-# Push Notifications, Typing Indicators, Chat Notifications, and WhatsApp Phone Field
+# Redesign: Buy, Rent & Airbnb Listing Pages
 
-## 1. Browser Push Notifications for New Messages
+## Overview
 
-Create a `useChatNotifications` hook that runs globally (mounted in `App.tsx`). It will:
-- Request browser notification permission on first login via `Notification.requestPermission()`
-- Subscribe to Supabase realtime `INSERT` events on the `messages` table filtered by `recipient_id=eq.{userId}`
-- When a new message arrives and the user is NOT on the chat page for that conversation, show a browser `Notification` with the sender's name and message preview
-- Clicking the notification navigates to `/dashboard/chats?c={conversationId}`
-- Only fires when `document.hidden === true` (tab not focused) or user is on a different page
+A fresh layout that replaces the current top-down hero + floating sidebar pattern with a modern split-panel design. The hero becomes a slim, search-focused bar with integrated location/proximity controls (replacing the stats). All filters (including the commute checker) move to a persistent left sidebar. The result is a cleaner, more usable layout inspired by property portals like Zillow and Rightmove.
 
-**Files to create:**
-- `src/hooks/useChatNotifications.ts`
+## What Changes
 
-**Files to modify:**
-- `src/App.tsx` -- mount the hook inside the `AuthProvider` via a small `<ChatNotificationsProvider />` component
+### 1. Hero Section Redesign -- "Search & Location Bar"
 
-## 2. Real-Time Typing Indicators
+Remove the stats (Listed, Avg. Price, Counties) from the hero. Replace with:
 
-Use Supabase Realtime **Presence** (broadcast channel) to share typing state between conversation participants. No database changes needed.
+- **Compact Header**: Icon + title + subtitle (keep existing)
+- **Search Input**: Stays as-is
+- **Location Quick Actions**: Two prominent action buttons replacing the stats area:
+  - "Near Me" pill button -- one tap activates GPS-based proximity filtering with a radius selector dropdown
+  - "Commute Time" pill button -- opens an inline commute destination input with transport mode selector
+- **Active Location Indicator**: When a location filter is active, show a dismissible chip below the search bar summarizing the filter (e.g., "Within 15 km of you" or "30 min transit to Westlands")
 
-**How it works:**
-- When user types in the chat input, broadcast a `typing` event on a presence channel `typing-{conversationId}`
-- Debounce: send typing=true on keystroke, auto-clear after 2 seconds of inactivity
-- The other participant listens on the same channel and shows a "typing..." indicator below the messages
+This merges the current `CommuteBar` (mobile) and `CommuteChecker` (desktop sidebar) directly into the hero, making it the single entry point for location-based filtering on all screen sizes.
 
-**Files to create:**
-- `src/hooks/useTypingIndicator.ts` -- handles broadcasting and listening for typing events
+### 2. Sidebar Filter Panel -- Always Visible on Desktop
 
-**Files to modify:**
-- `src/components/chat/ChatThread.tsx` -- add typing indicator UI below messages, call the hook on input changes
+Move ALL filters into a sticky left sidebar on desktop (already partially done, but now the CommuteChecker lives in the hero instead):
 
-## 3. Chat Notification Badge (Unread Count in Nav)
+- **Sidebar contents** (top to bottom):
+  - Property Type chips (replaces the separate QuickPickBar)
+  - County / Town dropdowns
+  - Price Range slider
+  - Bedrooms selector
+  - Bathrooms selector
+  - Furnished toggle
+  - Sort By dropdown
+- **Sticky behavior**: `position: sticky; top: 80px` so it scrolls with content but stays visible
+- **Mobile**: Opens as a slide-out Sheet (existing pattern) triggered by a "Filters" button in the toolbar
+- The QuickPickBar and separate sort chips row are removed from the main content area to reduce visual clutter
 
-Show an unread message count badge on the "Chats" nav item in sidebars and bottom nav.
+### 3. Main Content Area -- Wider Grid
 
-**Files to create:**
-- `src/hooks/useUnreadCount.ts` -- subscribes to realtime message inserts and queries unread count from `messages` table where `recipient_id = user.id AND is_read = false`
+With the location controls in the hero and category filters in the sidebar:
+- Category carousels remain between hero and grid
+- The grid area gets more width (no sidebar commute checker eating space)
+- Results toolbar simplified: just count + active filter chips + view mode toggle
+- Sort is handled in the sidebar, so sort chips row is removed from the toolbar
 
-**Files to modify:**
-- `src/components/BottomNav.tsx` -- show red badge with count on the Chats icon
-- `src/components/user/UserSidebar.tsx` -- show badge next to "Chats" nav item
-- `src/components/landlord/LandlordSidebar.tsx` -- show badge next to "Chats" nav item
+### 4. Mobile Layout
 
-## 4. Landlord Business Phone in Profile (WhatsApp Enablement)
+- Hero: same compact search + location buttons
+- Below hero: category carousels
+- Sticky toolbar: property count + "Filters" sheet button + view mode
+- No separate CommuteBar component -- it's integrated into the hero
+- Full-width property grid
 
-The `business_phone` field already exists in the `landlord_profiles` table and is already editable in the `VerificationDetailsCard` component. The `PropertyDetailPage` already queries for it and conditionally shows the `WhatsAppButton`. No database changes needed.
+## Technical Details
 
-However, the current RLS on `landlord_profiles` only allows landlords and admins to SELECT their own profiles. The `PropertyDetailPage` fetches the landlord's `business_phone` as a regular user, which will fail due to RLS.
+### Files to Modify
 
-**Fix needed:** Add an RLS policy allowing authenticated users to read the `business_phone` column from `landlord_profiles` for verified landlords. Since Postgres RLS is row-level (not column-level), we'll add a SELECT policy that allows any authenticated user to read rows where `verification_status = 'verified'`.
+**`src/components/ListingHero.tsx`** -- Major redesign:
+- Remove `stats` prop entirely
+- Add location filter props (Near Me button, Commute input, active state display)
+- New layout: two-row design with search on first row, location quick actions on second row
+- Active location chip shown below when filtering is active
 
-**Database migration:**
-```sql
-CREATE POLICY "Public can view verified landlord profiles"
-  ON landlord_profiles FOR SELECT
-  USING (verification_status = 'verified');
+**`src/pages/PropertyListingPage.tsx`** -- Restructure layout:
+- Remove `heroStats` prop
+- Pass location filter state to `ListingHero` instead of rendering separate `CommuteBar`/`CommuteChecker`
+- Remove the `CommuteBar` mobile section
+- Remove the `CommuteChecker` from the desktop sidebar
+- Remove the `QuickPickBar` sticky section (move property type filtering into `PropertyFilters`)
+- Remove the sort chips row (sort is in sidebar)
+- Simplify the results toolbar
+
+**`src/components/PropertyFilters.tsx`** -- Add property type chips:
+- Add a horizontal chip selector for property types at the top of the filter panel (replacing the separate QuickPickBar)
+- Keep all existing filter controls
+
+**`src/pages/BuyPage.tsx`** -- Remove `heroStats` prop
+**`src/pages/RentPage.tsx`** -- Remove `heroStats` prop  
+**`src/pages/AirbnbPage.tsx`** -- Remove `heroStats` prop
+
+### Files to Remove (no longer needed as standalone)
+- `src/components/CommuteBar.tsx` -- functionality merged into ListingHero
+- `src/components/QuickPickBar.tsx` -- functionality merged into PropertyFilters
+
+### New Component
+- `src/components/LocationFilterBar.tsx` -- Extracted reusable component for the hero's location quick actions (Near Me / Commute toggle with inline controls). Used inside ListingHero. This keeps the hero component manageable.
+
+### Layout Structure (Desktop)
+
+```text
++--------------------------------------------------+
+|  Navbar                                          |
++--------------------------------------------------+
+|  Hero: [Icon Title]                              |
+|  [Search input........................]          |
+|  [Near Me] [Commute Time]  (location actions)   |
+|  [Active: Within 15 km of you        X]         |
++--------------------------------------------------+
+|  Category Carousels (horizontal scroll)          |
++--------------------------------------------------+
+|  Sidebar (sticky)  |  Results Grid               |
+|  - Property Type   |  [8 Listed] [Grid/List]     |
+|  - County/Town     |  +------+ +------+ +------+ |
+|  - Price Range     |  | Card | | Card | | Card | |
+|  - Bedrooms        |  +------+ +------+ +------+ |
+|  - Bathrooms       |  +------+ +------+ +------+ |
+|  - Furnished       |  | Card | | Card | | Card | |
+|  - Sort By         |  +------+ +------+ +------+ |
++--------------------------------------------------+
 ```
 
-## Technical Summary
+### Layout Structure (Mobile)
 
-| Change | Type | Files |
-|--------|------|-------|
-| Browser push notifications | New hook + provider | `useChatNotifications.ts`, `App.tsx` |
-| Typing indicators | New hook + UI update | `useTypingIndicator.ts`, `ChatThread.tsx` |
-| Unread badge in nav | New hook + UI updates | `useUnreadCount.ts`, `BottomNav.tsx`, `UserSidebar.tsx`, `LandlordSidebar.tsx` |
-| WhatsApp RLS fix | DB migration | Migration SQL |
+```text
++---------------------------+
+|  Browse Tabs [Buy|Rent|Airbnb]
++---------------------------+
+|  Hero: Title + Search     |
+|  [Near Me] [Commute]      |
++---------------------------+
+|  Category Carousels       |
++---------------------------+
+|  [8 props] [Filters] [Grid]
++---------------------------+
+|  Property Cards (grid)    |
++---------------------------+
+```
 
-No new tables or columns are required. One new RLS policy is needed for the WhatsApp feature to work correctly.
+### Key Design Decisions
+- Location filtering is elevated to hero-level prominence (most users filter by location first)
+- Stats removed -- they add visual noise without driving user actions
+- Single sidebar for all filters reduces cognitive load
+- QuickPickBar chips move into the sidebar filter panel for a cleaner content area
+- CommuteBar/CommuteChecker consolidated into one `LocationFilterBar` component used in the hero
 
