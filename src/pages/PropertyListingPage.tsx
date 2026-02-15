@@ -5,32 +5,22 @@ import Footer from '@/components/Footer';
 import PropertyGrid from '@/components/PropertyGrid';
 import PropertyFilters from '@/components/PropertyFilters';
 import ListingHero from '@/components/ListingHero';
-import QuickPickBar from '@/components/QuickPickBar';
-import CommuteChecker, { CommuteSettings, TransportMode, LocationFilterMode, NearMeSettings } from '@/components/CommuteChecker';
-import CommuteBar from '@/components/CommuteBar';
 import { useProperties } from '@/hooks/useProperties';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { haversineDistance, formatDistance } from '@/lib/geoUtils';
 import { PropertyPurpose, PropertyFilter, PropertyType } from '@/types/property';
-import { SlidersHorizontal, Grid3X3, List, Loader2, ShoppingCart, Home, Palmtree, Car, Bus, PersonStanding, X, Navigation, ArrowUpDown } from 'lucide-react';
+import { SlidersHorizontal, Grid3X3, List, Loader2, ShoppingCart, Home, Palmtree, Car, Bus, PersonStanding, X, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { LocationFilterMode, CommuteSettings, NearMeSettings, TransportMode } from '@/components/LocationFilterBar';
 
 const browseTabs = [
   { purpose: 'buy' as PropertyPurpose, label: 'Buy', href: '/buy', icon: ShoppingCart },
   { purpose: 'rent' as PropertyPurpose, label: 'Rent', href: '/rent', icon: Home },
   { purpose: 'airbnb' as PropertyPurpose, label: 'Airbnb', href: '/airbnb', icon: Palmtree },
-];
-
-const sortOptions = [
-  { value: undefined as PropertyFilter['sortBy'], label: 'Recommended' },
-  { value: 'price-asc' as const, label: 'Price ↑' },
-  { value: 'price-desc' as const, label: 'Price ↓' },
-  { value: 'newest' as const, label: 'Newest' },
-  { value: 'popular' as const, label: 'Popular' },
 ];
 
 const getModeIcon = (mode: TransportMode) => {
@@ -53,11 +43,10 @@ interface PropertyListingPageProps {
   title: string;
   subtitle: string;
   heroIcon: React.ReactNode;
-  heroStats: { label: string; value: string }[];
   categorySections?: React.ReactNode;
 }
 
-const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, heroStats, categorySections }: PropertyListingPageProps) => {
+const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySections }: PropertyListingPageProps) => {
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState<PropertyFilter>({
     purpose,
@@ -258,13 +247,6 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, heroStats, ca
     setFilters(prev => ({ ...prev, search: query || undefined }));
   };
 
-  const handleQuickPick = (type?: PropertyType) => {
-    setFilters(prev => ({ ...prev, propertyType: type }));
-  };
-
-  const ModeIcon = getModeIcon(commuteSettings.mode);
-  const anyLocationActive = commuteActive || nearMeActive;
-
   const locationFilterProps = {
     filterMode,
     onFilterModeChange: handleFilterModeChange,
@@ -278,6 +260,8 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, heroStats, ca
     isNearMeLoading: geo.isLoading,
     isNearMeActive: nearMeActive,
     nearMeError: geo.error,
+    commuteActive,
+    onClear: handleClearLocationFilter,
   };
 
   return (
@@ -311,25 +295,16 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, heroStats, ca
           </div>
         </div>
 
-        {/* Hero Banner */}
+        {/* Hero Banner with integrated location filters */}
         <ListingHero
           purpose={purpose}
           title={title}
           subtitle={subtitle}
           icon={heroIcon}
-          stats={heroStats}
           onSearch={handleSearch}
           defaultSearch={filters.search}
+          locationFilterProps={locationFilterProps}
         />
-
-        {/* Mobile Commute Bar */}
-        <div className="lg:hidden mt-3 mb-2">
-          <CommuteBar
-            {...locationFilterProps}
-            isActive={commuteActive}
-            onClear={handleClearLocationFilter}
-          />
-        </div>
 
         {/* Category Carousels */}
         {categorySections && (
@@ -338,52 +313,14 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, heroStats, ca
           </div>
         )}
 
-        {/* Quick Pick Category Bar + Sort */}
-        <section className="sticky top-0 lg:top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border">
-          <div className="container py-3">
-            <div className="flex items-center gap-3">
-              {/* Desktop Quick Picks */}
-              <div className="hidden lg:flex flex-1 min-w-0">
-                <QuickPickBar selected={filters.propertyType} onSelect={handleQuickPick} />
-              </div>
-
-              {/* Mobile Quick Picks */}
-              <div className="lg:hidden flex-1 min-w-0">
-                <QuickPickBar selected={filters.propertyType} onSelect={handleQuickPick} />
-              </div>
-
-              {/* Sort Chips - Desktop */}
-              <div className="hidden md:flex items-center gap-1.5 shrink-0">
-                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-                {sortOptions.map((opt) => (
-                  <button
-                    key={opt.label}
-                    onClick={() => setFilters(prev => ({ ...prev, sortBy: opt.value }))}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-medium transition-all',
-                      filters.sortBy === opt.value || (!filters.sortBy && !opt.value)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Main Content */}
+        {/* Main Content: Sidebar + Results */}
         <section className="container py-8">
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Desktop Sidebar */}
-            <aside className="hidden lg:block w-72 shrink-0 space-y-6">
-              {/* Location Filter */}
-              <div className="rounded-xl border-2 border-primary/20 bg-primary/5 overflow-hidden">
-                <CommuteChecker {...locationFilterProps} />
+            {/* Desktop Sticky Sidebar */}
+            <aside className="hidden lg:block w-72 shrink-0">
+              <div className="sticky top-20 space-y-0 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-hide">
+                <PropertyFilters filters={filters} onChange={setFilters} purpose={purpose} />
               </div>
-              <PropertyFilters filters={filters} onChange={setFilters} purpose={purpose} />
             </aside>
 
             {/* Results */}
@@ -404,26 +341,6 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, heroStats, ca
                       </>
                     )}
                   </p>
-
-                  {/* Active Location Filter Chip */}
-                  {anyLocationActive && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                      {nearMeActive ? (
-                        <>
-                          <Navigation className="h-3.5 w-3.5" />
-                          <span>Within {formatDistance(nearMeSettings.maxDistanceKm)}</span>
-                        </>
-                      ) : (
-                        <>
-                          <ModeIcon className="h-3.5 w-3.5" />
-                          <span>{formatTime(commuteSettings.maxMinutes)} to {commuteSettings.destination}</span>
-                        </>
-                      )}
-                      <button onClick={handleClearLocationFilter} className="ml-0.5 hover:bg-primary/20 rounded-full p-0.5 transition-colors">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex items-center gap-2">

@@ -2,15 +2,16 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { PropertyPurpose } from '@/types/property';
+import LocationFilterBar, { LocationFilterBarProps } from '@/components/LocationFilterBar';
 
 interface ListingHeroProps {
   purpose: PropertyPurpose;
   title: string;
   subtitle: string;
   icon: React.ReactNode;
-  stats: { label: string; value: string }[];
   onSearch: (query: string) => void;
   defaultSearch?: string;
+  locationFilterProps?: Omit<LocationFilterBarProps, 'purpose'>;
 }
 
 const purposeStyles: Record<PropertyPurpose, { gradient: string; accent: string; ring: string }> = {
@@ -31,7 +32,7 @@ const purposeStyles: Record<PropertyPurpose, { gradient: string; accent: string;
   },
 };
 
-const ListingHero = ({ purpose, title, subtitle, icon, stats, onSearch, defaultSearch }: ListingHeroProps) => {
+const ListingHero = ({ purpose, title, subtitle, icon, onSearch, defaultSearch, locationFilterProps }: ListingHeroProps) => {
   const styles = purposeStyles[purpose];
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,44 +51,35 @@ const ListingHero = ({ purpose, title, subtitle, icon, stats, onSearch, defaultS
       <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-primary/5 blur-3xl" />
       <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-accent/5 blur-3xl" />
 
-      <div className="container relative py-8 md:py-12">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          {/* Left: Title + Search */}
-          <div className="space-y-4 max-w-xl">
-            <div className="flex items-center gap-3">
-              <div className={cn('h-11 w-11 rounded-xl flex items-center justify-center', styles.accent)}>
-                {icon}
-              </div>
-              <div>
-                <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground tracking-tight">
-                  {title}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
-              </div>
-            </div>
-
-            {/* Search */}
-            <form onSubmit={handleSubmit} className="relative max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                name="search"
-                placeholder="Search by location, name, or type..."
-                defaultValue={defaultSearch || ''}
-                className={cn('pl-10 h-11 bg-card/80 backdrop-blur-sm border-border shadow-sm ring-1', styles.ring)}
-              />
-            </form>
+      <div className="container relative py-6 md:py-8 space-y-4">
+        {/* Row 1: Title + Search */}
+        <div className="flex items-center gap-3">
+          <div className={cn('h-11 w-11 rounded-xl flex items-center justify-center', styles.accent)}>
+            {icon}
           </div>
-
-          {/* Right: Stats */}
-          <div className="flex gap-6 md:gap-8">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center md:text-right">
-                <p className="font-heading text-xl md:text-2xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground whitespace-nowrap">{stat.label}</p>
-              </div>
-            ))}
+          <div>
+            <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+              {title}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
           </div>
         </div>
+
+        {/* Search */}
+        <form onSubmit={handleSubmit} className="relative max-w-lg">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            name="search"
+            placeholder="Search by location, name, or type..."
+            defaultValue={defaultSearch || ''}
+            className={cn('pl-10 h-11 bg-card/80 backdrop-blur-sm border-border shadow-sm ring-1', styles.ring)}
+          />
+        </form>
+
+        {/* Row 2: Location Quick Actions */}
+        {locationFilterProps && (
+          <LocationFilterBar purpose={purpose} {...locationFilterProps} />
+        )}
       </div>
     </section>
   );

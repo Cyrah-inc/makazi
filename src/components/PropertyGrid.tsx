@@ -1,7 +1,7 @@
 import { Property } from '@/types/property';
 import PropertyCard from './PropertyCard';
 import PropertyCardSkeleton from './PropertyCardSkeleton';
-import { TransportMode } from './CommuteChecker';
+import { TransportMode } from './LocationFilterBar';
 
 interface PropertyGridProps {
   properties: Property[];
