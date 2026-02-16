@@ -14,9 +14,10 @@ interface PropertyGridProps {
   isLoadingCommute?: boolean;
   showCommuteBadge?: boolean;
   isLoading?: boolean;
-  // Near me
   distances?: Record<string, number>;
   showDistanceBadge?: boolean;
+  priorityCount?: number;
+  priorityLabel?: string;
 }
 
 const PropertyGrid = ({ 
@@ -32,6 +33,8 @@ const PropertyGrid = ({
   isLoading = false,
   distances,
   showDistanceBadge = false,
+  priorityCount,
+  priorityLabel,
 }: PropertyGridProps) => {
   if (isLoading) {
     return (
@@ -59,6 +62,29 @@ const PropertyGrid = ({
     );
   }
 
+  const hasSections = priorityCount !== undefined && priorityCount > 0 && priorityCount < properties.length;
+  const priorityProperties = hasSections ? properties.slice(0, priorityCount) : properties;
+  const otherProperties = hasSections ? properties.slice(priorityCount) : [];
+
+  const renderCard = (property: Property, index: number) => (
+    <div 
+      key={property.id} 
+      className="animate-fade-in-up opacity-0"
+      style={{ animationDelay: `${Math.min(index * 50, 400)}ms`, animationFillMode: 'forwards' }}
+    >
+      <PropertyCard 
+        property={property}
+        commuteTime={commuteTimes?.[property.id]}
+        commuteMode={commuteMode}
+        commuteDestination={commuteDestination}
+        isLoadingCommute={isLoadingCommute}
+        showCommuteBadge={showCommuteBadge}
+        distanceKm={distances?.[property.id]}
+        showDistanceBadge={showDistanceBadge}
+      />
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       {(title || subtitle) && (
@@ -67,27 +93,37 @@ const PropertyGrid = ({
           {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
         </div>
       )}
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {properties.map((property, index) => (
-          <div 
-            key={property.id} 
-            className="animate-fade-in-up opacity-0"
-            style={{ animationDelay: `${Math.min(index * 50, 400)}ms`, animationFillMode: 'forwards' }}
-          >
-            <PropertyCard 
-              property={property}
-              commuteTime={commuteTimes?.[property.id]}
-              commuteMode={commuteMode}
-              commuteDestination={commuteDestination}
-              isLoadingCommute={isLoadingCommute}
-              showCommuteBadge={showCommuteBadge}
-              distanceKm={distances?.[property.id]}
-              showDistanceBadge={showDistanceBadge}
-            />
+
+      {hasSections ? (
+        <>
+          {/* Matched section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-primary">{priorityLabel}</span>
+              <span className="text-xs text-muted-foreground">({priorityCount} {priorityCount === 1 ? 'property' : 'properties'})</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {priorityProperties.map((p, i) => renderCard(p, i))}
+            </div>
           </div>
-        ))}
-      </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 py-2">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted-foreground font-medium">Other Properties</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Other section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {otherProperties.map((p, i) => renderCard(p, i + priorityCount!))}
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {properties.map((property, index) => renderCard(property, index))}
+        </div>
+      )}
     </div>
   );
 };
