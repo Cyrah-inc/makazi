@@ -1,137 +1,52 @@
 
 
-# Redesign: Buy, Rent & Airbnb Listing Pages
+# Sorting Matched Properties First + Elevating Filters
 
-## Overview
+## Problem
+1. When Near Me or Commute Time filters are active, properties outside the range are completely hidden. Users want to see matching properties first, with remaining properties shown below.
+2. The filter sidebar only appears below the hero and category carousels, requiring users to scroll down before seeing filter options.
 
-A fresh layout that replaces the current top-down hero + floating sidebar pattern with a modern split-panel design. The hero becomes a slim, search-focused bar with integrated location/proximity controls (replacing the stats). All filters (including the commute checker) move to a persistent left sidebar. The result is a cleaner, more usable layout inspired by property portals like Zillow and Rightmove.
+## Changes
 
-## What Changes
+### 1. Priority Sorting Instead of Hard Filtering
 
-### 1. Hero Section Redesign -- "Search & Location Bar"
+**File: `src/pages/PropertyListingPage.tsx`**
 
-Remove the stats (Listed, Avg. Price, Counties) from the hero. Replace with:
+Currently, `filteredProperties` excludes properties outside the commute/distance range entirely (lines 207-214). Change this so location filters do NOT remove properties -- instead, the `sortedProperties` logic will sort matching properties to the top.
 
-- **Compact Header**: Icon + title + subtitle (keep existing)
-- **Search Input**: Stays as-is
-- **Location Quick Actions**: Two prominent action buttons replacing the stats area:
-  - "Near Me" pill button -- one tap activates GPS-based proximity filtering with a radius selector dropdown
-  - "Commute Time" pill button -- opens an inline commute destination input with transport mode selector
-- **Active Location Indicator**: When a location filter is active, show a dismissible chip below the search bar summarizing the filter (e.g., "Within 15 km of you" or "30 min transit to Westlands")
+- **Near Me**: Properties within the radius appear first (sorted by distance), followed by remaining properties (also sorted by distance, or by default sort). A visual separator or label ("Nearby" / "Other Properties") will distinguish the two groups.
+- **Commute Time**: Properties within `maxMinutes` appear first (sorted by commute time ascending), followed by the rest (sorted by commute time, with properties lacking commute data last).
 
-This merges the current `CommuteBar` (mobile) and `CommuteChecker` (desktop sidebar) directly into the hero, making it the single entry point for location-based filtering on all screen sizes.
+The `filteredProperties` memo will still apply standard filters (county, search, price, beds, etc.) but will no longer exclude based on distance/commute. The `sortedProperties` memo will handle the prioritized ordering.
 
-### 2. Sidebar Filter Panel -- Always Visible on Desktop
+### 2. Move Filters Above Category Carousels
 
-Move ALL filters into a sticky left sidebar on desktop (already partially done, but now the CommuteChecker lives in the hero instead):
+**File: `src/pages/PropertyListingPage.tsx`**
 
-- **Sidebar contents** (top to bottom):
-  - Property Type chips (replaces the separate QuickPickBar)
-  - County / Town dropdowns
-  - Price Range slider
-  - Bedrooms selector
-  - Bathrooms selector
-  - Furnished toggle
-  - Sort By dropdown
-- **Sticky behavior**: `position: sticky; top: 80px` so it scrolls with content but stays visible
-- **Mobile**: Opens as a slide-out Sheet (existing pattern) triggered by a "Filters" button in the toolbar
-- The QuickPickBar and separate sort chips row are removed from the main content area to reduce visual clutter
+Restructure the page layout so the filter sidebar + results grid section appears directly after the hero, with category carousels moved below or integrated differently:
 
-### 3. Main Content Area -- Wider Grid
+- On desktop: The sidebar with `PropertyFilters` and the results grid appear immediately after the hero (no category carousels separating them)
+- Category carousels move inside the results area, above the property grid but below the toolbar
+- This means users see filters right away without scrolling past carousels
 
-With the location controls in the hero and category filters in the sidebar:
-- Category carousels remain between hero and grid
-- The grid area gets more width (no sidebar commute checker eating space)
-- Results toolbar simplified: just count + active filter chips + view mode toggle
-- Sort is handled in the sidebar, so sort chips row is removed from the toolbar
+### 3. Section Headers for Grouped Results
 
-### 4. Mobile Layout
+**File: `src/components/PropertyGrid.tsx`**
 
-- Hero: same compact search + location buttons
-- Below hero: category carousels
-- Sticky toolbar: property count + "Filters" sheet button + view mode
-- No separate CommuteBar component -- it's integrated into the hero
-- Full-width property grid
+When a location filter is active, the grid will receive a `priorityCount` prop indicating how many properties are in the "matched" group. The grid will render a subtle section divider between the matched and unmatched groups (e.g., "Within 15 km" heading, then after those cards, "Other Properties" heading).
 
-## Technical Details
+### 4. Active Filter Summary in Toolbar
 
-### Files to Modify
+**File: `src/pages/PropertyListingPage.tsx`**
 
-**`src/components/ListingHero.tsx`** -- Major redesign:
-- Remove `stats` prop entirely
-- Add location filter props (Near Me button, Commute input, active state display)
-- New layout: two-row design with search on first row, location quick actions on second row
-- Active location chip shown below when filtering is active
+Add active filter chips in the results toolbar showing the current location filter state (e.g., "Within 15 km" or "30 min to Westlands") with dismiss buttons, making it clear what is shaping the results order.
 
-**`src/pages/PropertyListingPage.tsx`** -- Restructure layout:
-- Remove `heroStats` prop
-- Pass location filter state to `ListingHero` instead of rendering separate `CommuteBar`/`CommuteChecker`
-- Remove the `CommuteBar` mobile section
-- Remove the `CommuteChecker` from the desktop sidebar
-- Remove the `QuickPickBar` sticky section (move property type filtering into `PropertyFilters`)
-- Remove the sort chips row (sort is in sidebar)
-- Simplify the results toolbar
+## Technical Summary
 
-**`src/components/PropertyFilters.tsx`** -- Add property type chips:
-- Add a horizontal chip selector for property types at the top of the filter panel (replacing the separate QuickPickBar)
-- Keep all existing filter controls
-
-**`src/pages/BuyPage.tsx`** -- Remove `heroStats` prop
-**`src/pages/RentPage.tsx`** -- Remove `heroStats` prop  
-**`src/pages/AirbnbPage.tsx`** -- Remove `heroStats` prop
-
-### Files to Remove (no longer needed as standalone)
-- `src/components/CommuteBar.tsx` -- functionality merged into ListingHero
-- `src/components/QuickPickBar.tsx` -- functionality merged into PropertyFilters
-
-### New Component
-- `src/components/LocationFilterBar.tsx` -- Extracted reusable component for the hero's location quick actions (Near Me / Commute toggle with inline controls). Used inside ListingHero. This keeps the hero component manageable.
-
-### Layout Structure (Desktop)
-
-```text
-+--------------------------------------------------+
-|  Navbar                                          |
-+--------------------------------------------------+
-|  Hero: [Icon Title]                              |
-|  [Search input........................]          |
-|  [Near Me] [Commute Time]  (location actions)   |
-|  [Active: Within 15 km of you        X]         |
-+--------------------------------------------------+
-|  Category Carousels (horizontal scroll)          |
-+--------------------------------------------------+
-|  Sidebar (sticky)  |  Results Grid               |
-|  - Property Type   |  [8 Listed] [Grid/List]     |
-|  - County/Town     |  +------+ +------+ +------+ |
-|  - Price Range     |  | Card | | Card | | Card | |
-|  - Bedrooms        |  +------+ +------+ +------+ |
-|  - Bathrooms       |  +------+ +------+ +------+ |
-|  - Furnished       |  | Card | | Card | | Card | |
-|  - Sort By         |  +------+ +------+ +------+ |
-+--------------------------------------------------+
-```
-
-### Layout Structure (Mobile)
-
-```text
-+---------------------------+
-|  Browse Tabs [Buy|Rent|Airbnb]
-+---------------------------+
-|  Hero: Title + Search     |
-|  [Near Me] [Commute]      |
-+---------------------------+
-|  Category Carousels       |
-+---------------------------+
-|  [8 props] [Filters] [Grid]
-+---------------------------+
-|  Property Cards (grid)    |
-+---------------------------+
-```
-
-### Key Design Decisions
-- Location filtering is elevated to hero-level prominence (most users filter by location first)
-- Stats removed -- they add visual noise without driving user actions
-- Single sidebar for all filters reduces cognitive load
-- QuickPickBar chips move into the sidebar filter panel for a cleaner content area
-- CommuteBar/CommuteChecker consolidated into one `LocationFilterBar` component used in the hero
+| Change | File |
+|--------|------|
+| Remove hard filtering for location; add priority sorting | `PropertyListingPage.tsx` (sortedProperties memo) |
+| Move filters + grid above category carousels | `PropertyListingPage.tsx` (layout restructure) |
+| Add section dividers for matched vs. other properties | `PropertyGrid.tsx` |
+| Active location filter chips in toolbar | `PropertyListingPage.tsx` |
 
