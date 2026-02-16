@@ -33,6 +33,12 @@ export function InlineChatInput({ propertyId, landlordId, propertyTitle }: Inlin
     );
   }
 
+  if (user.id === landlordId) {
+    return (
+      <p className="text-sm text-muted-foreground italic">This is your own property.</p>
+    );
+  }
+
   const handleSend = async () => {
     if (!message.trim() || sending) return;
 
