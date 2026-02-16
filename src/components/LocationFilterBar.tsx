@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -82,20 +82,29 @@ const LocationFilterBar = ({
 }: LocationFilterBarProps) => {
   const [inputValue, setInputValue] = useState(settings.destination);
   const [expanded, setExpanded] = useState<'nearme' | 'commute' | null>(null);
+  const pendingSearchRef = useRef(false);
 
   const anyActive = isNearMeActive || commuteActive;
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
-      onChange({ ...settings, destination: inputValue.trim() });
+  // Trigger search after destination state has been updated
+  useEffect(() => {
+    if (pendingSearchRef.current && settings.destination.trim()) {
+      pendingSearchRef.current = false;
       onSearch();
     }
-  }, [inputValue, settings, onChange, onSearch]);
+  }, [settings.destination, onSearch]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && inputValue.trim()) {
+      pendingSearchRef.current = true;
+      onChange({ ...settings, destination: inputValue.trim() });
+    }
+  }, [inputValue, settings, onChange]);
 
   const handleSearchClick = () => {
     if (inputValue.trim()) {
+      pendingSearchRef.current = true;
       onChange({ ...settings, destination: inputValue.trim() });
-      onSearch();
     }
   };
 
