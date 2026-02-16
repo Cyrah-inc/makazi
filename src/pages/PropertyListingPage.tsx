@@ -204,23 +204,59 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                    purpose === 'rent' ? property.monthlyRent : property.nightlyRate;
       if (filters.minPrice && price && price < filters.minPrice) return false;
       if (filters.maxPrice && price && price > filters.maxPrice) return false;
-      if (commuteActive && commuteTimes[property.id] !== undefined) {
-        if (commuteTimes[property.id] > commuteSettings.maxMinutes) return false;
-      }
-      if (nearMeActive && geo.latitude && geo.longitude) {
-        if (!property.latitude || !property.longitude) return false;
-        const dist = distances[property.id];
-        if (dist === undefined || dist > nearMeSettings.maxDistanceKm) return false;
-      }
+      // Location filters no longer exclude — they only affect sort order
       return true;
     });
-  }, [filters, properties, purpose, commuteActive, commuteTimes, commuteSettings.maxMinutes, nearMeActive, geo.latitude, geo.longitude, distances, nearMeSettings.maxDistanceKm]);
+  }, [filters, properties, purpose]);
+
+  // Count how many properties match the active location filter (for section dividers)
+  const priorityCount = useMemo(() => {
+    if (nearMeActive && geo.latitude && geo.longitude) {
+      return filteredProperties.filter(p => {
+        const dist = distances[p.id];
+        return dist !== undefined && dist <= nearMeSettings.maxDistanceKm;
+      }).length;
+    }
+    if (commuteActive) {
+      return filteredProperties.filter(p => {
+        const time = commuteTimes[p.id];
+        return time !== undefined && time <= commuteSettings.maxMinutes;
+      }).length;
+    }
+    return 0;
+  }, [filteredProperties, nearMeActive, commuteActive, geo.latitude, geo.longitude, distances, nearMeSettings.maxDistanceKm, commuteTimes, commuteSettings.maxMinutes]);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...filteredProperties];
-    if (nearMeActive && !filters.sortBy) {
-      return sorted.sort((a, b) => (distances[a.id] ?? Infinity) - (distances[b.id] ?? Infinity));
+
+    // Priority sorting: matched properties first, then others
+    if (nearMeActive && geo.latitude && geo.longitude && !filters.sortBy) {
+      return sorted.sort((a, b) => {
+        const distA = distances[a.id] ?? Infinity;
+        const distB = distances[b.id] ?? Infinity;
+        const aInRange = distA <= nearMeSettings.maxDistanceKm;
+        const bInRange = distB <= nearMeSettings.maxDistanceKm;
+        if (aInRange && !bInRange) return -1;
+        if (!aInRange && bInRange) return 1;
+        return distA - distB;
+      });
     }
+
+    if (commuteActive && !filters.sortBy) {
+      return sorted.sort((a, b) => {
+        const timeA = commuteTimes[a.id];
+        const timeB = commuteTimes[b.id];
+        const aInRange = timeA !== undefined && timeA <= commuteSettings.maxMinutes;
+        const bInRange = timeB !== undefined && timeB <= commuteSettings.maxMinutes;
+        if (aInRange && !bInRange) return -1;
+        if (!aInRange && bInRange) return 1;
+        if (timeA === undefined && timeB === undefined) return 0;
+        if (timeA === undefined) return 1;
+        if (timeB === undefined) return -1;
+        return timeA - timeB;
+      });
+    }
+
     switch (filters.sortBy) {
       case 'price-asc':
         return sorted.sort((a, b) => {
@@ -241,7 +277,7 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
       default:
         return sorted;
     }
-  }, [filteredProperties, filters.sortBy, purpose, nearMeActive, distances]);
+  }, [filteredProperties, filters.sortBy, purpose, nearMeActive, distances, nearMeSettings.maxDistanceKm, commuteActive, commuteTimes, commuteSettings.maxMinutes, geo.latitude, geo.longitude]);
 
   const handleSearch = (query: string) => {
     setFilters(prev => ({ ...prev, search: query || undefined }));
@@ -306,13 +342,6 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
           locationFilterProps={locationFilterProps}
         />
 
-        {/* Category Carousels */}
-        {categorySections && (
-          <div className="border-b border-border/50">
-            {categorySections}
-          </div>
-        )}
-
         {/* Main Content: Sidebar + Results */}
         <section className="container py-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -326,8 +355,8 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
             {/* Results */}
             <div className="flex-1 min-w-0">
               {/* Results Toolbar */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div className="flex flex-wrap items-center gap-3">
                   <p className="text-sm text-muted-foreground">
                     {isLoading ? (
                       <span className="flex items-center gap-2">
@@ -341,6 +370,26 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                       </>
                     )}
                   </p>
+
+                  {/* Active location filter chips */}
+                  {nearMeActive && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      <Navigation className="h-3 w-3" />
+                      Within {nearMeSettings.maxDistanceKm} km
+                      <button onClick={handleClearLocationFilter} className="ml-1 hover:text-primary/70">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {commuteActive && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      {(() => { const Icon = getModeIcon(commuteSettings.mode); return <Icon className="h-3 w-3" />; })()}
+                      {formatTime(commuteSettings.maxMinutes)} to {commuteSettings.destination}
+                      <button onClick={handleClearLocationFilter} className="ml-1 hover:text-primary/70">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -384,6 +433,13 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                 </div>
               </div>
 
+              {/* Category Carousels (inside results area) */}
+              {categorySections && (
+                <div className="mb-6 border-b border-border/50 pb-6">
+                  {categorySections}
+                </div>
+              )}
+
               {/* Loading State */}
               {isLoading && (
                 <div className="flex items-center justify-center py-16">
@@ -410,6 +466,8 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                   showCommuteBadge={commuteActive || isLoadingCommute}
                   distances={distances}
                   showDistanceBadge={nearMeActive}
+                  priorityCount={(nearMeActive || commuteActive) ? priorityCount : undefined}
+                  priorityLabel={nearMeActive ? `Within ${nearMeSettings.maxDistanceKm} km` : commuteActive ? `Within ${formatTime(commuteSettings.maxMinutes)}` : undefined}
                 />
               )}
             </div>
