@@ -189,36 +189,45 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
       if (filters.county && property.county !== filters.county) return false;
+      if (filters.town && property.town !== filters.town) return false;
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         if (!property.title.toLowerCase().includes(searchLower) &&
             !property.town.toLowerCase().includes(searchLower) &&
-            !property.county.toLowerCase().includes(searchLower)) {
+            !property.county.toLowerCase().includes(searchLower) &&
+            !property.address.toLowerCase().includes(searchLower)) {
           return false;
         }
       }
       if (filters.propertyType && property.propertyType !== filters.propertyType) return false;
       if (filters.bedrooms && property.bedrooms < filters.bedrooms) return false;
+      if (filters.bathrooms && property.bathrooms < filters.bathrooms) return false;
       if (filters.furnished !== undefined && property.furnished !== filters.furnished) return false;
       const price = purpose === 'buy' ? property.salePrice : 
                    purpose === 'rent' ? property.monthlyRent : property.nightlyRate;
-      if (filters.minPrice && price && price < filters.minPrice) return false;
-      if (filters.maxPrice && price && price > filters.maxPrice) return false;
+      if (filters.minPrice !== undefined) {
+        if (price === undefined || price === null || price < filters.minPrice) return false;
+      }
+      if (filters.maxPrice !== undefined) {
+        if (price === undefined || price === null || price > filters.maxPrice) return false;
+      }
       // Location filters no longer exclude — they only affect sort order
       return true;
     });
   }, [filters, properties, purpose]);
 
-  // Count how many properties match the active filter (for search results section)
+  // Check if any sidebar filter is active (beyond just purpose)
+  const hasActiveFilters = useMemo(() => {
+    return Object.keys(filters).some(key => 
+      key !== 'purpose' && filters[key as keyof PropertyFilter] !== undefined
+    );
+  }, [filters]);
+
+  const isAnyFilterActive = hasActiveFilters || nearMeActive || commuteActive;
+
+  // Count how many properties match the active location/search filter (for search results section)
   const priorityCount = useMemo(() => {
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      return filteredProperties.filter(p =>
-        p.title.toLowerCase().includes(searchLower) ||
-        p.town.toLowerCase().includes(searchLower) ||
-        p.county.toLowerCase().includes(searchLower)
-      ).length;
-    }
+    // For location-based filters, prioritize properties within range
     if (nearMeActive && geo.latitude && geo.longitude) {
       return filteredProperties.filter(p => {
         const dist = distances[p.id];
@@ -231,8 +240,12 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
         return time !== undefined && time <= commuteSettings.maxMinutes;
       }).length;
     }
+    // For text search or sidebar filters, ALL filtered properties are the results
+    if (hasActiveFilters) {
+      return filteredProperties.length;
+    }
     return 0;
-  }, [filteredProperties, filters.search, nearMeActive, commuteActive, geo.latitude, geo.longitude, distances, nearMeSettings.maxDistanceKm, commuteTimes, commuteSettings.maxMinutes]);
+  }, [filteredProperties, hasActiveFilters, nearMeActive, commuteActive, geo.latitude, geo.longitude, distances, nearMeSettings.maxDistanceKm, commuteTimes, commuteSettings.maxMinutes]);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...filteredProperties];
@@ -441,8 +454,8 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                 </div>
               </div>
 
-              {/* Search Results Section - shown above carousels when filters are active */}
-              {!isLoading && !error && (nearMeActive || commuteActive || filters.search) && priorityCount > 0 && (
+              {/* Search Results Section - shown above carousels when any filter is active */}
+              {!isLoading && !error && isAnyFilterActive && priorityCount > 0 && (
                 <div className="mb-6 border-b border-border/50 pb-6">
                   <PropertyGrid 
                     properties={sortedProperties.slice(0, priorityCount)}
@@ -451,7 +464,7 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                       filters.search ? `Matching "${filters.search}"` :
                       nearMeActive ? `Within ${nearMeSettings.maxDistanceKm} km of your location` :
                       commuteActive ? `Within ${formatTime(commuteSettings.maxMinutes)} to ${commuteSettings.destination}` :
-                      undefined
+                      `${priorityCount} ${priorityCount === 1 ? 'property' : 'properties'} matching your filters`
                     }
                     commuteTimes={commuteTimes}
                     commuteMode={commuteSettings.mode}
@@ -488,8 +501,8 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
               {/* Property Grid - remaining properties or all */}
               {!isLoading && !error && (
                 <PropertyGrid 
-                  properties={(nearMeActive || commuteActive || filters.search) && priorityCount > 0 ? sortedProperties.slice(priorityCount) : sortedProperties}
-                  title={(nearMeActive || commuteActive || filters.search) && priorityCount > 0 ? "Other Properties" : undefined}
+                  properties={isAnyFilterActive && priorityCount > 0 && (nearMeActive || commuteActive) ? sortedProperties.slice(priorityCount) : (isAnyFilterActive && priorityCount > 0 && !nearMeActive && !commuteActive ? [] : sortedProperties)}
+                  title={isAnyFilterActive && priorityCount > 0 && (nearMeActive || commuteActive) ? "Other Properties" : undefined}
                   emptyMessage="No properties match your criteria. Try adjusting your filters."
                   commuteTimes={commuteTimes}
                   commuteMode={commuteSettings.mode}
