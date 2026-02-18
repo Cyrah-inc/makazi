@@ -5,7 +5,7 @@ import { LandlordSidebar } from './LandlordSidebar';
 import { LandlordBreadcrumb } from '@/components/DashboardBreadcrumb';
 import { Loader2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LandlordLayoutProps {
@@ -52,12 +52,13 @@ export function LandlordLayout({ children }: LandlordLayoutProps) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72">
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <LandlordSidebar onNavigate={() => setSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
       )}
       
-      <main className={`flex-1 overflow-auto ${isMobile ? 'pt-16' : ''}`}>
+      <main className={`flex-1 ${isMobile ? 'pt-16' : 'overflow-auto'}`}>
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
           <LandlordBreadcrumb />
           {children}

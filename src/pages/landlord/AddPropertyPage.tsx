@@ -201,7 +201,7 @@ export default function AddPropertyPage() {
 
   return (
     <LandlordLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6 pb-8">
         {/* Header */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Add New Property</h1>
@@ -513,7 +513,7 @@ export default function AddPropertyPage() {
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 sticky bottom-0 bg-background/95 backdrop-blur-sm py-4 -mx-4 px-4 border-t border-border sm:static sm:bg-transparent sm:backdrop-blur-none sm:py-0 sm:mx-0 sm:px-0 sm:border-0 z-10">
             <Button type="button" variant="outline" className="flex-1" onClick={() => navigate('/landlord/properties')}>
               Cancel
             </Button>

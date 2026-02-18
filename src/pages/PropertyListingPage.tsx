@@ -209,8 +209,16 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
     });
   }, [filters, properties, purpose]);
 
-  // Count how many properties match the active location filter (for section dividers)
+  // Count how many properties match the active filter (for search results section)
   const priorityCount = useMemo(() => {
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      return filteredProperties.filter(p =>
+        p.title.toLowerCase().includes(searchLower) ||
+        p.town.toLowerCase().includes(searchLower) ||
+        p.county.toLowerCase().includes(searchLower)
+      ).length;
+    }
     if (nearMeActive && geo.latitude && geo.longitude) {
       return filteredProperties.filter(p => {
         const dist = distances[p.id];
@@ -224,7 +232,7 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
       }).length;
     }
     return 0;
-  }, [filteredProperties, nearMeActive, commuteActive, geo.latitude, geo.longitude, distances, nearMeSettings.maxDistanceKm, commuteTimes, commuteSettings.maxMinutes]);
+  }, [filteredProperties, filters.search, nearMeActive, commuteActive, geo.latitude, geo.longitude, distances, nearMeSettings.maxDistanceKm, commuteTimes, commuteSettings.maxMinutes]);
 
   const sortedProperties = useMemo(() => {
     const sorted = [...filteredProperties];
@@ -433,6 +441,29 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                 </div>
               </div>
 
+              {/* Search Results Section - shown above carousels when filters are active */}
+              {!isLoading && !error && (nearMeActive || commuteActive || filters.search) && priorityCount > 0 && (
+                <div className="mb-6 border-b border-border/50 pb-6">
+                  <PropertyGrid 
+                    properties={sortedProperties.slice(0, priorityCount)}
+                    title="Search Results"
+                    subtitle={
+                      filters.search ? `Matching "${filters.search}"` :
+                      nearMeActive ? `Within ${nearMeSettings.maxDistanceKm} km of your location` :
+                      commuteActive ? `Within ${formatTime(commuteSettings.maxMinutes)} to ${commuteSettings.destination}` :
+                      undefined
+                    }
+                    commuteTimes={commuteTimes}
+                    commuteMode={commuteSettings.mode}
+                    commuteDestination={commuteSettings.destination}
+                    isLoadingCommute={isLoadingCommute}
+                    showCommuteBadge={commuteActive || isLoadingCommute}
+                    distances={distances}
+                    showDistanceBadge={nearMeActive}
+                  />
+                </div>
+              )}
+
               {/* Category Carousels (inside results area) */}
               {categorySections && (
                 <div className="mb-6 border-b border-border/50 pb-6">
@@ -454,10 +485,11 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                 </div>
               )}
 
-              {/* Property Grid */}
+              {/* Property Grid - remaining properties or all */}
               {!isLoading && !error && (
                 <PropertyGrid 
-                  properties={sortedProperties}
+                  properties={(nearMeActive || commuteActive || filters.search) && priorityCount > 0 ? sortedProperties.slice(priorityCount) : sortedProperties}
+                  title={(nearMeActive || commuteActive || filters.search) && priorityCount > 0 ? "Other Properties" : undefined}
                   emptyMessage="No properties match your criteria. Try adjusting your filters."
                   commuteTimes={commuteTimes}
                   commuteMode={commuteSettings.mode}
@@ -466,8 +498,6 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                   showCommuteBadge={commuteActive || isLoadingCommute}
                   distances={distances}
                   showDistanceBadge={nearMeActive}
-                  priorityCount={(nearMeActive || commuteActive) ? priorityCount : undefined}
-                  priorityLabel={nearMeActive ? `Within ${nearMeSettings.maxDistanceKm} km` : commuteActive ? `Within ${formatTime(commuteSettings.maxMinutes)}` : undefined}
                 />
               )}
             </div>

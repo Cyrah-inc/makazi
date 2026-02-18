@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building2, Eye, Plus, Clock, CheckCircle, XCircle, CalendarDays, DollarSign, Users, Star } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { StatsCardCompactSkeleton } from '@/components/skeletons/StatsCardSkeleton';
 import { DashboardListItemSkeleton } from '@/components/skeletons/ListSkeletons';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +21,18 @@ import { cn } from '@/lib/utils';
 import { useLandlordProfile } from '@/hooks/useLandlordProfile';
 import { VerificationBanner } from '@/components/landlord/VerificationBanner';
 import { SubscriptionPaymentDialog } from '@/components/landlord/SubscriptionPaymentDialog';
+
+const MobileAddPropertyFAB = () => {
+  const isMobile = useIsMobile();
+  if (!isMobile) return null;
+  return (
+    <Link to="/landlord/add-property" className="fixed bottom-6 right-6 z-40">
+      <Button size="lg" className="rounded-full h-14 w-14 shadow-lg">
+        <Plus className="w-6 h-6" />
+      </Button>
+    </Link>
+  );
+};
 
 export default function LandlordDashboard() {
   const { user } = useAuth();
@@ -320,6 +333,8 @@ export default function LandlordDashboard() {
           </CardContent>
         </Card>
       </div>
+      {/* Mobile FAB for Add Property */}
+      <MobileAddPropertyFAB />
       <SubscriptionPaymentDialog open={subscriptionOpen} onOpenChange={setSubscriptionOpen} />
     </LandlordLayout>
   );

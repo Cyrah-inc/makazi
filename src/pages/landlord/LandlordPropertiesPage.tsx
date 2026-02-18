@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Building2, Eye, Search, Plus, Clock, CheckCircle, XCircle, Pencil, Trash2, Heart, Home, LandPlot, BedDouble, Palmtree, LayoutGrid } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { PropertyManagementCardSkeleton } from '@/components/skeletons/ListSkeletons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,6 +55,7 @@ const CATEGORY_TABS: CategoryTab[] = [
 export default function LandlordPropertiesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -285,6 +287,14 @@ export default function LandlordPropertiesPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        {/* Mobile FAB */}
+        {isMobile && (
+          <Link to="/landlord/add-property" className="fixed bottom-6 right-6 z-40">
+            <Button size="lg" className="rounded-full h-14 w-14 shadow-lg">
+              <Plus className="w-6 h-6" />
+            </Button>
+          </Link>
+        )}
       </div>
     </LandlordLayout>
   );
