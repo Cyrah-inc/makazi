@@ -9,7 +9,8 @@ import {
   FileText,
   CalendarDays,
   DollarSign,
-  Shield
+  Shield,
+  BarChart3
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ const sidebarItems = [
   { icon: FileText, label: 'Listings Overview', path: '/admin/listings' },
   { icon: CalendarDays, label: 'Airbnb', path: '/admin/airbnb' },
   { icon: DollarSign, label: 'Revenue', path: '/admin/revenue' },
+  { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 
