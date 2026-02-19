@@ -1,62 +1,111 @@
 
+# Admin Analytics, Settings Pages + Mobile Navigation Optimization
 
-# Fix: Search Results Section + Mobile Landlord Listing
+## 1. Analytics Page (`/admin/analytics`)
 
-## Issue 1: Search Results Not Displayed as a Separate Category
+A new dedicated analytics page with rich, data-driven insights pulled from existing Supabase tables.
 
-**Current behavior**: When a user searches by name, activates "Near Me", or uses "Commute Time" on Buy/Rent/Airbnb pages, the results are sorted in the main property grid but not visually distinguished as a separate section above the category carousels.
+### Metrics and Sections
 
-**Root cause**: In `PropertyListingPage.tsx`, the category carousels (`categorySections`) always render above the property grid (lines 437-441). When search/location filters are active, matched results are only priority-sorted within the grid -- there is no separate "Search Results" section shown above the carousels.
+**User and Landlord Stats (Top Cards)**
+- Total registered users (from `profiles`)
+- Total landlords (from `user_roles` where role = landlord)
+- New users this week/month (from `profiles.created_at`)
+- New landlords this week/month
 
-**Fix**: When any search filter is active (text search, Near Me, or Commute Time), render a "Search Results" section with matching properties above the category carousels. The category carousels continue to show below. The main grid below the carousels shows remaining properties.
+**Inquiry Response Leaderboard**
+- Ranks landlords by average response time (computed from `inquiries.created_at` vs `inquiries.replied_at`)
+- Shows fastest responders with their average reply time (e.g., "2h 15m")
+- Highlights landlords with unanswered inquiries
 
-### Changes to `src/pages/PropertyListingPage.tsx`:
-- Extract "search result" properties (those matching the active filter) into a separate array
-- Render a `PropertyGrid` with title "Search Results" above `categorySections` when search/nearme/commute is active
-- The lower grid shows "Other Properties" or all properties when no search is active
+**Most Viewed Properties (Top 10)**
+- Table/list of properties sorted by `views_count` descending
+- Shows property title, landlord name, view count, and listing type (sale/rent/airbnb)
 
-### Changes to `src/pages/Index.tsx`:
-- The Home page uses `HeroSearch` which navigates to Buy/Rent/Airbnb pages with query params. No separate search results section is needed on the Home page itself since the search action redirects users to the relevant listing page.
+**Booking Analytics**
+- Total bookings by status (pending, paid, checked_in, completed, cancelled)
+- Revenue trend -- bookings grouped by month using `created_at`
+- Average booking value
+- Displayed as a bar chart using Recharts
+
+**Property Distribution**
+- Pie chart: properties by type (sale vs rent vs airbnb)
+- Pie chart: properties by status (approved, pending, rejected)
+- Bar chart: properties by county/city (top 10 locations)
+
+**Favorites Insights**
+- Most favorited properties (join `favorites` with `properties`, group by `property_id`, count)
+
+### Data Fetching
+All queries use the existing Supabase client with admin RLS policies (admin can SELECT all tables). No new database tables or migrations needed -- all metrics are derived from existing data.
+
+### Charts
+Uses the already-installed `recharts` library via the existing `ChartContainer`, `ChartTooltip`, etc. components in `src/components/ui/chart.tsx`.
 
 ---
 
-## Issue 2: Landlords Cannot List Properties on Mobile
+## 2. Settings Page (`/admin/settings`)
 
-**Current behavior**: On mobile, landlords have difficulty listing properties.
+A new admin settings page with tabs for different configuration areas.
 
-**Root causes identified**:
+### Tabs and Sections
 
-1. **Navigation**: The "Add Property" button is only accessible through the hamburger menu sidebar. There is no visible shortcut or floating action button (FAB) on the landlord dashboard or properties page on mobile, making it hard to discover.
+**Platform Settings Tab**
+- Platform name display (read-only, "Makazi")
+- Platform service fee percentage (currently hardcoded at 10%) -- displayed as info
+- Subscription price display (KES 2,000) -- displayed as info
+- These are informational cards since changing them requires code/DB changes; the settings page surfaces them for admin awareness
 
-2. **Form scrolling**: The `LandlordLayout` main area uses `overflow-auto` inside a `flex` parent. On some mobile browsers, the long AddPropertyPage form (images, details, pricing, location with map, amenities, submit) may have scroll containment issues. The submit button at the very bottom of the form can be unreachable on certain devices.
+**User Management Quick Actions Tab**
+- Quick link buttons to: Manage Users, Manage Landlords, View Revenue
+- Bulk action info: how many users are active vs suspended (from `profiles.status`)
 
-3. **Missing SheetTitle**: The mobile sidebar `Sheet` in `LandlordLayout.tsx` wraps `SheetContent` without a `SheetTitle`, which causes Radix accessibility warnings and can cause focus management issues on mobile.
+**Verification Checklist Tab**
+- Displays the landlord verification document requirements
+- Admin can see which documents are required (ID, KRA PIN, business phone)
+- Summary: how many landlords are unverified, pending, verified, rejected
 
-**Fixes**:
+**Subscription Management Tab**
+- Overview of active vs expired subscriptions
+- Quick cancel action for active subscriptions (already exists in landlord detail modal, but surfaced here too)
 
-### Changes to `src/components/landlord/LandlordLayout.tsx`:
-- Add `SheetTitle` inside `SheetContent` for accessibility and proper focus management
-- Remove `overflow-auto` from `main` element on mobile to allow native page scrolling (prevents scroll containment issues)
+### No Database Changes
+All settings data is read from existing tables. No new migrations needed.
 
-### Changes to `src/pages/landlord/LandlordDashboard.tsx`:
-- Add a sticky/floating "Add Property" button visible on mobile at the bottom of the dashboard, so landlords can easily find the action without navigating through the hamburger menu
+---
 
-### Changes to `src/pages/landlord/LandlordPropertiesPage.tsx`:
-- Similarly ensure the "Add New Property" button is prominently placed on mobile
+## 3. Mobile Navigation Optimization
 
-### Changes to `src/pages/landlord/AddPropertyPage.tsx`:
-- Add `pb-8` (bottom padding) to the form container to ensure the submit button has clearance on mobile
-- Make the submit/cancel buttons sticky at the bottom on mobile so they're always accessible regardless of scroll position
+### Problem
+- The admin panel on mobile uses a hamburger menu (Sheet) with a floating button at `top-4 left-4`. This can overlap with page content.
+- No bottom navigation for admin pages (BottomNav is hidden on `/admin` routes).
+- The mobile Sheet lacks a `SheetTitle` for accessibility.
+
+### Fixes
+
+**AdminLayout.tsx**
+- Add `SheetTitle` inside `SheetContent` for accessibility
+- Add a sticky top header bar on mobile (instead of a floating button) with the page title and hamburger icon, providing consistent navigation context
+- Remove `overflow-auto` from main on mobile to allow native scrolling
+
+**AdminSidebar.tsx**
+- Add an "Analytics" nav item pointing to `/admin/analytics`
+- The existing "Settings" item already points to `/admin/settings`
+
+**App.tsx**
+- Add routes for `/admin/analytics` and `/admin/settings`
+- Lazy-load both new page components
 
 ---
 
 ## Technical Summary
 
-| Change | File |
-|---|---|
-| Show "Search Results" section above carousels when filters are active | `PropertyListingPage.tsx` |
-| Add SheetTitle to mobile sidebar for proper focus management | `LandlordLayout.tsx` |
-| Fix scroll containment on mobile | `LandlordLayout.tsx` |
-| Add floating/sticky "Add Property" button on mobile | `LandlordDashboard.tsx`, `LandlordPropertiesPage.tsx` |
-| Make submit buttons sticky on mobile for long form | `AddPropertyPage.tsx` |
+| Change | File | Type |
+|---|---|---|
+| New Analytics page with charts and data tables | `src/pages/admin/AdminAnalyticsPage.tsx` | New file |
+| New Settings page with tabbed configuration view | `src/pages/admin/AdminSettingsPage.tsx` | New file |
+| Add Analytics nav item to sidebar | `src/components/admin/AdminSidebar.tsx` | Edit |
+| Add SheetTitle + sticky mobile header | `src/components/admin/AdminLayout.tsx` | Edit |
+| Add routes for analytics and settings | `src/App.tsx` | Edit |
 
+No database migrations required -- all data comes from existing tables with existing admin RLS policies.
