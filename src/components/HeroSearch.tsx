@@ -43,7 +43,7 @@ const HeroSearch = ({ onFiltersChange }: HeroSearchProps) => {
     <div className="w-full max-w-4xl mx-auto">
       {/* Purpose Tabs */}
       <div className="flex justify-center mb-4">
-        <div className="inline-flex bg-white/10 backdrop-blur-md rounded-xl p-1.5">
+        <div className="inline-flex bg-primary-foreground/10 backdrop-blur-sm rounded-xl p-1.5">
           {[
             { value: 'buy' as const, label: 'Buy' },
             { value: 'rent' as const, label: 'Rent' },
@@ -54,8 +54,8 @@ const HeroSearch = ({ onFiltersChange }: HeroSearchProps) => {
               onClick={() => setPurpose(tab.value)}
               className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 purpose === tab.value
-                  ? 'bg-gold text-foreground shadow-md'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
+                  ? 'bg-primary-foreground text-primary shadow-md'
+                  : 'text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10'
               }`}
             >
               {tab.label}
@@ -65,7 +65,7 @@ const HeroSearch = ({ onFiltersChange }: HeroSearchProps) => {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-card rounded-2xl shadow-2xl p-2 md:p-3 ring-1 ring-gold/20">
+      <div className="bg-card rounded-2xl shadow-xl p-2 md:p-3">
         <div className="flex flex-col md:flex-row gap-2 md:gap-0">
           {/* Search Input */}
           <div className="flex-1 flex items-center gap-3 px-4 py-2 md:border-r border-border">
