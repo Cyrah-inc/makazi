@@ -1,111 +1,75 @@
 
-# Admin Analytics, Settings Pages + Mobile Navigation Optimization
 
-## 1. Analytics Page (`/admin/analytics`)
+# Google OAuth, Password Toggle, and Premium Hero Redesign
 
-A new dedicated analytics page with rich, data-driven insights pulled from existing Supabase tables.
+## 1. Google OAuth -- Dashboard Configuration Only
 
-### Metrics and Sections
+The frontend code in `AuthPage.tsx` is already complete. You need to:
+1. Go to **Supabase Dashboard** > Authentication > Providers > Enable Google
+2. Create OAuth credentials in **Google Cloud Console** with redirect URI: `https://wbveiqffiooxaujccajq.supabase.co/auth/v1/callback`
+3. Paste Client ID and Secret into the Supabase Google provider settings
+4. In Supabase > Authentication > URL Configuration, add `https://makazi.lovable.app` as Site URL and redirect URL
 
-**User and Landlord Stats (Top Cards)**
-- Total registered users (from `profiles`)
-- Total landlords (from `user_roles` where role = landlord)
-- New users this week/month (from `profiles.created_at`)
-- New landlords this week/month
-
-**Inquiry Response Leaderboard**
-- Ranks landlords by average response time (computed from `inquiries.created_at` vs `inquiries.replied_at`)
-- Shows fastest responders with their average reply time (e.g., "2h 15m")
-- Highlights landlords with unanswered inquiries
-
-**Most Viewed Properties (Top 10)**
-- Table/list of properties sorted by `views_count` descending
-- Shows property title, landlord name, view count, and listing type (sale/rent/airbnb)
-
-**Booking Analytics**
-- Total bookings by status (pending, paid, checked_in, completed, cancelled)
-- Revenue trend -- bookings grouped by month using `created_at`
-- Average booking value
-- Displayed as a bar chart using Recharts
-
-**Property Distribution**
-- Pie chart: properties by type (sale vs rent vs airbnb)
-- Pie chart: properties by status (approved, pending, rejected)
-- Bar chart: properties by county/city (top 10 locations)
-
-**Favorites Insights**
-- Most favorited properties (join `favorites` with `properties`, group by `property_id`, count)
-
-### Data Fetching
-All queries use the existing Supabase client with admin RLS policies (admin can SELECT all tables). No new database tables or migrations needed -- all metrics are derived from existing data.
-
-### Charts
-Uses the already-installed `recharts` library via the existing `ChartContainer`, `ChartTooltip`, etc. components in `src/components/ui/chart.tsx`.
+No code changes needed for this part.
 
 ---
 
-## 2. Settings Page (`/admin/settings`)
+## 2. Password Visibility Toggle
 
-A new admin settings page with tabs for different configuration areas.
+**File: `src/pages/auth/AuthPage.tsx`**
 
-### Tabs and Sections
-
-**Platform Settings Tab**
-- Platform name display (read-only, "Makazi")
-- Platform service fee percentage (currently hardcoded at 10%) -- displayed as info
-- Subscription price display (KES 2,000) -- displayed as info
-- These are informational cards since changing them requires code/DB changes; the settings page surfaces them for admin awareness
-
-**User Management Quick Actions Tab**
-- Quick link buttons to: Manage Users, Manage Landlords, View Revenue
-- Bulk action info: how many users are active vs suspended (from `profiles.status`)
-
-**Verification Checklist Tab**
-- Displays the landlord verification document requirements
-- Admin can see which documents are required (ID, KRA PIN, business phone)
-- Summary: how many landlords are unverified, pending, verified, rejected
-
-**Subscription Management Tab**
-- Overview of active vs expired subscriptions
-- Quick cancel action for active subscriptions (already exists in landlord detail modal, but surfaced here too)
-
-### No Database Changes
-All settings data is read from existing tables. No new migrations needed.
+- Add `showPassword` state
+- Import `Eye` and `EyeOff` from lucide-react
+- For both sign-in and sign-up password fields:
+  - Change `type="password"` to `type={showPassword ? 'text' : 'password'}`
+  - Add a toggle button with `Eye`/`EyeOff` icon inside the existing `relative` wrapper, positioned `absolute right-3`
+  - Add `pr-10` to password inputs for icon clearance
 
 ---
 
-## 3. Mobile Navigation Optimization
+## 3. Hero Section Redesign -- "Warm Luxury" Concept
 
-### Problem
-- The admin panel on mobile uses a hamburger menu (Sheet) with a floating button at `top-4 left-4`. This can overlap with page content.
-- No bottom navigation for admin pages (BottomNav is hidden on `/admin` routes).
-- The mobile Sheet lacks a `SheetTitle` for accessibility.
+Replace the current solid green hero with a premium dark-themed hero inspired by luxury real estate brands (Knight Frank, Sotheby's). This design uses CSS-only techniques -- no external images needed.
 
-### Fixes
+### Design Details
 
-**AdminLayout.tsx**
-- Add `SheetTitle` inside `SheetContent` for accessibility
-- Add a sticky top header bar on mobile (instead of a floating button) with the page title and hamburger icon, providing consistent navigation context
-- Remove `overflow-auto` from main on mobile to allow native scrolling
+**Background:**
+- Deep warm dark background using inline gradient: `from-[hsl(200,15%,10%)] via-[hsl(180,10%,14%)] to-[hsl(150,15%,12%)]`
+- Subtle radial gold glow in the center (`bg-gold/10 blur-3xl`) for warmth
+- Thin geometric accent lines using CSS borders (a horizontal gold line under the heading)
 
-**AdminSidebar.tsx**
-- Add an "Analytics" nav item pointing to `/admin/analytics`
-- The existing "Settings" item already points to `/admin/settings`
+**Typography:**
+- Large elegant heading: "Discover Exceptional" on line 1 (white), "Properties in Kenya" on line 2 with a gold gradient text effect using `bg-gradient-to-r from-gold via-amber-400 to-gold bg-clip-text text-transparent`
+- Subtitle in muted warm white (`text-white/60`) with refined copy: "Verified homes, apartments, and land across 47 counties. Your next chapter starts here."
 
-**App.tsx**
-- Add routes for `/admin/analytics` and `/admin/settings`
-- Lazy-load both new page components
+**Trust Bar:**
+- A horizontal row of 3-4 stats with subtle dividers:
+  - "10,000+ Properties"
+  - "5,000+ Happy Clients" 
+  - "47 Counties Covered"
+  - "Verified Listings"
+- Styled with `text-white/50` labels and `text-gold font-bold` numbers
+- Sits between the heading and the search bar
 
----
+**Search Card:**
+- Wrapped in a container with a subtle gold border glow: `ring-1 ring-gold/20 shadow-2xl`
+- The card itself stays white (`bg-card`) for contrast against the dark hero
+- Slightly larger padding and rounded corners for a premium feel
 
-## Technical Summary
+**Purpose Tabs (HeroSearch):**
+- Restyle from the current translucent white-on-green to work on dark background
+- Tab strip: `bg-white/10 backdrop-blur-md` 
+- Active tab: `bg-gold text-foreground` (gold highlight instead of white)
+- Inactive: `text-white/70 hover:text-white`
 
-| Change | File | Type |
-|---|---|---|
-| New Analytics page with charts and data tables | `src/pages/admin/AdminAnalyticsPage.tsx` | New file |
-| New Settings page with tabbed configuration view | `src/pages/admin/AdminSettingsPage.tsx` | New file |
-| Add Analytics nav item to sidebar | `src/components/admin/AdminSidebar.tsx` | Edit |
-| Add SheetTitle + sticky mobile header | `src/components/admin/AdminLayout.tsx` | Edit |
-| Add routes for analytics and settings | `src/App.tsx` | Edit |
+**Bottom transition:**
+- A subtle curved SVG divider or gradient fade from the dark hero into the light `bg-muted/30` content area below
 
-No database migrations required -- all data comes from existing tables with existing admin RLS policies.
+### Files Changed
+
+| File | Change |
+|---|---|
+| `src/pages/auth/AuthPage.tsx` | Add password visibility toggle with Eye/EyeOff icons |
+| `src/pages/Index.tsx` | Replace green hero with dark luxury design, add trust bar, gold accents |
+| `src/components/HeroSearch.tsx` | Restyle tabs for dark background (gold active state, translucent inactive) |
+
