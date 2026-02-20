@@ -17,7 +17,7 @@ import {
   detectCounty,
 } from '@/hooks/useHomeSections';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home } from 'lucide-react';
+import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Shield, Users, MapPinned } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -59,27 +59,54 @@ const Index = () => {
 
       <main className="flex-1">
         {/* Hero Section — compact */}
-        <section className="relative bg-primary overflow-hidden">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-primary-foreground blur-3xl animate-float" />
-            <div className="absolute bottom-10 right-20 w-96 h-96 rounded-full bg-primary-foreground blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-            <div className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full bg-gold blur-3xl animate-pulse-soft" />
+        <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(200,15%,10%)] via-[hsl(180,10%,14%)] to-[hsl(150,15%,12%)]">
+          {/* Decorative elements */}
+          <div className="absolute inset-0">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gold/10 blur-[120px]" />
+            <div className="absolute top-10 right-10 w-72 h-72 rounded-full bg-gold/5 blur-3xl" />
+            <div className="absolute bottom-10 left-10 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
           </div>
 
           <div className="relative container py-16 md:py-24">
-            <div className="text-center mb-8 space-y-3">
-              <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground animate-fade-in-up">
-                Find Your Dream Home
-                <span className="block text-gold">in Kenya</span>
+            <div className="text-center mb-6 space-y-4">
+              <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-white animate-fade-in-up">
+                Discover Exceptional
+                <span className="block bg-gradient-to-r from-gold via-amber-400 to-gold bg-clip-text text-transparent">
+                  Properties in Kenya
+                </span>
               </h1>
-              <p className="text-lg md:text-xl text-primary-foreground/80 max-w-2xl mx-auto animate-fade-in-up delay-200">
-                Discover thousands of verified properties for sale, rent, or short-term stays across Kenya.
+              <div className="w-16 h-0.5 bg-gold/60 mx-auto" />
+              <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto animate-fade-in-up delay-200">
+                Verified homes, apartments, and land across 47 counties. Your next chapter starts here.
               </p>
+            </div>
+
+            {/* Trust Bar */}
+            <div className="flex flex-wrap justify-center gap-6 md:gap-10 mb-8 animate-fade-in-up delay-200">
+              {[
+                { icon: <Home className="h-4 w-4" />, number: '10,000+', label: 'Properties' },
+                { icon: <Users className="h-4 w-4" />, number: '5,000+', label: 'Happy Clients' },
+                { icon: <MapPinned className="h-4 w-4" />, number: '47', label: 'Counties' },
+                { icon: <Shield className="h-4 w-4" />, number: '100%', label: 'Verified' },
+              ].map((stat, i) => (
+                <div key={i} className="flex items-center gap-2 text-center">
+                  <span className="text-gold/60">{stat.icon}</span>
+                  <span className="text-gold font-bold text-lg">{stat.number}</span>
+                  <span className="text-white/50 text-sm">{stat.label}</span>
+                </div>
+              ))}
             </div>
 
             <div className="animate-fade-in-up delay-300">
               <HeroSearch />
             </div>
+          </div>
+
+          {/* Bottom curve transition */}
+          <div className="absolute bottom-0 left-0 right-0">
+            <svg viewBox="0 0 1440 60" fill="none" className="w-full h-8 md:h-12" preserveAspectRatio="none">
+              <path d="M0 60L1440 60L1440 0C1440 0 1080 60 720 60C360 60 0 0 0 0L0 60Z" className="fill-muted/30" />
+            </svg>
           </div>
         </section>
 
