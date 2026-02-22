@@ -7,8 +7,7 @@ import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';
-import CommuteBadge from './CommuteBadge';
-import { TransportMode } from './LocationFilterBar';
+import { type TransportMode } from './LocationFilterBar';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 interface PropertyCardProps {
@@ -131,26 +130,15 @@ const PropertyCard = ({
               <span className="text-xl font-heading font-bold text-primary">{price}</span>
               {label && <span className="text-sm text-muted-foreground">{label}</span>}
             </div>
-            {showBadge && (
-              showDistanceBadge ? (
-                <CommuteBadge
-                  distanceKm={distanceKm}
-                  mode={commuteMode}
-                  destination=""
-                  badgeMode="nearme"
-                  isLoading={isLoadingCommute}
-                  noLocation={!property.latitude || !property.longitude}
-                />
-              ) : showCommuteBadge && commuteDestination ? (
-                <CommuteBadge
-                  minutes={commuteTime}
-                  mode={commuteMode}
-                  destination={commuteDestination}
-                  badgeMode="commute"
-                  isLoading={isLoadingCommute}
-                  noLocation={!property.latitude || !property.longitude}
-                />
-              ) : null
+          {showBadge && showDistanceBadge && distanceKm != null && (
+              <Badge variant="secondary" className="text-xs">
+                {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`}
+              </Badge>
+            )}
+            {showBadge && showCommuteBadge && commuteTime != null && commuteDestination && (
+              <Badge variant="secondary" className="text-xs">
+                {commuteTime} min
+              </Badge>
             )}
           </div>
 
