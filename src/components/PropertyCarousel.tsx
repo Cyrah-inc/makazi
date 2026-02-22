@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Property } from '@/types/property';
 import PropertyCard from './PropertyCard';
-import PropertyCardSkeleton from './PropertyCardSkeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -115,7 +115,14 @@ const PropertyCarousel = ({
             {isLoading
               ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
-                    <PropertyCardSkeleton />
+                    <div className="bg-card rounded-2xl overflow-hidden shadow-md">
+                      <Skeleton className="aspect-[4/3] w-full" />
+                      <div className="p-4 space-y-3">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </div>
+                    </div>
                   </div>
                 ))
               : properties.map((property, index) => (
