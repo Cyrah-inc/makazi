@@ -331,7 +331,57 @@ export function useCompleteBooking() {
   });
 }
 
-// Simulate payment (temporary until real payment integration)
+// Trigger M-Pesa STK Push via edge function
+export function useMpesaStkPush() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { bookingId: string; phoneNumber: string }) => {
+      const { data, error } = await supabase.functions.invoke('mpesa-stk-push', {
+        body: { bookingId: params.bookingId, phoneNumber: params.phoneNumber },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { checkoutRequestId: string; bookingId: string; message: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'M-Pesa payment failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Poll booking status until it changes from pending_payment
+export function useBookingStatusPoll(bookingId: string | null) {
+  return useQuery({
+    queryKey: ['booking-status-poll', bookingId],
+    queryFn: async () => {
+      if (!bookingId) return null;
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('id, status')
+        .eq('id', bookingId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!bookingId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status || status === 'pending_payment') return 3000; // poll every 3s
+      return false; // stop polling once status changes
+    },
+  });
+}
+
+// Simulate payment (kept as fallback)
 export function useSimulatePayment() {
   const queryClient = useQueryClient();
 
