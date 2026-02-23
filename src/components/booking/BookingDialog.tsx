@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,13 @@ import {
 import { BookingSummary } from './BookingSummary';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { useAuth } from '@/hooks/useAuth';
-import { useCreateBooking, useSimulatePayment, usePropertyBookedDates } from '@/hooks/useBookings';
+import { useCreateBooking, useMpesaStkPush, useBookingStatusPoll } from '@/hooks/useBookings';
 import { PaymentMethod } from '@/types/booking';
-import { Calendar as CalendarIcon, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Smartphone } from 'lucide-react';
 import { differenceInDays, format, addDays, isSameDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { toast } from '@/hooks/use-toast';
+import { usePropertyBookedDates } from '@/hooks/useBookings';
 
 interface BookingDialogProps {
   propertyId: string;
@@ -39,7 +40,7 @@ export function BookingDialog({
   const navigate = useNavigate();
   const { user } = useAuth();
   const createBooking = useCreateBooking();
-  const simulatePayment = useSimulatePayment();
+  const mpesaStkPush = useMpesaStkPush();
   const { data: bookedDates = [] } = usePropertyBookedDates(propertyId);
 
   const [open, setOpen] = useState(false);
@@ -47,7 +48,33 @@ export function BookingDialog({
   const [nightsInput, setNightsInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [step, setStep] = useState<'dates' | 'payment'>('dates');
+  const [step, setStep] = useState<'dates' | 'payment' | 'waiting'>('dates');
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
+
+  const { data: polledBooking } = useBookingStatusPoll(
+    step === 'waiting' ? pendingBookingId : null
+  );
+
+  // When payment is confirmed via callback, navigate to bookings
+  useEffect(() => {
+    if (polledBooking && polledBooking.status === 'paid') {
+      setOpen(false);
+      resetForm();
+      toast({
+        title: 'Payment Confirmed!',
+        description: `Your stay at ${propertyTitle} has been booked. Payment is held in escrow.`,
+      });
+      navigate('/dashboard/bookings');
+    } else if (polledBooking && polledBooking.status === 'cancelled') {
+      setStep('payment');
+      setPendingBookingId(null);
+      toast({
+        title: 'Payment Failed',
+        description: 'The M-Pesa payment was not completed. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [polledBooking?.status]);
 
   const nights = useMemo(() => {
     if (dateRange?.from && dateRange?.to) {
@@ -64,12 +91,9 @@ export function BookingDialog({
   };
 
   const isDateDisabled = (date: Date) => {
-    // Don't allow past dates
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (date < today) return true;
-
-    // Don't allow already booked dates
     return bookedDates.some(d => isSameDay(d, date));
   };
 
@@ -99,6 +123,7 @@ export function BookingDialog({
     }
 
     try {
+      // 1. Create booking in pending_payment status
       const booking = await createBooking.mutateAsync({
         propertyId,
         landlordId,
@@ -111,18 +136,28 @@ export function BookingDialog({
         guestPhone: phoneNumber || undefined,
       });
 
-      // Simulate payment for now (will be replaced with real payment flow)
-      await simulatePayment.mutateAsync(booking.id);
+      if (paymentMethod === 'mpesa') {
+        // 2. Trigger M-Pesa STK Push
+        const result = await mpesaStkPush.mutateAsync({
+          bookingId: booking.id,
+          phoneNumber: phoneNumber,
+        });
 
-      setOpen(false);
-      resetForm();
-      
-      toast({
-        title: 'Booking Confirmed!',
-        description: `Your stay at ${propertyTitle} has been booked. Payment is held in escrow.`,
-      });
-
-      navigate('/dashboard/bookings');
+        // 3. Move to waiting step — poll for callback
+        setPendingBookingId(booking.id);
+        setStep('waiting');
+        toast({
+          title: 'Check your phone',
+          description: result.message || 'Enter your M-Pesa PIN to complete payment.',
+        });
+      } else {
+        // Stripe flow — redirect to checkout (TODO: implement)
+        toast({
+          title: 'Stripe not yet configured',
+          description: 'Please use M-Pesa for now.',
+          variant: 'destructive',
+        });
+      }
     } catch (error: any) {
       toast({
         title: 'Booking failed',
@@ -138,9 +173,10 @@ export function BookingDialog({
     setPaymentMethod('mpesa');
     setPhoneNumber('');
     setStep('dates');
+    setPendingBookingId(null);
   };
 
-  const isProcessing = createBooking.isPending || simulatePayment.isPending;
+  const isProcessing = createBooking.isPending || mpesaStkPush.isPending;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
@@ -148,7 +184,7 @@ export function BookingDialog({
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading">
-            {step === 'dates' ? 'Select Dates' : 'Confirm & Pay'}
+            {step === 'dates' ? 'Select Dates' : step === 'payment' ? 'Confirm & Pay' : 'Waiting for Payment'}
           </DialogTitle>
         </DialogHeader>
 
@@ -170,7 +206,6 @@ export function BookingDialog({
               className="rounded-lg border pointer-events-auto"
             />
 
-            {/* Nights shortcut */}
             <div className="flex gap-2 items-end">
               <div className="flex-1 space-y-1">
                 <Label className="text-xs text-muted-foreground">Or enter number of nights</Label>
@@ -244,6 +279,32 @@ export function BookingDialog({
             <p className="text-xs text-center text-muted-foreground">
               Payment will be held in escrow until you check in at the property.
             </p>
+          </div>
+        )}
+
+        {step === 'waiting' && (
+          <div className="space-y-6 py-4 text-center">
+            <div className="flex justify-center">
+              <div className="relative">
+                <Smartphone className="h-16 w-16 text-primary animate-pulse" />
+                <div className="absolute -top-1 -right-1 h-5 w-5 bg-green-500 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg">STK Push Sent</h3>
+              <p className="text-sm text-muted-foreground">
+                A payment prompt has been sent to your phone. Enter your M-Pesa PIN to complete the payment.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Waiting for confirmation...
+            </div>
+            <Button variant="outline" onClick={() => { setStep('payment'); setPendingBookingId(null); }}>
+              Cancel & Try Again
+            </Button>
           </div>
         )}
       </DialogContent>
