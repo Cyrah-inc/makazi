@@ -1,75 +1,37 @@
 
 
-# Google OAuth, Password Toggle, and Premium Hero Redesign
+# Improve Airbnb Date Selection UX
 
-## 1. Google OAuth -- Dashboard Configuration Only
+The current booking dialog requires users to tap two dates on a small calendar, then optionally type a number of nights -- it's not intuitive. Here's the plan to make it friendlier and more Airbnb-like.
 
-The frontend code in `AuthPage.tsx` is already complete. You need to:
-1. Go to **Supabase Dashboard** > Authentication > Providers > Enable Google
-2. Create OAuth credentials in **Google Cloud Console** with redirect URI: `https://wbveiqffiooxaujccajq.supabase.co/auth/v1/callback`
-3. Paste Client ID and Secret into the Supabase Google provider settings
-4. In Supabase > Authentication > URL Configuration, add `https://makazi.lovable.app` as Site URL and redirect URL
+## What Changes
 
-No code changes needed for this part.
+### 1. Quick Night Presets
+Replace the manual "enter number of nights" input with quick-tap pill buttons: **1 night**, **2 nights**, **3 nights**, **5 nights**, **7 nights**. Tapping one auto-sets the end date based on the selected check-in date. Much faster than typing.
 
----
+### 2. Clearer Check-in / Check-out Display
+Add a visual header above the calendar showing the selected **Check-in** and **Check-out** dates in a two-column layout (like Airbnb). This gives users instant feedback on what they've picked, with placeholder text ("Select date") when nothing is chosen yet.
 
-## 2. Password Visibility Toggle
+### 3. Better Guidance Text
+Add helper text: "Tap your check-in date, then tap your check-out date" so users know exactly what to do. Update to "Now tap your check-out date" after check-in is selected.
 
-**File: `src/pages/auth/AuthPage.tsx`**
+### 4. Auto-advance to Payment
+Once both dates are selected (nights > 0), show the booking summary immediately with a prominent "Continue to Payment" button -- keeping the flow smooth.
 
-- Add `showPassword` state
-- Import `Eye` and `EyeOff` from lucide-react
-- For both sign-in and sign-up password fields:
-  - Change `type="password"` to `type={showPassword ? 'text' : 'password'}`
-  - Add a toggle button with `Eye`/`EyeOff` icon inside the existing `relative` wrapper, positioned `absolute right-3`
-  - Add `pr-10` to password inputs for icon clearance
+### 5. Clear Dates Button
+Add a small "Clear dates" link so users can easily reset without closing the dialog.
 
 ---
 
-## 3. Hero Section Redesign -- "Warm Luxury" Concept
+## Technical Details
 
-Replace the current solid green hero with a premium dark-themed hero inspired by luxury real estate brands (Knight Frank, Sotheby's). This design uses CSS-only techniques -- no external images needed.
+**File: `src/components/booking/BookingDialog.tsx`**
 
-### Design Details
+- Remove the `nightsInput` state and the number input + Apply button
+- Add quick-select preset buttons (1, 2, 3, 5, 7 nights) that call `setDateRange({ from: dateRange.from, to: addDays(dateRange.from, n) })`
+- Add a date display header with two columns (Check-in / Check-out) above the calendar
+- Add dynamic helper text based on selection state
+- Add a "Clear dates" reset button
+- Keep the calendar with `mode="range"` and `pointer-events-auto`
 
-**Background:**
-- Deep warm dark background using inline gradient: `from-[hsl(200,15%,10%)] via-[hsl(180,10%,14%)] to-[hsl(150,15%,12%)]`
-- Subtle radial gold glow in the center (`bg-gold/10 blur-3xl`) for warmth
-- Thin geometric accent lines using CSS borders (a horizontal gold line under the heading)
-
-**Typography:**
-- Large elegant heading: "Discover Exceptional" on line 1 (white), "Properties in Kenya" on line 2 with a gold gradient text effect using `bg-gradient-to-r from-gold via-amber-400 to-gold bg-clip-text text-transparent`
-- Subtitle in muted warm white (`text-white/60`) with refined copy: "Verified homes, apartments, and land across 47 counties. Your next chapter starts here."
-
-**Trust Bar:**
-- A horizontal row of 3-4 stats with subtle dividers:
-  - "10,000+ Properties"
-  - "5,000+ Happy Clients" 
-  - "47 Counties Covered"
-  - "Verified Listings"
-- Styled with `text-white/50` labels and `text-gold font-bold` numbers
-- Sits between the heading and the search bar
-
-**Search Card:**
-- Wrapped in a container with a subtle gold border glow: `ring-1 ring-gold/20 shadow-2xl`
-- The card itself stays white (`bg-card`) for contrast against the dark hero
-- Slightly larger padding and rounded corners for a premium feel
-
-**Purpose Tabs (HeroSearch):**
-- Restyle from the current translucent white-on-green to work on dark background
-- Tab strip: `bg-white/10 backdrop-blur-md` 
-- Active tab: `bg-gold text-foreground` (gold highlight instead of white)
-- Inactive: `text-white/70 hover:text-white`
-
-**Bottom transition:**
-- A subtle curved SVG divider or gradient fade from the dark hero into the light `bg-muted/30` content area below
-
-### Files Changed
-
-| File | Change |
-|---|---|
-| `src/pages/auth/AuthPage.tsx` | Add password visibility toggle with Eye/EyeOff icons |
-| `src/pages/Index.tsx` | Replace green hero with dark luxury design, add trust bar, gold accents |
-| `src/components/HeroSearch.tsx` | Restyle tabs for dark background (gold active state, translucent inactive) |
-
+No new dependencies or files needed -- this is a UI-only refactor of the existing BookingDialog component.
