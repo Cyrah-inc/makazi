@@ -2,8 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +43,7 @@ export function BookingDialog({
 
   const [open, setOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [nightsInput, setNightsInput] = useState('');
+  
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [step, setStep] = useState<'dates' | 'payment' | 'waiting'>('dates');
@@ -83,9 +81,8 @@ export function BookingDialog({
     return 0;
   }, [dateRange]);
 
-  const handleNightsShortcut = () => {
-    const n = parseInt(nightsInput);
-    if (n > 0 && dateRange?.from) {
+  const handlePresetClick = (n: number) => {
+    if (dateRange?.from) {
       setDateRange({ from: dateRange.from, to: addDays(dateRange.from, n) });
     }
   };
@@ -169,7 +166,6 @@ export function BookingDialog({
 
   const resetForm = () => {
     setDateRange(undefined);
-    setNightsInput('');
     setPaymentMethod('mpesa');
     setPhoneNumber('');
     setStep('dates');
@@ -197,6 +193,31 @@ export function BookingDialog({
 
         {step === 'dates' && (
           <div className="space-y-4">
+            {/* Check-in / Check-out display header */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className={`rounded-lg border p-3 text-center ${dateRange?.from ? 'border-primary bg-primary/5' : 'border-dashed border-muted-foreground/30'}`}>
+                <p className="text-xs text-muted-foreground mb-1">Check-in</p>
+                <p className="font-semibold text-sm">
+                  {dateRange?.from ? format(dateRange.from, 'MMM d, yyyy') : 'Select date'}
+                </p>
+              </div>
+              <div className={`rounded-lg border p-3 text-center ${dateRange?.to ? 'border-primary bg-primary/5' : 'border-dashed border-muted-foreground/30'}`}>
+                <p className="text-xs text-muted-foreground mb-1">Check-out</p>
+                <p className="font-semibold text-sm">
+                  {dateRange?.to ? format(dateRange.to, 'MMM d, yyyy') : 'Select date'}
+                </p>
+              </div>
+            </div>
+
+            {/* Guidance text */}
+            <p className="text-xs text-center text-muted-foreground">
+              {!dateRange?.from
+                ? 'Tap your check-in date on the calendar'
+                : !dateRange?.to
+                ? 'Now tap your check-out date'
+                : `${nights} night${nights !== 1 ? 's' : ''} selected`}
+            </p>
+
             <Calendar
               mode="range"
               selected={dateRange}
@@ -206,26 +227,36 @@ export function BookingDialog({
               className="rounded-lg border pointer-events-auto"
             />
 
-            <div className="flex gap-2 items-end">
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs text-muted-foreground">Or enter number of nights</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="e.g. 3"
-                  value={nightsInput}
-                  onChange={(e) => setNightsInput(e.target.value)}
-                />
+            {/* Quick night presets */}
+            {dateRange?.from && !dateRange?.to && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">Quick select nights</p>
+                <div className="flex gap-2 flex-wrap">
+                  {[1, 2, 3, 5, 7].map((n) => (
+                    <Button
+                      key={n}
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full px-4"
+                      onClick={() => handlePresetClick(n)}
+                    >
+                      {n} night{n !== 1 ? 's' : ''}
+                    </Button>
+                  ))}
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNightsShortcut}
-                disabled={!dateRange?.from || !nightsInput}
+            )}
+
+            {/* Clear dates */}
+            {(dateRange?.from || dateRange?.to) && (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline hover:text-foreground"
+                onClick={() => setDateRange(undefined)}
               >
-                Apply
-              </Button>
-            </div>
+                Clear dates
+              </button>
+            )}
 
             {nights > 0 && (
               <BookingSummary
