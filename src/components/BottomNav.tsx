@@ -20,12 +20,12 @@ function BottomNavInner() {
   const isMobile = useIsMobile();
   const unreadCount = useUnreadCount();
 
-  // Don't render on desktop or in dashboard pages (they have their own nav)
-  const isDashboardPage = location.pathname.startsWith('/dashboard') || 
-                          location.pathname.startsWith('/admin') || 
-                          location.pathname.startsWith('/landlord');
+  // Don't render on desktop or in admin/landlord pages (they have their own nav)
+  // Keep visible on /dashboard/* so users can access Saved and Chats
+  const isHiddenPage = location.pathname.startsWith('/admin') || 
+                       location.pathname.startsWith('/landlord');
   
-  if (!isMobile || isDashboardPage) return null;
+  if (!isMobile || isHiddenPage) return null;
 
   const filteredItems = navItems.filter(item => !item.requiresAuth || user);
 

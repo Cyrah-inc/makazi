@@ -11,7 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Home, Building, Landmark, Trees } from 'lucide-react';
+import { Loader2, ArrowLeft, Home, Building, Landmark, Trees, Briefcase, Plus, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Link } from 'react-router-dom';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 import { LocationPicker } from '@/components/LocationPicker';
@@ -36,7 +37,18 @@ const propertyCategories = [
   { value: 'townhouse', label: 'Townhouse', icon: Building },
   { value: 'land', label: 'Land', icon: Trees },
   { value: 'commercial', label: 'Commercial', icon: Building },
+  { value: 'office', label: 'Office Space', icon: Briefcase },
 ];
+
+const UNIT_TYPE_OPTIONS = [
+  'Bedsitter', 'Studio', '1 Bedroom', '2 Bedroom', '3 Bedroom', '4 Bedroom', 'Office Space', 'Shop', 'Other'
+];
+
+interface RentalUnitEntry {
+  type: string;
+  count: string;
+  rent: string;
+}
 
 type ListingPurpose = 'sale' | 'rent' | 'airbnb';
 
@@ -74,6 +86,25 @@ export default function AddPropertyPage() {
     amenities: [] as string[],
     images: [] as string[],
   });
+
+  const [isMultiUnit, setIsMultiUnit] = useState(false);
+  const [rentalUnits, setRentalUnits] = useState<RentalUnitEntry[]>([
+    { type: 'Bedsitter', count: '', rent: '' }
+  ]);
+
+  const addRentalUnit = () => {
+    setRentalUnits(prev => [...prev, { type: '1 Bedroom', count: '', rent: '' }]);
+  };
+
+  const removeRentalUnit = (index: number) => {
+    setRentalUnits(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateRentalUnit = (index: number, field: keyof RentalUnitEntry, value: string) => {
+    setRentalUnits(prev => prev.map((u, i) => i === index ? { ...u, [field]: value } : u));
+  };
+
+  const showMultiUnitOption = formData.forRent && ['apartment', 'commercial', 'office'].includes(formData.property_category);
 
   const getSelectedPurposes = (): ListingPurpose[] => {
     const purposes: ListingPurpose[] = [];
@@ -128,13 +159,24 @@ export default function AddPropertyPage() {
       });
       return;
     }
-    if (formData.forRent && !formData.monthlyRent) {
+    if (formData.forRent && !isMultiUnit && !formData.monthlyRent) {
       toast({
         title: 'Error',
         description: 'Please enter a monthly rent',
         variant: 'destructive',
       });
       return;
+    }
+    if (formData.forRent && isMultiUnit) {
+      const validUnits = rentalUnits.filter(u => u.count && u.rent);
+      if (validUnits.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'Please add at least one rental unit with count and rent',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     if (formData.forAirbnb && !formData.nightlyRate) {
       toast({
@@ -147,6 +189,20 @@ export default function AddPropertyPage() {
 
     setIsLoading(true);
 
+    // Build rental_units JSON if multi-unit
+    const rentalUnitsJson = isMultiUnit && formData.forRent
+      ? rentalUnits.filter(u => u.count && u.rent).map(u => ({
+          type: u.type,
+          count: parseInt(u.count),
+          rent: parseFloat(u.rent),
+        }))
+      : null;
+
+    // For multi-unit, use lowest rent as headline monthly_rent
+    const computedMonthlyRent = isMultiUnit && rentalUnitsJson && rentalUnitsJson.length > 0
+      ? Math.min(...rentalUnitsJson.map(u => u.rent))
+      : formData.forRent && formData.monthlyRent ? parseFloat(formData.monthlyRent) : null;
+
     const { error } = await supabase.from('properties').insert({
       landlord_id: user.id,
       title: formData.title,
@@ -155,7 +211,7 @@ export default function AddPropertyPage() {
       property_category: formData.property_category,
       price: getPrimaryPrice(),
       sale_price: formData.forSale && formData.salePrice ? parseFloat(formData.salePrice) : null,
-      monthly_rent: formData.forRent && formData.monthlyRent ? parseFloat(formData.monthlyRent) : null,
+      monthly_rent: computedMonthlyRent,
       nightly_rate: formData.forAirbnb && formData.nightlyRate ? parseFloat(formData.nightlyRate) : null,
       bedrooms: parseInt(formData.bedrooms),
       bathrooms: parseInt(formData.bathrooms),
@@ -168,6 +224,7 @@ export default function AddPropertyPage() {
       longitude: formData.longitude,
       amenities: formData.amenities,
       images: formData.images,
+      rental_units: rentalUnitsJson as any,
       status: 'pending',
     });
 
@@ -340,15 +397,85 @@ export default function AddPropertyPage() {
                   </div>
                 </div>
                 {formData.forRent && (
-                  <div className="mt-4 ml-7">
-                    <Label htmlFor="monthlyRent">Monthly Rent (KES) *</Label>
-                    <Input
-                      id="monthlyRent"
-                      type="number"
-                      value={formData.monthlyRent}
-                      onChange={(e) => setFormData(prev => ({ ...prev, monthlyRent: e.target.value }))}
-                      placeholder="e.g., 50000"
-                    />
+                  <div className="mt-4 ml-7 space-y-4">
+                    {/* Multi-unit toggle */}
+                    {showMultiUnitOption && (
+                      <div className="flex items-center justify-between rounded-md border border-border p-3 bg-muted/30">
+                        <div>
+                          <Label htmlFor="multiUnit" className="text-sm font-medium cursor-pointer">Multi-Unit Property</Label>
+                          <p className="text-xs text-muted-foreground">Different unit types with separate pricing</p>
+                        </div>
+                        <Switch id="multiUnit" checked={isMultiUnit} onCheckedChange={setIsMultiUnit} />
+                      </div>
+                    )}
+
+                    {!isMultiUnit ? (
+                      <div>
+                        <Label htmlFor="monthlyRent">Monthly Rent (KES) *</Label>
+                        <Input
+                          id="monthlyRent"
+                          type="number"
+                          value={formData.monthlyRent}
+                          onChange={(e) => setFormData(prev => ({ ...prev, monthlyRent: e.target.value }))}
+                          placeholder="e.g., 50000"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <Label>Rental Units</Label>
+                        {rentalUnits.map((unit, index) => (
+                          <div key={index} className="grid grid-cols-[1fr_80px_1fr_40px] gap-2 items-end">
+                            <div>
+                              {index === 0 && <Label className="text-xs text-muted-foreground mb-1 block">Unit Type</Label>}
+                              <Select value={unit.type} onValueChange={(v) => updateRentalUnit(index, 'type', v)}>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {UNIT_TYPE_OPTIONS.map(opt => (
+                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              {index === 0 && <Label className="text-xs text-muted-foreground mb-1 block">Units</Label>}
+                              <Input
+                                type="number"
+                                className="h-9"
+                                value={unit.count}
+                                onChange={(e) => updateRentalUnit(index, 'count', e.target.value)}
+                                placeholder="#"
+                              />
+                            </div>
+                            <div>
+                              {index === 0 && <Label className="text-xs text-muted-foreground mb-1 block">Rent (KES)</Label>}
+                              <Input
+                                type="number"
+                                className="h-9"
+                                value={unit.rent}
+                                onChange={(e) => updateRentalUnit(index, 'rent', e.target.value)}
+                                placeholder="25000"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9"
+                              onClick={() => removeRentalUnit(index)}
+                              disabled={rentalUnits.length <= 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" className="gap-1" onClick={addRentalUnit}>
+                          <Plus className="h-3.5 w-3.5" />
+                          Add Unit Type
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
