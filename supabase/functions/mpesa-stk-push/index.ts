@@ -6,8 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Daraja API base URL (production)
-const DARAJA_BASE = 'https://api.safaricom.co.ke';
+// Daraja API base URL — defaults to sandbox unless MPESA_ENVIRONMENT=production
+const MPESA_ENV = Deno.env.get('MPESA_ENVIRONMENT') || 'sandbox';
+const DARAJA_BASE = MPESA_ENV === 'production'
+  ? 'https://api.safaricom.co.ke'
+  : 'https://sandbox.safaricom.co.ke';
 
 async function getOAuthToken(consumerKey: string, consumerSecret: string): Promise<string> {
   const credentials = btoa(`${consumerKey}:${consumerSecret}`);
@@ -69,7 +72,7 @@ serve(async (req) => {
     }
 
     const { bookingId, phoneNumber } = await req.json();
-    console.log(`M-Pesa STK Push for booking ${bookingId}, phone: ${phoneNumber}`);
+    console.log(`M-Pesa STK Push (${MPESA_ENV}) for booking ${bookingId}, phone: ${phoneNumber}`);
 
     // Fetch the booking
     const { data: booking, error: bookingError } = await supabase
