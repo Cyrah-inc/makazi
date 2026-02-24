@@ -97,10 +97,10 @@ serve(async (req) => {
     }
 
     // Get M-Pesa credentials
-    const consumerKey = Deno.env.get('MPESA_CONSUMER_KEY');
-    const consumerSecret = Deno.env.get('MPESA_CONSUMER_SECRET');
-    const shortcode = Deno.env.get('MPESA_SHORTCODE');
-    const passkey = Deno.env.get('MPESA_PASSKEY');
+    const consumerKey = Deno.env.get('MPESA_CONSUMER_KEY')?.trim();
+    const consumerSecret = Deno.env.get('MPESA_CONSUMER_SECRET')?.trim();
+    const shortcode = Deno.env.get('MPESA_SHORTCODE')?.trim();
+    const passkey = Deno.env.get('MPESA_PASSKEY')?.trim();
 
     if (!consumerKey || !consumerSecret || !shortcode || !passkey) {
       console.error('M-Pesa credentials not configured');
