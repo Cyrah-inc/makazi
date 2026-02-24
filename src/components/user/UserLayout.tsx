@@ -52,7 +52,7 @@ export function UserLayout({ children }: UserLayoutProps) {
         </Sheet>
       )}
       
-      <main className={`flex-1 overflow-auto ${isMobile ? 'pt-16' : ''}`}>
+      <main className={`flex-1 overflow-auto ${isMobile ? 'pt-16 pb-20' : ''}`}>
         <div className="p-4 sm:p-6 lg:p-8">
           <UserBreadcrumb />
           {children}

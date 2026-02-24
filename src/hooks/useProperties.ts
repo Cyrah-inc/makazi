@@ -8,6 +8,7 @@ export type DbProperty = Tables<'properties'> & {
   monthly_rent?: number | null;
   nightly_rate?: number | null;
   property_category?: string | null;
+  rental_units?: any | null;
 };
 
 type DbPropertyType = 'sale' | 'rent' | 'airbnb';
@@ -113,6 +114,7 @@ export const transformProperty = (
     images: dbProperty.images || [],
     videoUrl: undefined,
     amenities: dbProperty.amenities || [],
+    rentalUnits: Array.isArray(dbProperty.rental_units) ? dbProperty.rental_units : undefined,
     featured: false,
     verified: dbProperty.status === 'approved',
     views: dbProperty.views_count,
@@ -124,7 +126,7 @@ export const transformProperty = (
   };
 };
 
-export const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at' as const;
+export const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at,rental_units' as const;
 
 export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolean = false) => {
   return useQuery({

@@ -1,6 +1,12 @@
 export type PropertyPurpose = 'buy' | 'rent' | 'airbnb';
 export type PropertyType = 'apartment' | 'house' | 'maisonette' | 'bungalow' | 'villa' | 'land' | 'commercial' | 'townhouse';
 
+export interface RentalUnit {
+  type: string;
+  count: number;
+  rent: number;
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -34,6 +40,9 @@ export interface Property {
   
   // Amenities
   amenities: string[];
+  
+  // Rental units
+  rentalUnits?: RentalUnit[];
   
   // Meta
   featured: boolean;

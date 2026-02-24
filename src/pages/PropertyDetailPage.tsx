@@ -32,7 +32,7 @@ const PropertyDetailPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('properties')
-        .select('id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,landlord_id,latitude,longitude,created_at,updated_at,status')
+        .select('id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,landlord_id,latitude,longitude,created_at,updated_at,status,rental_units')
         .eq('id', id)
         .eq('status', 'approved')
         .maybeSingle();
@@ -94,6 +94,7 @@ const PropertyDetailPage = () => {
     landlordName: 'Property Owner',
     latitude: dbProperty.latitude ? Number(dbProperty.latitude) : undefined,
     longitude: dbProperty.longitude ? Number(dbProperty.longitude) : undefined,
+    rentalUnits: Array.isArray((dbProperty as any).rental_units) ? (dbProperty as any).rental_units : undefined,
   } : null;
 
   if (isLoading) {
@@ -274,6 +275,27 @@ const PropertyDetailPage = () => {
                     {property.description}
                   </p>
                 </div>
+
+                {/* Rental Units Breakdown */}
+                {property.rentalUnits && property.rentalUnits.length > 0 && (
+                  <div>
+                    <h2 className="font-heading text-xl font-semibold mb-4">Available Units</h2>
+                    <div className="border border-border rounded-lg overflow-hidden">
+                      <div className="grid grid-cols-3 gap-4 p-3 bg-muted/50 text-sm font-medium text-muted-foreground">
+                        <span>Unit Type</span>
+                        <span className="text-center">Available</span>
+                        <span className="text-right">Rent/month</span>
+                      </div>
+                      {property.rentalUnits.map((unit: any, idx: number) => (
+                        <div key={idx} className="grid grid-cols-3 gap-4 p-3 border-t border-border text-sm">
+                          <span className="font-medium">{unit.type}</span>
+                          <span className="text-center">{unit.count} unit{unit.count !== 1 ? 's' : ''}</span>
+                          <span className="text-right font-semibold text-primary">{formatFullPrice(unit.rent)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Amenities */}
                 <div>

@@ -361,6 +361,7 @@ export type Database = {
           price: number
           property_category: string | null
           property_type: Database["public"]["Enums"]["property_type"]
+          rental_units: Json | null
           sale_price: number | null
           state: string | null
           status: Database["public"]["Enums"]["property_status"]
@@ -388,6 +389,7 @@ export type Database = {
           price: number
           property_category?: string | null
           property_type?: Database["public"]["Enums"]["property_type"]
+          rental_units?: Json | null
           sale_price?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["property_status"]
@@ -415,6 +417,7 @@ export type Database = {
           price?: number
           property_category?: string | null
           property_type?: Database["public"]["Enums"]["property_type"]
+          rental_units?: Json | null
           sale_price?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["property_status"]
