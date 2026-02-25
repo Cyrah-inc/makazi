@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_withdrawals: {
+        Row: {
+          admin_id: string
+          amount: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          mpesa_conversation_id: string | null
+          mpesa_receipt: string | null
+          phone_number: string
+          source: string
+          status: string
+        }
+        Insert: {
+          admin_id: string
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mpesa_conversation_id?: string | null
+          mpesa_receipt?: string | null
+          phone_number: string
+          source?: string
+          status?: string
+        }
+        Update: {
+          admin_id?: string
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mpesa_conversation_id?: string | null
+          mpesa_receipt?: string | null
+          phone_number?: string
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           check_in_date: string
@@ -300,6 +339,53 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payouts: {
+        Row: {
+          amount: number
+          booking_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          landlord_id: string
+          mpesa_conversation_id: string | null
+          mpesa_receipt: string | null
+          phone_number: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          landlord_id: string
+          mpesa_conversation_id?: string | null
+          mpesa_receipt?: string | null
+          phone_number: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          landlord_id?: string
+          mpesa_conversation_id?: string | null
+          mpesa_receipt?: string | null
+          phone_number?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
         ]
