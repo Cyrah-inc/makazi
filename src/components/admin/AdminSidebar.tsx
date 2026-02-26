@@ -25,6 +25,7 @@ const sidebarItems = [
   { icon: FileText, label: 'Listings Overview', path: '/admin/listings' },
   { icon: CalendarDays, label: 'Airbnb', path: '/admin/airbnb' },
   { icon: DollarSign, label: 'Revenue', path: '/admin/revenue' },
+  { icon: DollarSign, label: 'Payouts', path: '/admin/payouts' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];

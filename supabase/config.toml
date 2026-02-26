@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.process-subscription]
 verify_jwt = false
+
+[functions.mpesa-b2c-callback]
+verify_jwt = false
+
+[functions.admin-withdraw-commission]
+verify_jwt = false

@@ -40,7 +40,6 @@ export interface BookingWithProperty extends Booking {
 }
 
 export interface BookingDetail extends Booking {
-  // Property details
   property_title: string;
   property_image: string;
   property_images: string[];
@@ -53,11 +52,36 @@ export interface BookingDetail extends Booking {
   property_amenities: string[];
   property_type: string;
   property_category: string | null;
-  // Guest details
   guest_name: string;
   guest_email: string;
   guest_phone_profile: string | null;
   guest_avatar_url: string | null;
+}
+
+export interface Payout {
+  id: string;
+  booking_id: string;
+  landlord_id: string;
+  amount: number;
+  phone_number: string;
+  status: 'pending' | 'completed' | 'failed';
+  mpesa_conversation_id: string | null;
+  mpesa_receipt: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface AdminWithdrawal {
+  id: string;
+  admin_id: string;
+  amount: number;
+  phone_number: string;
+  status: 'pending' | 'completed' | 'failed';
+  mpesa_conversation_id: string | null;
+  mpesa_receipt: string | null;
+  source: string;
+  created_at: string;
+  completed_at: string | null;
 }
 
 export const BOOKING_STATUS_CONFIG: Record<BookingStatus, { label: string; color: string }> = {
@@ -69,4 +93,4 @@ export const BOOKING_STATUS_CONFIG: Record<BookingStatus, { label: string; color
   refunded: { label: 'Refunded', color: 'bg-orange-100 text-orange-800' },
 };
 
-export const SERVICE_FEE_RATE = 0.10; // 10% platform fee
+export const SERVICE_FEE_RATE = 0.10;

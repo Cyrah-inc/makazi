@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Booking, BookingWithProperty, BookingDetail, SERVICE_FEE_RATE } from '@/types/booking';
+import { Booking, BookingWithProperty, BookingDetail, Payout, SERVICE_FEE_RATE } from '@/types/booking';
 import { toast } from '@/hooks/use-toast';
 
 // Fetch bookings for the current guest
@@ -108,7 +108,6 @@ export function useBookingDetail(bookingId: string | undefined) {
       if (error) throw error;
       if (!booking) return null;
 
-      // Fetch property and guest profile in parallel
       const [propRes, guestRes] = await Promise.all([
         supabase
           .from('properties')
@@ -297,7 +296,40 @@ export function useCancelBooking() {
   });
 }
 
-// Mark booking as completed (landlord action)
+// Mark booking as completed (landlord action) — now calls edge function for payout
+export function useRequestPayout() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { bookingId: string; phoneNumber: string }) => {
+      const { data, error } = await supabase.functions.invoke('process-booking-payout', {
+        body: { bookingId: params.bookingId, phoneNumber: params.phoneNumber },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { success: boolean; payoutAmount: number; payoutReference: string; message: string };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['booking-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['landlord-payouts'] });
+      toast({
+        title: 'Payout Processed!',
+        description: `KES ${data.payoutAmount.toLocaleString()} has been sent to your M-Pesa (simulated).`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Payout failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Keep old useCompleteBooking for backward compatibility
 export function useCompleteBooking() {
   const queryClient = useQueryClient();
 
@@ -328,6 +360,52 @@ export function useCompleteBooking() {
         variant: 'destructive',
       });
     },
+  });
+}
+
+// Fetch landlord payouts
+export function useLandlordPayouts() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['landlord-payouts', user?.id],
+    queryFn: async (): Promise<Payout[]> => {
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('payouts')
+        .select('*')
+        .eq('landlord_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as Payout[];
+    },
+    enabled: !!user,
+  });
+}
+
+// Fetch payout for a specific booking
+export function useBookingPayout(bookingId: string | undefined) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['booking-payout', bookingId],
+    queryFn: async (): Promise<Payout | null> => {
+      if (!bookingId || !user) return null;
+
+      const { data, error } = await supabase
+        .from('payouts')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Payout | null;
+    },
+    enabled: !!bookingId && !!user,
   });
 }
 
@@ -375,8 +453,8 @@ export function useBookingStatusPoll(bookingId: string | null) {
     enabled: !!bookingId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      if (!status || status === 'pending_payment') return 3000; // poll every 3s
-      return false; // stop polling once status changes
+      if (!status || status === 'pending_payment') return 3000;
+      return false;
     },
   });
 }
@@ -410,6 +488,37 @@ export function useSimulatePayment() {
     onError: (error) => {
       toast({
         title: 'Payment failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Admin withdraw commission
+export function useAdminWithdraw() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { amount: number; phoneNumber: string; source: string }) => {
+      const { data, error } = await supabase.functions.invoke('admin-withdraw-commission', {
+        body: params,
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+      toast({
+        title: 'Withdrawal Processed',
+        description: 'Commission withdrawal has been processed (simulated).',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Withdrawal failed',
         description: error.message,
         variant: 'destructive',
       });

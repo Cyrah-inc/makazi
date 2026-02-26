@@ -1,12 +1,13 @@
 import { BookingStatus } from '@/types/booking';
 import { cn } from '@/lib/utils';
-import { Clock, CreditCard, LogIn, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { Clock, CreditCard, LogIn, CheckCircle, XCircle, RotateCcw, Banknote } from 'lucide-react';
 
-const TIMELINE_STEPS: { status: BookingStatus; label: string; icon: React.ElementType }[] = [
+const TIMELINE_STEPS: { status: BookingStatus | 'paid_out'; label: string; icon: React.ElementType }[] = [
   { status: 'pending_payment', label: 'Booked', icon: Clock },
   { status: 'paid', label: 'Paid', icon: CreditCard },
   { status: 'checked_in', label: 'Checked In', icon: LogIn },
   { status: 'completed', label: 'Completed', icon: CheckCircle },
+  { status: 'paid_out', label: 'Paid Out', icon: Banknote },
 ];
 
 const STATUS_ORDER: Record<string, number> = {
@@ -20,10 +21,15 @@ const STATUS_ORDER: Record<string, number> = {
 
 interface BookingTimelineProps {
   status: string;
+  paidOut?: boolean;
 }
 
-export function BookingTimeline({ status }: BookingTimelineProps) {
-  const currentIndex = STATUS_ORDER[status] ?? -1;
+export function BookingTimeline({ status, paidOut }: BookingTimelineProps) {
+  let currentIndex = STATUS_ORDER[status] ?? -1;
+  // If payout has been made, advance to "Paid Out" step
+  if (paidOut && currentIndex >= 3) {
+    currentIndex = 4;
+  }
   const isCancelled = status === 'cancelled';
   const isRefunded = status === 'refunded';
 

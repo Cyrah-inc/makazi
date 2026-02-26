@@ -1,7 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { LandlordLayout } from '@/components/landlord/LandlordLayout';
-import { useBookingDetail, useCompleteBooking, useCancelBooking } from '@/hooks/useBookings';
+import { useBookingDetail, useRequestPayout, useCancelBooking, useBookingPayout } from '@/hooks/useBookings';
 import { useBookingReview } from '@/hooks/useReviews';
+import { useLandlordProfile } from '@/hooks/useLandlordProfile';
 import { BookingTimeline } from '@/components/booking/BookingTimeline';
 import { ReviewDisplay } from '@/components/booking/ReviewDisplay';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { BOOKING_STATUS_CONFIG, BookingStatus } from '@/types/booking';
 import { formatFullPrice, formatDate } from '@/lib/formatters';
 import { getBookingRelativeLabel } from '@/lib/bookingUtils';
@@ -16,7 +19,7 @@ import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 import { cn } from '@/lib/utils';
 import {
   Loader2, ArrowLeft, MapPin, CalendarDays, CreditCard, MessageSquare,
-  User, Mail, Phone, Star, CheckCircle, XCircle, Copy, Check,
+  User, Mail, Phone, Star, CheckCircle, XCircle, Copy, Check, Banknote,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
@@ -25,15 +28,22 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog';
 
 export default function LandlordBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: booking, isLoading } = useBookingDetail(id);
   const { data: review } = useBookingReview(id);
-  const completeBooking = useCompleteBooking();
+  const { data: payout } = useBookingPayout(id);
+  const { landlordProfile } = useLandlordProfile();
+  const requestPayout = useRequestPayout();
   const cancelBooking = useCancelBooking();
   const [copied, setCopied] = useState(false);
+  const [payoutPhone, setPayoutPhone] = useState('');
+  const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
 
   const copyBookingRef = () => {
     if (!booking) return;
@@ -41,6 +51,19 @@ export default function LandlordBookingDetailPage() {
     setCopied(true);
     toast({ title: 'Copied!', description: 'Booking reference copied.' });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRequestPayout = () => {
+    if (!booking || !payoutPhone) return;
+    requestPayout.mutate(
+      { bookingId: booking.id, phoneNumber: payoutPhone },
+      { onSuccess: () => setPayoutDialogOpen(false) }
+    );
+  };
+
+  const openPayoutDialog = () => {
+    setPayoutPhone(landlordProfile?.business_phone || '');
+    setPayoutDialogOpen(true);
   };
 
   if (isLoading) {
@@ -70,8 +93,9 @@ export default function LandlordBookingDetailPage() {
   const statusConfig = BOOKING_STATUS_CONFIG[booking.status as BookingStatus];
   const relativeLabel = getBookingRelativeLabel(booking.check_in_date, booking.check_out_date, booking.status);
   const landlordPayout = booking.total_amount - booking.service_fee;
-  const canComplete = booking.status === 'checked_in';
+  const canRequestPayout = booking.status === 'checked_in' && !payout;
   const canCancel = ['pending_payment', 'paid'].includes(booking.status);
+  const hasPayout = !!payout;
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -162,7 +186,7 @@ export default function LandlordBookingDetailPage() {
                 <CardTitle className="text-base font-heading">Booking Timeline</CardTitle>
               </CardHeader>
               <CardContent>
-                <BookingTimeline status={booking.status} />
+                <BookingTimeline status={booking.status} paidOut={hasPayout && payout?.status === 'completed'} />
               </CardContent>
             </Card>
 
@@ -204,6 +228,45 @@ export default function LandlordBookingDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Payout Details */}
+            {hasPayout && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-heading flex items-center gap-2">
+                    <Banknote className="h-4 w-4" /> Payout Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-medium">{formatFullPrice(payout!.amount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Phone</span>
+                    <span className="font-mono text-xs">{payout!.phone_number}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant={payout!.status === 'completed' ? 'default' : payout!.status === 'failed' ? 'destructive' : 'secondary'}>
+                      {payout!.status}
+                    </Badge>
+                  </div>
+                  {payout!.mpesa_receipt && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Receipt</span>
+                      <span className="font-mono text-xs">{payout!.mpesa_receipt}</span>
+                    </div>
+                  )}
+                  {payout!.completed_at && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Paid at</span>
+                      <span>{new Date(payout!.completed_at).toLocaleString('en-KE', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Guest Review */}
             {review && (
@@ -267,33 +330,58 @@ export default function LandlordBookingDetailPage() {
             {/* Actions */}
             <Card>
               <CardContent className="p-4 space-y-3">
-                {canComplete && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button className="w-full gap-2">
-                        <CheckCircle className="h-4 w-4" />
-                        Mark as Completed
+                {canRequestPayout && (
+                  <Dialog open={payoutDialogOpen} onOpenChange={setPayoutDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="w-full gap-2" onClick={openPayoutDialog}>
+                        <Banknote className="h-4 w-4" />
+                        Request Payout
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Complete this booking?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This confirms the guest's stay is finished. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => completeBooking.mutate(booking.id)}
-                          disabled={completeBooking.isPending}
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Request M-Pesa Payout</DialogTitle>
+                        <DialogDescription>
+                          Enter your M-Pesa phone number to receive {formatFullPrice(landlordPayout)}.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="payout-phone">M-Pesa Phone Number</Label>
+                          <Input
+                            id="payout-phone"
+                            placeholder="254712345678"
+                            value={payoutPhone}
+                            onChange={(e) => setPayoutPhone(e.target.value)}
+                          />
+                          <p className="text-xs text-muted-foreground">Format: 254XXXXXXXXX</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Payout amount</span>
+                            <span className="font-semibold">{formatFullPrice(landlordPayout)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          onClick={handleRequestPayout}
+                          disabled={!payoutPhone || requestPayout.isPending}
+                          className="gap-2"
                         >
-                          {completeBooking.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                          Complete Booking
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          {requestPayout.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                          Confirm Payout
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+
+                {hasPayout && payout?.status === 'completed' && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+                    <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-primary font-medium">Payout sent</span>
+                  </div>
                 )}
 
                 {canCancel && (
