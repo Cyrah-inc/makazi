@@ -17,7 +17,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Not authenticated' }), {
@@ -37,8 +36,8 @@ serve(async (req) => {
       });
     }
 
-    const { bookingId } = await req.json();
-    console.log(`Processing payout for booking ${bookingId}`);
+    const { bookingId, phoneNumber } = await req.json();
+    console.log(`Processing payout for booking ${bookingId} to phone ${phoneNumber}`);
 
     // Fetch the booking
     const { data: booking, error: bookingError } = await supabase
@@ -54,7 +53,7 @@ serve(async (req) => {
       });
     }
 
-    // Authorization: only the booking's landlord or an admin can process the payout
+    // Authorization: only the booking's landlord or an admin
     if (booking.landlord_id !== user.id) {
       const { data: roleData } = await supabase
         .from('user_roles')
@@ -64,13 +63,11 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!roleData) {
-        console.warn(`User ${user.id} attempted payout on booking ${bookingId} owned by landlord ${booking.landlord_id}`);
         return new Response(JSON.stringify({ error: 'Not authorized to process this payout' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      console.log(`Admin ${user.id} processing payout for landlord ${booking.landlord_id}`);
     }
 
     if (booking.status !== 'checked_in') {
@@ -82,30 +79,57 @@ serve(async (req) => {
 
     // Calculate payout amount (total minus service fee)
     const payoutAmount = booking.total_amount - booking.service_fee;
+    const simulatedConversationId = `B2C-SIM-${Date.now()}`;
+    const simulatedReceipt = `RCPT-SIM-${Date.now()}`;
+
     console.log(`Payout amount: ${payoutAmount} to landlord ${booking.landlord_id}`);
 
-    // TODO: When payment providers are configured:
-    // - For Stripe: Create a Stripe Transfer to landlord's connected account
-    // - For M-Pesa: Initiate B2C payment to landlord's phone
+    // TODO: Replace simulation with actual M-Pesa B2C API call:
+    // 1. Get OAuth token from Daraja
+    // 2. POST to /mpesa/b2c/v3/paymentrequest with:
+    //    - InitiatorName, SecurityCredential, CommandID: "BusinessPayment"
+    //    - Amount: payoutAmount, PartyA: shortcode, PartyB: phoneNumber
+    //    - ResultURL: mpesa-b2c-callback endpoint
+    // 3. Wait for callback to confirm
 
-    // For now, mark as completed
+    // Create payout record
+    const { error: payoutInsertError } = await supabase
+      .from('payouts')
+      .insert({
+        booking_id: bookingId,
+        landlord_id: booking.landlord_id,
+        amount: payoutAmount,
+        phone_number: phoneNumber,
+        status: 'completed', // Simulated — would be 'pending' with real B2C
+        mpesa_conversation_id: simulatedConversationId,
+        mpesa_receipt: simulatedReceipt,
+        completed_at: new Date().toISOString(),
+      });
+
+    if (payoutInsertError) {
+      console.error('Failed to insert payout record:', payoutInsertError);
+      throw payoutInsertError;
+    }
+
+    // Update booking status to completed
     const { error: updateError } = await supabase
       .from('bookings')
       .update({
         status: 'completed',
         paid_out_at: new Date().toISOString(),
-        payout_reference: `PAYOUT-SIM-${Date.now()}`,
+        payout_reference: simulatedConversationId,
       })
       .eq('id', bookingId);
 
     if (updateError) throw updateError;
 
-    console.log(`Booking ${bookingId} marked as completed`);
+    console.log(`Booking ${bookingId} marked as completed with payout`);
 
     return new Response(JSON.stringify({
       success: true,
       payoutAmount,
-      message: 'Payout processed (simulation mode)',
+      payoutReference: simulatedConversationId,
+      message: 'Payout processed (simulation mode — B2C integration pending)',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
