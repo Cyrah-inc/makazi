@@ -18,6 +18,7 @@ import {
   Shield, Eye, Home, CheckCircle2
 } from 'lucide-react';
 import { PropertyDetailSkeleton } from '@/components/skeletons/PropertyDetailSkeleton';
+import MortgageCalculator from '@/components/MortgageCalculator';
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
@@ -414,6 +415,11 @@ const PropertyDetailPage = () => {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Mortgage Calculator for buy properties */}
+                  {property.purposes.includes('buy') && property.salePrice && (
+                    <MortgageCalculator salePrice={property.salePrice} />
+                  )}
 
                   {/* Agent Card */}
                   <Card>
