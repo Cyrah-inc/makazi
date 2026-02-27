@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { PropertyDetailSkeleton } from '@/components/skeletons/PropertyDetailSkeleton';
 import MortgageCalculator from '@/components/MortgageCalculator';
+import { PropertyReviewsSection, PropertyReviewsSummary } from '@/components/PropertyReviews';
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
@@ -331,6 +332,9 @@ const PropertyDetailPage = () => {
                   </div>
                 </div>
 
+                {/* Reviews */}
+                <PropertyReviewsSection propertyId={property.id} />
+
                 {/* Location Map */}
                 {property.latitude && property.longitude && (
                   <div>
@@ -433,11 +437,7 @@ const PropertyDetailPage = () => {
                           <div className="text-sm text-muted-foreground">Property Owner</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Star className="h-4 w-4 fill-gold text-gold" />
-                        <span className="font-medium text-foreground">4.8</span>
-                        <span>(24 reviews)</span>
-                      </div>
+                      <PropertyReviewsSummary propertyId={property.id} />
                     </CardContent>
                   </Card>
                 </div>

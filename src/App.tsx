@@ -28,6 +28,7 @@ const AdminAirbnbPage = lazy(() => import("./pages/admin/AdminAirbnbPage"));
 const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
 const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage"));
 const AdminPayoutsPage = lazy(() => import("./pages/admin/AdminPayoutsPage"));
+const AdminReviewsPage = lazy(() => import("./pages/admin/AdminReviewsPage"));
 const LandlordDashboard = lazy(() => import("./pages/landlord/LandlordDashboard"));
 const LandlordPropertiesPage = lazy(() => import("./pages/landlord/LandlordPropertiesPage"));
 const AddPropertyPage = lazy(() => import("./pages/landlord/AddPropertyPage"));
@@ -46,6 +47,7 @@ const UserBookingDetailPage = lazy(() => import("./pages/user/UserBookingDetailP
 const LandlordBookingDetailPage = lazy(() => import("./pages/landlord/LandlordBookingDetailPage"));
 const LandlordProfilePage = lazy(() => import("./pages/landlord/LandlordProfilePage"));
 const LandlordPayoutsPage = lazy(() => import("./pages/landlord/LandlordPayoutsPage"));
+const LandlordReviewsPage = lazy(() => import("./pages/landlord/LandlordReviewsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -89,6 +91,7 @@ const App = () => (
                   <Route path="/admin/airbnb" element={<AdminAirbnbPage />} />
                   <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                   <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
+                  <Route path="/admin/reviews" element={<AdminReviewsPage />} />
                   <Route path="/admin/settings" element={<AdminSettingsPage />} />
                   <Route path="/landlord" element={<LandlordDashboard />} />
                   <Route path="/landlord/properties" element={<LandlordPropertiesPage />} />
@@ -107,6 +110,7 @@ const App = () => (
                   <Route path="/landlord/airbnb-bookings" element={<LandlordAirbnbPage />} />
                   <Route path="/landlord/airbnb-bookings/:id" element={<LandlordBookingDetailPage />} />
                   <Route path="/landlord/payouts" element={<LandlordPayoutsPage />} />
+                  <Route path="/landlord/reviews" element={<LandlordReviewsPage />} />
                   <Route path="/landlord/profile" element={<LandlordProfilePage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />

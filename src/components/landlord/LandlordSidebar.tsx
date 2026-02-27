@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User, CalendarDays, ChevronRight, Shield, Banknote } from 'lucide-react';
+import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User, CalendarDays, ChevronRight, Shield, Banknote, Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -26,6 +26,7 @@ const navGroups = [
     items: [
       { href: '/landlord/airbnb-bookings', icon: CalendarDays, label: 'Airbnb Bookings' },
       { href: '/landlord/payouts', icon: Banknote, label: 'Payouts' },
+      { href: '/landlord/reviews', icon: Star, label: 'Reviews' },
       { href: '/landlord/chats', icon: MessageSquare, label: 'Chats' },
     ],
   },
