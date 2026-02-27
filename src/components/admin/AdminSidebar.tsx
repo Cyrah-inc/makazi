@@ -10,7 +10,8 @@ import {
   CalendarDays,
   DollarSign,
   Shield,
-  BarChart3
+  BarChart3,
+  Star
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ const sidebarItems = [
   { icon: DollarSign, label: 'Revenue', path: '/admin/revenue' },
   { icon: DollarSign, label: 'Payouts', path: '/admin/payouts' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+  { icon: Star, label: 'Reviews', path: '/admin/reviews' },
   { icon: Settings, label: 'Settings', path: '/admin/settings' },
 ];
 
