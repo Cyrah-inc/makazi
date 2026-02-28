@@ -626,7 +626,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      landlord_public_info: {
+        Row: {
+          business_phone: string | null
+          user_id: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          business_phone?: string | null
+          user_id?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          business_phone?: string | null
+          user_id?: string | null
+          verification_status?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
