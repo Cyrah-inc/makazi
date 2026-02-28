@@ -45,14 +45,13 @@ const PropertyDetailPage = () => {
     enabled: !!id,
   });
 
-  // Fetch landlord phone for WhatsApp
+  // Fetch landlord phone from safe public view
   const { data: landlordPhone } = useQuery({
     queryKey: ['landlord-phone', dbProperty?.landlord_id],
     queryFn: async () => {
       const landlordId = dbProperty!.landlord_id;
-      // Try landlord_profiles.business_phone first
       const { data: lp } = await supabase
-        .from('landlord_profiles')
+        .from('landlord_public_info')
         .select('business_phone')
         .eq('user_id', landlordId)
         .maybeSingle();
@@ -64,6 +63,22 @@ const PropertyDetailPage = () => {
         .eq('user_id', landlordId)
         .maybeSingle();
       return p?.phone || null;
+    },
+    enabled: !!dbProperty?.landlord_id,
+  });
+
+  // Check if landlord has active subscription (gates WhatsApp visibility)
+  const { data: hasActiveSubscription } = useQuery({
+    queryKey: ['landlord-subscription', dbProperty?.landlord_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('user_id', dbProperty!.landlord_id)
+        .eq('status', 'active')
+        .gte('expires_at', new Date().toISOString())
+        .maybeSingle();
+      return !!data;
     },
     enabled: !!dbProperty?.landlord_id,
   });
@@ -397,7 +412,7 @@ const PropertyDetailPage = () => {
                             propertyTitle={property.title}
                           />
                         )}
-                        {landlordPhone && (
+                        {hasActiveSubscription && landlordPhone && (
                           <WhatsAppButton
                             phone={landlordPhone}
                             propertyTitle={property.title}
@@ -446,6 +461,19 @@ const PropertyDetailPage = () => {
           </div>
         </section>
       </main>
+
+      {/* Floating mobile WhatsApp button */}
+      {hasActiveSubscription && landlordPhone && (
+        <a
+          href={`https://wa.me/${landlordPhone.replace(/[\s\-()]/g, '').replace(/^0/, '254')}?text=${encodeURIComponent(`Hi, I'm interested in "${property.title}" listed on Makazi. Is it still available?`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-20 right-4 z-40 md:hidden flex items-center justify-center h-14 w-14 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#1da851] transition-colors"
+          aria-label="Chat on WhatsApp"
+        >
+          <Phone className="h-6 w-6" />
+        </a>
+      )}
 
       <Footer />
     </div>
