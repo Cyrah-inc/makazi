@@ -12,7 +12,7 @@ export const STALE_TIME = 5 * 60 * 1000; // 5 min
 
 // Helper: run a query and transform results
 export const fetchAndTransform = async (
-  queryBuilder: ReturnType<ReturnType<typeof supabase.from>['select']>
+  queryBuilder: PromiseLike<{ data: any; error: any }>
 ): Promise<Property[]> => {
   const { data, error } = await queryBuilder;
   if (error) throw error;
