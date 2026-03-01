@@ -81,7 +81,7 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
 
   // Defer main grid query when category sections exist and no filters active
   const shouldFetchMain = !categorySections || hasAnyFilter || nearMeActive || commuteActive;
-  const { data: properties = [], isLoading, error } = useProperties(shouldFetchMain ? purpose : undefined, false);
+  const { data: properties = [], isLoading, error } = useProperties(purpose, false, shouldFetchMain);
 
   // Calculate distances client-side when we have user location
   const distances = useMemo(() => {
