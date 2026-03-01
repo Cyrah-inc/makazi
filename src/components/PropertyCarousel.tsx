@@ -118,9 +118,20 @@ const PropertyCarousel = ({
                     <div className="bg-card rounded-2xl overflow-hidden shadow-md">
                       <Skeleton className="aspect-[4/3] w-full" />
                       <div className="p-4 space-y-3">
-                        <Skeleton className="h-6 w-24" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-7 w-28" />
+                        <Skeleton className="h-5 w-3/4" />
+                        <div className="flex items-start gap-1.5">
+                          <Skeleton className="h-4 w-4 rounded-full shrink-0 mt-0.5" />
+                          <div className="space-y-1 flex-1">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-3 w-2/3" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 pt-2 border-t border-border">
+                          <Skeleton className="h-4 w-14" />
+                          <Skeleton className="h-4 w-14" />
+                          <Skeleton className="h-4 w-16" />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -131,7 +142,7 @@ const PropertyCarousel = ({
                     className={cn(
                       "min-w-[280px] max-w-[320px] shrink-0 snap-start animate-fade-in-up opacity-0"
                     )}
-                    style={{ animationDelay: `${Math.min(index * 60, 300)}ms`, animationFillMode: 'forwards' }}
+                    style={{ animationDelay: `${Math.min(index * 40, 160)}ms`, animationFillMode: 'forwards' }}
                   >
                     <PropertyCard property={property} />
                   </div>
