@@ -43,7 +43,8 @@ export function SubscriptionPaymentDialog({ open, onOpenChange }: SubscriptionPa
         },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(error.message || 'Function call failed');
+      if (data?.error) throw new Error(data.error);
 
       toast({ title: 'Subscription activated!', description: 'You can now list unlimited properties for 30 days.' });
       queryClient.invalidateQueries({ queryKey: ['landlord-subscription'] });

@@ -128,7 +128,7 @@ export const transformProperty = (
 
 export const LISTING_COLUMNS = 'id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,status,landlord_id,latitude,longitude,created_at,updated_at,rental_units' as const;
 
-export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolean = false) => {
+export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolean = false, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['properties', purpose, requireLocation],
     queryFn: async (): Promise<Property[]> => {
@@ -163,6 +163,7 @@ export const useProperties = (purpose?: PropertyPurpose, requireLocation: boolea
       
       return data.map((dbProperty) => transformProperty(dbProperty, profileMap));
     },
+    enabled,
   });
 };
 
