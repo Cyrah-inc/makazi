@@ -74,7 +74,14 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
   const geo = useGeolocation();
 
   // Fetch properties
-  const { data: properties = [], isLoading, error } = useProperties(purpose, false);
+  // Check if any sidebar filter is active early (for query gating)
+  const hasAnyFilter = Object.keys(filters).some(key => 
+    key !== 'purpose' && filters[key as keyof PropertyFilter] !== undefined
+  );
+
+  // Defer main grid query when category sections exist and no filters active
+  const shouldFetchMain = !categorySections || hasAnyFilter || nearMeActive || commuteActive;
+  const { data: properties = [], isLoading, error } = useProperties(shouldFetchMain ? purpose : undefined, false);
 
   // Calculate distances client-side when we have user location
   const distances = useMemo(() => {
@@ -484,11 +491,12 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                 </div>
               )}
 
-              {/* Loading State */}
-              {isLoading && (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
+              {/* Loading State — uses skeleton grid instead of spinner */}
+              {isLoading && !categorySections && (
+                <PropertyGrid
+                  properties={[]}
+                  isLoading={true}
+                />
               )}
 
               {/* Error State */}
