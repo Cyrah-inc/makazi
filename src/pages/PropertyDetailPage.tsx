@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { InlineChatInput } from '@/components/chat/InlineChatInput';
 import { WhatsAppButton } from '@/components/chat/WhatsAppButton';
 import { PropertyMap } from '@/components/PropertyMap';
@@ -15,13 +16,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   MapPin, Bed, Bath, Car, Maximize, Heart, Share2, Phone, 
   Calendar, ChevronLeft, ChevronRight, Star,
-  Shield, Eye, Home, CheckCircle2
+  Shield, Eye, Home, CheckCircle2, BadgeCheck
 } from 'lucide-react';
 import { PropertyDetailSkeleton } from '@/components/skeletons/PropertyDetailSkeleton';
 import MortgageCalculator from '@/components/MortgageCalculator';
 import { PropertyReviewsSection, PropertyReviewsSummary } from '@/components/PropertyReviews';
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
+
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.quicktime'];
+const isVideoUrl = (url: string) => VIDEO_EXTENSIONS.some(ext => url.toLowerCase().includes(ext));
 
 const PropertyDetailPage = () => {
   const { id } = useParams();
@@ -45,6 +49,24 @@ const PropertyDetailPage = () => {
     enabled: !!id,
   });
 
+  // Fetch landlord profile (name, avatar)
+  const { data: landlordProfile } = useQuery({
+    queryKey: ['landlord-profile-public', dbProperty?.landlord_id],
+    queryFn: async () => {
+      const landlordId = dbProperty!.landlord_id;
+      const [{ data: profile }, { data: verification }] = await Promise.all([
+        supabase.from('profiles').select('full_name, avatar_url').eq('user_id', landlordId).maybeSingle(),
+        supabase.from('landlord_public_info').select('verification_status').eq('user_id', landlordId).maybeSingle(),
+      ]);
+      return {
+        name: profile?.full_name || 'Property Owner',
+        avatar: profile?.avatar_url || null,
+        verified: verification?.verification_status === 'verified',
+      };
+    },
+    enabled: !!dbProperty?.landlord_id,
+  });
+
   // Fetch landlord phone from safe public view
   const { data: landlordPhone } = useQuery({
     queryKey: ['landlord-phone', dbProperty?.landlord_id],
@@ -56,7 +78,6 @@ const PropertyDetailPage = () => {
         .eq('user_id', landlordId)
         .maybeSingle();
       if (lp?.business_phone) return lp.business_phone;
-      // Fallback to profiles.phone
       const { data: p } = await supabase
         .from('profiles')
         .select('phone')
@@ -103,12 +124,14 @@ const PropertyDetailPage = () => {
     amenities: dbProperty.amenities || [],
     views: dbProperty.views_count,
     createdAt: dbProperty.created_at,
-    verified: true,
+    verified: landlordProfile?.verified ?? true,
     propertyType: dbProperty.property_category || 'apartment',
     yearBuilt: undefined,
     furnished: false,
     landlordId: dbProperty.landlord_id,
-    landlordName: 'Property Owner',
+    landlordName: landlordProfile?.name || 'Property Owner',
+    landlordAvatar: landlordProfile?.avatar || null,
+    landlordVerified: landlordProfile?.verified ?? false,
     latitude: dbProperty.latitude ? Number(dbProperty.latitude) : undefined,
     longitude: dbProperty.longitude ? Number(dbProperty.longitude) : undefined,
     rentalUnits: Array.isArray((dbProperty as any).rental_units) ? (dbProperty as any).rental_units : undefined,
@@ -126,9 +149,7 @@ const PropertyDetailPage = () => {
           <div className="text-center">
             <h1 className="text-2xl font-heading font-bold mb-2">Property Not Found</h1>
             <p className="text-muted-foreground mb-4">The property you're looking for doesn't exist.</p>
-            <Link to="/">
-              <Button>Go Home</Button>
-            </Link>
+            <Link to="/"><Button>Go Home</Button></Link>
           </div>
         </main>
         <Footer />
@@ -136,12 +157,17 @@ const PropertyDetailPage = () => {
     );
   }
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
-  };
+  const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
+  const prevImage = () => setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
 
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+  const currentMedia = property.images[currentImageIndex];
+  const currentIsVideo = isVideoUrl(currentMedia);
+
+  const handleWhatsAppClick = () => {
+    if (!landlordPhone) return;
+    const cleanPhone = landlordPhone.replace(/[\s\-()]/g, '').replace(/^0/, '254');
+    const message = encodeURIComponent(`Hi, I'm interested in "${property.title}" listed on Makazi. Is it still available?`);
+    window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
   };
 
   return (
@@ -153,30 +179,34 @@ const PropertyDetailPage = () => {
         <section className="relative bg-foreground">
           <div className="container py-4">
             <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-2xl overflow-hidden">
-              <img
-                src={getOptimizedImageUrl(property.images[currentImageIndex], IMAGE_SIZES.DETAIL.width, IMAGE_SIZES.DETAIL.quality)}
-                alt={property.title}
-                loading="lazy"
-                className="w-full h-full object-cover"
-              />
+              {currentIsVideo ? (
+                <video
+                  src={currentMedia}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={getOptimizedImageUrl(currentMedia, IMAGE_SIZES.DETAIL.width, IMAGE_SIZES.DETAIL.quality)}
+                  alt={property.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+              )}
               
               {/* Navigation */}
               {property.images.length > 1 && (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
+                  <Button variant="ghost" size="icon"
                     className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
-                    onClick={prevImage}
-                  >
+                    onClick={prevImage}>
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
+                  <Button variant="ghost" size="icon"
                     className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
-                    onClick={nextImage}
-                  >
+                    onClick={nextImage}>
                     <ChevronRight className="h-5 w-5" />
                   </Button>
                 </>
@@ -189,19 +219,13 @@ const PropertyDetailPage = () => {
 
               {/* Actions */}
               <div className="absolute top-4 right-4 flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <Button variant="ghost" size="icon"
                   className="h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
-                  onClick={() => setIsFavorited(!isFavorited)}
-                >
+                  onClick={() => setIsFavorited(!isFavorited)}>
                   <Heart className={cn("h-5 w-5", isFavorited && "fill-airbnb text-airbnb")} />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background"
-                >
+                <Button variant="ghost" size="icon"
+                  className="h-10 w-10 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background">
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
@@ -210,18 +234,25 @@ const PropertyDetailPage = () => {
             {/* Thumbnails */}
             {property.images.length > 1 && (
               <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-                {property.images.map((img, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={cn(
-                      "shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all",
-                      index === currentImageIndex ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
-                    )}
-                  >
-                    <img src={getOptimizedImageUrl(img, IMAGE_SIZES.DETAIL_THUMB.width, IMAGE_SIZES.DETAIL_THUMB.quality)} alt="" loading="lazy" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+                {property.images.map((img, index) => {
+                  const thumbIsVideo = isVideoUrl(img);
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={cn(
+                        "shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all",
+                        index === currentImageIndex ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
+                      )}
+                    >
+                      {thumbIsVideo ? (
+                        <video src={img} preload="metadata" muted playsInline className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={getOptimizedImageUrl(img, IMAGE_SIZES.DETAIL_THUMB.width, IMAGE_SIZES.DETAIL_THUMB.quality)} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -288,9 +319,7 @@ const PropertyDetailPage = () => {
                 {/* Description */}
                 <div>
                   <h2 className="font-heading text-xl font-semibold mb-4">Description</h2>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {property.description}
-                  </p>
+                  <p className="text-muted-foreground leading-relaxed">{property.description}</p>
                 </div>
 
                 {/* Rental Units Breakdown */}
@@ -359,7 +388,8 @@ const PropertyDetailPage = () => {
                       longitude={property.longitude}
                       title={property.title}
                       address={property.address}
-                      height="350px"
+                      height="clamp(300px, 60vw, 500px)"
+                      showDirections
                     />
                     <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
@@ -444,12 +474,22 @@ const PropertyDetailPage = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Home className="h-6 w-6 text-primary" />
-                        </div>
+                        <Avatar className="h-14 w-14">
+                          <AvatarImage src={property.landlordAvatar || undefined} alt={property.landlordName} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                            {property.landlordName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <div className="font-heading font-semibold">{property.landlordName}</div>
-                          <div className="text-sm text-muted-foreground">Property Owner</div>
+                          <div className="font-heading font-semibold flex items-center gap-1.5">
+                            {property.landlordName}
+                            {property.landlordVerified && (
+                              <BadgeCheck className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {property.landlordVerified ? 'Verified Property Owner' : 'Property Owner'}
+                          </div>
                         </div>
                       </div>
                       <PropertyReviewsSummary propertyId={property.id} />
@@ -464,15 +504,13 @@ const PropertyDetailPage = () => {
 
       {/* Floating mobile WhatsApp button */}
       {hasActiveSubscription && landlordPhone && (
-        <a
-          href={`https://wa.me/${landlordPhone.replace(/[\s\-()]/g, '').replace(/^0/, '254')}?text=${encodeURIComponent(`Hi, I'm interested in "${property.title}" listed on Makazi. Is it still available?`)}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={handleWhatsAppClick}
           className="fixed bottom-20 right-4 z-40 md:hidden flex items-center justify-center h-14 w-14 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#1da851] transition-colors"
           aria-label="Chat on WhatsApp"
         >
           <Phone className="h-6 w-6" />
-        </a>
+        </button>
       )}
 
       <Footer />
