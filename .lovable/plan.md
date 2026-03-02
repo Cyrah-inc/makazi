@@ -1,51 +1,44 @@
 
 
-# Performance & Skeleton Accuracy Fixes
+# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
 
-## Issues Identified
+## Issues Found
 
-### Skeleton Mismatch
-The loading skeletons in `PropertyCarousel` (lines 116-127) and `PropertyGrid` (lines 49-58) show only 3 generic lines but the actual `PropertyCard` renders: image, price+badge row, title, location (2-line with icon), and a features row with border-top. This causes a jarring layout shift when data loads.
+### 1. WhatsApp Button Blocked
+The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
 
-### PropertyListingPage Uses Spinner Instead of Skeleton
-`PropertyListingPage` lines 488-492 renders a centered `<Loader2>` spinner instead of a skeleton grid, creating a blank space during loading.
+### 2. No Cover Photo Selection
+Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
 
-### Staggered Animations Add Perceived Delay
-Every card in both `PropertyGrid` (line 80) and `PropertyCarousel` (line 134) uses `animate-fade-in-up` with incremental delays up to 400ms and 300ms. On pages with many cards, this makes the UI feel slow even after data arrives.
+### 3. No Video Upload Support
+Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
 
-### Duplicate Data Fetching on Listing Pages
-`BuyPage` fires 6 section hooks AND `useProperties('buy')` from `PropertyListingPage` -- that's 7 parallel Supabase queries plus 7 separate `fetchLandlordProfiles` batch calls. Same pattern on Rent and Airbnb pages.
+### 4. Map Too Small on Mobile
+`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
 
----
+### 5. No Property Owner Info
+`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
 
 ## Plan
 
-### 1. Fix skeleton card to match PropertyCard layout
-Update the skeleton in both `PropertyCarousel` and `PropertyGrid` to accurately reflect the real card:
-- Image: `aspect-[4/3]` (already correct)
-- Price row: `h-7 w-28` (large bold price)
-- Title: `h-5 w-3/4`
-- Location: icon placeholder + 2-line text
-- Features row: border-top + 4 small items
-
-### 2. Replace spinner with skeleton grid in PropertyListingPage
-Remove the `<Loader2>` spinner block (lines 488-492) and instead pass `isLoading` to the main `PropertyGrid` component so it shows the proper skeleton grid.
-
-### 3. Reduce animation delays
-- Cap `PropertyGrid` card animation delay to `Math.min(index * 30, 150)ms` (was 50/400)
-- Cap `PropertyCarousel` to `Math.min(index * 40, 160)ms` (was 60/300)
-- This cuts perceived render time by ~50%
-
-### 4. Deduplicate listing page data fetching
-The section carousel hooks already fetch category-specific data. The main `useProperties(purpose)` in `PropertyListingPage` fetches ALL properties of that purpose again (overlapping). This is fine architecturally since they serve different UI sections, but we can skip the main grid query when `categorySections` exist and no filters are active, showing only the carousel sections until the user applies a filter.
-
----
-
-## Files Changed
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/PropertyCarousel.tsx` | Update skeleton to match PropertyCard layout; reduce animation delay |
-| `src/components/PropertyGrid.tsx` | Update skeleton to match PropertyCard layout; reduce animation delay |
-| `src/pages/PropertyListingPage.tsx` | Replace Loader2 spinner with PropertyGrid skeleton; defer main query when category sections exist and no filters active |
+| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
+| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
+| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
+| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
+
+### Technical Details
+
+**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
+
+**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
+
+**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
+
+**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
+
+**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
 
