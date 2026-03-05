@@ -2,10 +2,9 @@ import { useRef, useState, useEffect, ReactNode } from 'react';
 
 interface LazySectionProps {
   children: ReactNode;
-  /** Vertical margin around the root for early triggering (default: 200px) */
   rootMargin?: string;
-  /** Minimum height placeholder before content loads */
   minHeight?: string;
+  onVisible?: () => void;
 }
 
 /**
