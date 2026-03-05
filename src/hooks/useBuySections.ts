@@ -15,7 +15,7 @@ export const useTrendingForSale = () =>
           .eq('status', 'approved')
           .eq('property_type', 'sale')
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -35,7 +35,7 @@ export const useHousesForSale = () =>
           .eq('property_type', 'sale')
           .in('property_category', HOUSE_CATEGORIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -71,7 +71,7 @@ export const useCommercialForSale = () =>
           .eq('property_type', 'sale')
           .eq('property_category', 'commercial')
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -89,7 +89,7 @@ export const useApartmentsForSale = () =>
           .eq('property_type', 'sale')
           .eq('property_category', 'apartment')
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -109,6 +109,24 @@ export const useTownhousesForSale = () =>
           .eq('property_type', 'sale')
           .in('property_category', TOWNHOUSE_CATEGORIES)
           .order('views_count', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(8)
+      ),
+    staleTime: STALE_TIME,
+  });
+
+// 7. Newly Listed for Sale
+export const useNewlyListedForSale = () =>
+  useQuery({
+    queryKey: ['buy', 'newly-listed'],
+    queryFn: () =>
+      fetchAndTransform(
+        supabase
+          .from('properties')
+          .select(LISTING_COLUMNS)
+          .eq('status', 'approved')
+          .eq('property_type', 'sale')
+          .order('created_at', { ascending: false })
           .limit(8)
       ),
     staleTime: STALE_TIME,

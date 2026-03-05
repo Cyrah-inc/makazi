@@ -15,7 +15,7 @@ export const useTrendingRentals = () =>
           .eq('status', 'approved')
           .eq('property_type', 'rent')
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -36,7 +36,7 @@ export const useApartmentsForRent = () =>
           .eq('property_category', 'apartment')
           .in('state', URBAN_COUNTIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -56,7 +56,7 @@ export const useHousesForRent = () =>
           .eq('property_type', 'rent')
           .in('property_category', HOUSE_CATEGORIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -109,8 +109,26 @@ export const useRentalsNearYou = (county: string | null) =>
           .eq('property_type', 'rent')
           .ilike('state', `%${county}%`)
           .order('views_count', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(8)
       ),
     enabled: !!county,
+    staleTime: STALE_TIME,
+  });
+
+// 7. Newly Listed for Rent
+export const useNewlyListedForRent = () =>
+  useQuery({
+    queryKey: ['rent', 'newly-listed'],
+    queryFn: () =>
+      fetchAndTransform(
+        supabase
+          .from('properties')
+          .select(LISTING_COLUMNS)
+          .eq('status', 'approved')
+          .eq('property_type', 'rent')
+          .order('created_at', { ascending: false })
+          .limit(8)
+      ),
     staleTime: STALE_TIME,
   });

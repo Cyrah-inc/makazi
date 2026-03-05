@@ -14,10 +14,11 @@ import {
   useLandListings,
   useUrbanApartments,
   useFamilyHomes,
+  useNewlyListed,
   detectCounty,
 } from '@/hooks/useHomeSections';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home } from 'lucide-react';
+import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ const Index = () => {
 
   // All section hooks — fire in parallel
   const trending = useTrendingProperties();
+  const newlyListed = useNewlyListed();
   const nearby = useNearbyProperties(nearbyCounty);
   const exotic = useExoticGetaways();
   const land = useLandListings();
@@ -85,6 +87,15 @@ const Index = () => {
 
         {/* Category Carousels */}
         <div className="bg-muted/30">
+          <PropertyCarousel
+            title="Just Added"
+            subtitle="Fresh listings you haven't seen yet"
+            properties={newlyListed.data ?? []}
+            isLoading={newlyListed.isLoading}
+            seeAllLink="/buy"
+            icon={<Sparkles className="h-6 w-6 text-primary" />}
+          />
+
           <PropertyCarousel
             title="Trending Homes"
             subtitle="The most viewed properties right now"
