@@ -1,0 +1,1 @@
+DROP POLICY "Public can view verified landlord basic info" ON public.landlord_profiles;
