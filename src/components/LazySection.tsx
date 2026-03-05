@@ -23,6 +23,7 @@ export function LazySection({ children, rootMargin = '200px', minHeight = '300px
       ([entry]) => {
         if (entry.isIntersecting) {
           setVisible(true);
+          onVisible?.();
           observer.disconnect();
         }
       },
