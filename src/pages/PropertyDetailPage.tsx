@@ -510,7 +510,7 @@ const PropertyDetailPage = () => {
           aria-label="Chat on WhatsApp"
         >
           <Phone className="h-6 w-6" />
-        </a>
+        </button>
       )}
 
       <Footer />
