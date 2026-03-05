@@ -8,10 +8,11 @@ import {
   useLuxuryRentals,
   useFurnishedRentals,
   useRentalsNearYou,
+  useNewlyListedForRent,
 } from '@/hooks/useRentSections';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { detectCounty } from '@/hooks/useHomeSections';
-import { TrendingUp, Building, Home, Gem, Sofa, Navigation, Key } from 'lucide-react';
+import { TrendingUp, Building, Home, Gem, Sofa, Navigation, Key, Sparkles } from 'lucide-react';
 
 const RentPage = () => {
   const geo = useGeolocation();
@@ -26,9 +27,11 @@ const RentPage = () => {
   const luxury = useLuxuryRentals();
   const furnished = useFurnishedRentals();
   const nearby = useRentalsNearYou(county);
+  const newlyListed = useNewlyListedForRent();
 
   const sections = (
     <>
+      <PropertyCarousel title="Just Added for Rent" subtitle="Freshly listed rental properties" properties={newlyListed.data ?? []} isLoading={newlyListed.isLoading} seeAllLink="/rent" icon={<Sparkles className="h-5 w-5 text-primary" />} />
       <PropertyCarousel title="Trending Rentals" subtitle="Most viewed rental properties right now" properties={trending.data ?? []} isLoading={trending.isLoading} seeAllLink="/rent" icon={<TrendingUp className="h-5 w-5 text-primary" />} />
       <PropertyCarousel title="Apartments for Rent" subtitle="City apartments in Nairobi, Mombasa & Kisumu" properties={apartments.data ?? []} isLoading={apartments.isLoading} seeAllLink="/rent?type=apartment" icon={<Building className="h-5 w-5 text-primary" />} />
       <PropertyCarousel title="Houses for Rent" subtitle="Spacious houses, villas & bungalows" properties={houses.data ?? []} isLoading={houses.isLoading} seeAllLink="/rent?type=house" icon={<Home className="h-5 w-5 text-primary" />} />

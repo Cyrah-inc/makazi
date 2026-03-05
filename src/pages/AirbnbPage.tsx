@@ -11,10 +11,11 @@ import {
   useBudgetStays,
   useMountainRetreats,
   useCityBreaks,
+  useNewlyListedAirbnb,
 } from '@/hooks/useAirbnbSections';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { detectCounty } from '@/hooks/useHomeSections';
-import { TrendingUp, Navigation, Gem, Mountain, Waves, Binoculars, Palmtree, Coins, MountainSnow, Building } from 'lucide-react';
+import { TrendingUp, Navigation, Gem, Mountain, Waves, Binoculars, Palmtree, Coins, MountainSnow, Building, Sparkles } from 'lucide-react';
 
 const AirbnbPage = () => {
   const geo = useGeolocation();
@@ -32,9 +33,11 @@ const AirbnbPage = () => {
   const budget = useBudgetStays();
   const mountain = useMountainRetreats();
   const cityBreaks = useCityBreaks();
+  const newlyListed = useNewlyListedAirbnb();
 
   const sections = (
     <>
+      <PropertyCarousel title="Just Added Stays" subtitle="Freshly listed short-term stays" properties={newlyListed.data ?? []} isLoading={newlyListed.isLoading} seeAllLink="/airbnb" icon={<Sparkles className="h-5 w-5 text-primary" />} />
       <PropertyCarousel title="Trending Staycations" subtitle="Popular short-term stays everyone loves" properties={trending.data ?? []} isLoading={trending.isLoading} seeAllLink="/airbnb" icon={<TrendingUp className="h-5 w-5 text-primary" />} />
       {county && (
         <PropertyCarousel title="Airbnb Near Me" subtitle={`Stays in ${county} and nearby`} properties={nearby.data ?? []} isLoading={nearby.isLoading} seeAllLink="/airbnb" icon={<Navigation className="h-5 w-5 text-primary" />} />
