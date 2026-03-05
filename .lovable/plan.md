@@ -1,31 +1,44 @@
 
 
-# AI Description Generator Enhancements
+# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
 
-## Changes
+## Issues Found
 
-### 1. Add custom prompt input field
-Add a text input above the tone selector where landlords can describe what they want, e.g. "3 bedroom house in Kitengela with swimming pool, close to schools". This `customPrompt` field is sent to the edge function and incorporated into the AI prompt so each generation is unique to the landlord's vision.
+### 1. WhatsApp Button Blocked
+The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
 
-### 2. Update edge function prompt to produce single paragraph
-Modify `supabase/functions/generate-description/index.ts`:
-- Accept new `customPrompt` field from the request body
-- Change the system prompt to explicitly require **one single paragraph** (no line breaks)
-- Instruct the AI to be captivating, detailed, and fascinating -- paint a vivid picture
-- If `customPrompt` is provided, include it as the landlord's specific vision/instructions
-- Reduce temperature slightly (0.7) for more focused output
+### 2. No Cover Photo Selection
+Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
 
-### 3. Add preview dialog
-After generating a description, show a "Preview" button that opens a `Dialog` displaying the description exactly as it would appear on the public property detail page -- using the same typography, spacing, and card styling from `PropertyDetailPage`. This lets landlords see the final look before saving.
+### 3. No Video Upload Support
+Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
 
-### 4. Apply to both AddPropertyPage and EditPropertyPage
-Both pages get:
-- `customPrompt` state + input field (placeholder: "Describe what you want, e.g. 3 bedroom house in Kitengela...")
-- Preview button (visible when description exists) that opens the preview dialog
-- Same edge function call with `customPrompt` included
+### 4. Map Too Small on Mobile
+`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
 
-### Files to modify
-- `supabase/functions/generate-description/index.ts` -- prompt changes + accept `customPrompt`
-- `src/pages/landlord/AddPropertyPage.tsx` -- custom prompt input, preview dialog
-- `src/pages/landlord/EditPropertyPage.tsx` -- same changes
+### 5. No Property Owner Info
+`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+
+## Plan
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
+| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
+| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
+| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
+
+### Technical Details
+
+**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
+
+**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
+
+**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
+
+**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
+
+**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
 
