@@ -505,9 +505,8 @@ const PropertyDetailPage = () => {
       {hasActiveSubscription && landlordPhone && (
         <a
           href={whatsAppUrl}
-          target="_top"
+          target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => { e.preventDefault(); window.open(whatsAppUrl, '_top', 'noopener,noreferrer'); }}
           className="fixed bottom-20 right-4 z-40 md:hidden flex items-center justify-center h-14 w-14 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#1da851] transition-colors"
           aria-label="Chat on WhatsApp"
         >
