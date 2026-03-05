@@ -1,44 +1,51 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+# AI Property Description Generator (ChatGPT)
 
-## Issues Found
+## Overview
+Add a "✨ Generate with AI" button next to the description textarea on the Add Property page. It uses the landlord's filled-in property details to generate a polished description via OpenAI's ChatGPT API. Only available to subscribed landlords.
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+## Architecture
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+```text
+[AddPropertyPage] → supabase.functions.invoke('generate-description')
+                          ↓
+              [Edge Function] → OpenAI ChatGPT API
+                          ↓
+              Returns description text
+```
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+## Changes
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+### 1. Store ChatGPT API Key
+- Use the Supabase secrets tool to store `OPENAI_API_KEY` as a secret
+- You will be prompted to paste your key
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+### 2. Edge Function: `supabase/functions/generate-description/index.ts`
+- Accepts: title, category, bedrooms, bathrooms, amenities, location, pricing, tone (Professional / Friendly / Luxury)
+- Authenticates the caller via `getClaims()`
+- Checks subscription status server-side (queries `subscriptions` table)
+- Calls OpenAI Chat Completions API (`gpt-4o-mini`) with a Kenyan real estate system prompt
+- Returns the generated description (non-streaming, simple invoke)
 
-## Plan
+### 3. Update `supabase/config.toml`
+- Add `[functions.generate-description]` with `verify_jwt = false`
 
-### Files Changed
+### 4. Update `src/pages/landlord/AddPropertyPage.tsx`
+- Add a tone selector (Professional / Friendly / Luxury) and "✨ Generate with AI" button below the description textarea
+- Button disabled + tooltip for non-subscribed landlords ("Subscribe to unlock AI descriptions")
+- On click: collects form context, calls edge function, populates textarea with result
+- Loading spinner while generating; landlord can freely edit the result
+- Uses `useLandlordProfile` hook's `hasActiveSubscription` to gate access
 
-| File | Change |
-|------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
+### 5. Also update `src/pages/landlord/EditPropertyPage.tsx`
+- Same AI button added to the description field for regenerating descriptions on existing listings
 
-### Technical Details
+## Technical Details
 
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
+**OpenAI call**: Uses `gpt-4o-mini` for cost efficiency. System prompt instructs the model to write a compelling 150-250 word Kenyan property listing description using the provided attributes. The tone parameter adjusts formality.
 
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
+**Subscription gating**: Double-checked server-side in the edge function (defense in depth) by querying the `subscriptions` table for an active, non-expired subscription.
 
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
-
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
-
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+**No new npm dependencies** -- uses existing `supabase.functions.invoke()` pattern.
 
