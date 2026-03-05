@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { title, category, bedrooms, bathrooms, amenities, location, pricing, tone } = await req.json();
+    const { title, category, bedrooms, bathrooms, amenities, location, pricing, tone, customPrompt } = await req.json();
 
     const toneInstructions: Record<string, string> = {
       professional: 'Use a professional, authoritative tone suitable for serious buyers and investors.',
@@ -70,16 +70,26 @@ Deno.serve(async (req) => {
 
     const toneGuide = toneInstructions[tone] || toneInstructions.professional;
 
-    const systemPrompt = `You are a Kenyan real estate copywriter. Write a compelling property listing description (150-250 words) based on the provided details. ${toneGuide}
+    const customInstruction = customPrompt
+      ? `\n\nThe landlord's specific vision: "${customPrompt}". Incorporate this vision naturally into the description.`
+      : '';
 
-Guidelines:
-- Highlight key selling points naturally
-- Mention the location and neighborhood appeal
-- Reference specific amenities and features
-- Include a call to action at the end
+    const systemPrompt = `You are an award-winning Kenyan real estate copywriter known for captivating, vivid property descriptions. Write EXACTLY ONE single paragraph (no line breaks, no bullet points) of 150-200 words. ${toneGuide}
+
+The description must be:
+- Captivating from the very first sentence — hook the reader immediately
+- Richly detailed — paint a vivid picture so the reader can imagine living there
+- Fascinating — highlight unique selling points that make this property irresistible
+- Emotionally compelling — make the reader feel the lifestyle this property offers
+
+Rules:
+- Output ONLY one continuous paragraph with NO line breaks
+- Mention the location and neighborhood appeal naturally
+- Reference specific amenities and features seamlessly
+- End with a compelling call to action
 - Use Kenyan real estate terminology where appropriate (e.g., "ensuite", "SQ" for servant quarters)
-- Do NOT use markdown formatting, just plain text paragraphs
-- Do NOT include the property title or price in the description`;
+- Do NOT use markdown formatting
+- Do NOT include the property title or price${customInstruction}`;
 
     const userPrompt = `Property Details:
 - Title: ${title || 'Not specified'}
@@ -90,7 +100,7 @@ Guidelines:
 - Location: ${location || 'Not specified'}
 - Pricing: ${pricing || 'Not specified'}
 
-Write a compelling description for this property.`;
+Write a single captivating paragraph description for this property.`;
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -105,7 +115,7 @@ Write a compelling description for this property.`;
           { role: 'user', content: userPrompt },
         ],
         max_tokens: 500,
-        temperature: 0.8,
+        temperature: 0.7,
       }),
     });
 
