@@ -12,12 +12,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Home, Building, Landmark, Trees, Briefcase, Plus, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Home, Building, Landmark, Trees, Briefcase, Plus, Trash2, Sparkles, Lock } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Link } from 'react-router-dom';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
 import { LocationPicker } from '@/components/LocationPicker';
 import { KENYA_COUNTIES } from '@/types/property';
+import { useLandlordProfile } from '@/hooks/useLandlordProfile';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const amenitiesList = [
   'Parking', 'Swimming Pool', 'Gym', 'Security', 'Garden',
@@ -56,6 +58,9 @@ export default function EditPropertyPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [aiTone, setAiTone] = useState<'professional' | 'friendly' | 'luxury'>('professional');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { hasActiveSubscription } = useLandlordProfile();
 
   const [formData, setFormData] = useState({
     title: '',
