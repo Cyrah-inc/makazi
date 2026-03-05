@@ -163,12 +163,9 @@ const PropertyDetailPage = () => {
   const currentMedia = property.images[currentImageIndex];
   const currentIsVideo = isVideoUrl(currentMedia);
 
-  const handleWhatsAppClick = () => {
-    if (!landlordPhone) return;
-    const cleanPhone = landlordPhone.replace(/[\s\-()]/g, '').replace(/^0/, '254');
-    const message = encodeURIComponent(`Hi, I'm interested in "${property.title}" listed on Makazi. Is it still available?`);
-    window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
-  };
+  const whatsAppUrl = landlordPhone
+    ? `https://wa.me/${landlordPhone.replace(/[\s\-()]/g, '').replace(/^0/, '254')}?text=${encodeURIComponent(`Hi, I'm interested in "${property.title}" listed on Makazi. Is it still available?`)}`
+    : '';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -506,8 +503,10 @@ const PropertyDetailPage = () => {
 
       {/* Floating mobile WhatsApp button */}
       {hasActiveSubscription && landlordPhone && (
-        <button
-          onClick={handleWhatsAppClick}
+        <a
+          href={whatsAppUrl}
+          target="_blank"
+          rel="noopener noreferrer"
           className="fixed bottom-20 right-4 z-40 md:hidden flex items-center justify-center h-14 w-14 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#1da851] transition-colors"
           aria-label="Chat on WhatsApp"
         >
