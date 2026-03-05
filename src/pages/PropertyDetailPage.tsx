@@ -383,14 +383,16 @@ const PropertyDetailPage = () => {
                 {property.latitude && property.longitude && (
                   <div>
                     <h2 className="font-heading text-xl font-semibold mb-4">Location</h2>
-                    <PropertyMap
-                      latitude={property.latitude}
-                      longitude={property.longitude}
-                      title={property.title}
-                      address={property.address}
-                      height="clamp(300px, 60vw, 500px)"
-                      showDirections
-                    />
+                    <div className="w-[calc(100%+2rem)] -mx-4 sm:w-full sm:mx-0">
+                      <PropertyMap
+                        latitude={property.latitude}
+                        longitude={property.longitude}
+                        title={property.title}
+                        address={property.address}
+                        height="clamp(400px, 85vw, 600px)"
+                        showDirections
+                      />
+                    </div>
                     <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
                       {property.address}
