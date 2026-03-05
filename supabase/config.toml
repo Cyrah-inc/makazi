@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.admin-withdraw-commission]
 verify_jwt = false
+
+[functions.generate-description]
+verify_jwt = false
