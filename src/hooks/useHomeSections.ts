@@ -24,7 +24,7 @@ export const fetchAndTransform = async (
 };
 
 // 1. Trending — most viewed
-export const useTrendingProperties = () =>
+export const useTrendingProperties = (enabled = true) =>
   useQuery({
     queryKey: ['home', 'trending'],
     queryFn: () =>
@@ -35,12 +35,14 @@ export const useTrendingProperties = () =>
           .eq('status', 'approved')
           .order('views_count', { ascending: false })
           .order('created_at', { ascending: false })
+          .limit(8)
       ),
     staleTime: STALE_TIME,
+    enabled,
   });
 
 // 2. Near you — by county
-export const useNearbyProperties = (county: string | null) =>
+export const useNearbyProperties = (county: string | null, enabled = true) =>
   useQuery({
     queryKey: ['home', 'nearby', county],
     queryFn: () =>
@@ -52,15 +54,16 @@ export const useNearbyProperties = (county: string | null) =>
           .ilike('state', `%${county}%`)
           .order('views_count', { ascending: false })
           .order('created_at', { ascending: false })
+          .limit(8)
       ),
-    enabled: !!county,
+    enabled: enabled && !!county,
     staleTime: STALE_TIME,
   });
 
 // 3. Exotic getaways — airbnb in scenic counties
 const EXOTIC_COUNTIES = ['Kwale', 'Kilifi', 'Narok', 'Nakuru', 'Laikipia', 'Lamu'];
 
-export const useExoticGetaways = () =>
+export const useExoticGetaways = (enabled = true) =>
   useQuery({
     queryKey: ['home', 'exotic'],
     queryFn: () =>
@@ -73,12 +76,14 @@ export const useExoticGetaways = () =>
           .in('state', EXOTIC_COUNTIES)
           .order('views_count', { ascending: false })
           .order('created_at', { ascending: false })
+          .limit(8)
       ),
     staleTime: STALE_TIME,
+    enabled,
   });
 
 // 4. Prime Land
-export const useLandListings = () =>
+export const useLandListings = (enabled = true) =>
   useQuery({
     queryKey: ['home', 'land'],
     queryFn: () =>
@@ -92,12 +97,13 @@ export const useLandListings = () =>
           .limit(8)
       ),
     staleTime: STALE_TIME,
+    enabled,
   });
 
 // 5. Urban Apartments
 const URBAN_COUNTIES = ['Nairobi', 'Mombasa', 'Kisumu'];
 
-export const useUrbanApartments = () =>
+export const useUrbanApartments = (enabled = true) =>
   useQuery({
     queryKey: ['home', 'urban'],
     queryFn: () =>
@@ -111,14 +117,16 @@ export const useUrbanApartments = () =>
           .in('state', URBAN_COUNTIES)
           .order('views_count', { ascending: false })
           .order('created_at', { ascending: false })
+          .limit(8)
       ),
     staleTime: STALE_TIME,
+    enabled,
   });
 
 // 6. Family Homes for Sale
 const FAMILY_CATEGORIES = ['house', 'villa', 'bungalow', 'maisonette'];
 
-export const useFamilyHomes = () =>
+export const useFamilyHomes = (enabled = true) =>
   useQuery({
     queryKey: ['home', 'family'],
     queryFn: () =>
@@ -134,6 +142,7 @@ export const useFamilyHomes = () =>
           .limit(8)
       ),
     staleTime: STALE_TIME,
+    enabled,
   });
 
 // 7. Newly Listed — latest approved properties
