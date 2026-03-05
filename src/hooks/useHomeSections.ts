@@ -34,7 +34,7 @@ export const useTrendingProperties = () =>
           .select(LISTING_COLUMNS)
           .eq('status', 'approved')
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -51,7 +51,7 @@ export const useNearbyProperties = (county: string | null) =>
           .eq('status', 'approved')
           .ilike('state', `%${county}%`)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     enabled: !!county,
     staleTime: STALE_TIME,
@@ -72,7 +72,7 @@ export const useExoticGetaways = () =>
           .eq('property_type', 'airbnb')
           .in('state', EXOTIC_COUNTIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -110,7 +110,7 @@ export const useUrbanApartments = () =>
           .eq('property_category', 'apartment')
           .in('state', URBAN_COUNTIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -130,6 +130,23 @@ export const useFamilyHomes = () =>
           .eq('property_type', 'sale')
           .in('property_category', FAMILY_CATEGORIES)
           .order('views_count', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(8)
+      ),
+    staleTime: STALE_TIME,
+  });
+
+// 7. Newly Listed — latest approved properties
+export const useNewlyListed = () =>
+  useQuery({
+    queryKey: ['home', 'newly-listed'],
+    queryFn: () =>
+      fetchAndTransform(
+        supabase
+          .from('properties')
+          .select(LISTING_COLUMNS)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false })
           .limit(8)
       ),
     staleTime: STALE_TIME,

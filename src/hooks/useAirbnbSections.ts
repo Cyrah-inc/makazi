@@ -15,7 +15,7 @@ export const useTrendingStaycations = () =>
           .eq('status', 'approved')
           .eq('property_type', 'airbnb')
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -33,7 +33,7 @@ export const useAirbnbNearMe = (county: string | null) =>
           .eq('property_type', 'airbnb')
           .ilike('state', `%${county}%`)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     enabled: !!county,
     staleTime: STALE_TIME,
@@ -71,7 +71,7 @@ export const useExoticStays = () =>
           .eq('property_type', 'airbnb')
           .in('state', EXOTIC_COUNTIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -91,7 +91,7 @@ export const useBeachVibes = () =>
           .eq('property_type', 'airbnb')
           .in('state', COASTAL_COUNTIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -111,7 +111,7 @@ export const useSafariStays = () =>
           .eq('property_type', 'airbnb')
           .in('state', SAFARI_COUNTIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -148,7 +148,7 @@ export const useMountainRetreats = () =>
           .eq('property_type', 'airbnb')
           .in('state', HIGHLAND_COUNTIES)
           .order('views_count', { ascending: false })
-          .limit(8)
+          .order('created_at', { ascending: false })
       ),
     staleTime: STALE_TIME,
   });
@@ -168,6 +168,24 @@ export const useCityBreaks = () =>
           .eq('property_type', 'airbnb')
           .in('city', CITY_NAMES)
           .order('views_count', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(8)
+      ),
+    staleTime: STALE_TIME,
+  });
+
+// 10. Newly Listed Airbnb
+export const useNewlyListedAirbnb = () =>
+  useQuery({
+    queryKey: ['airbnb', 'newly-listed'],
+    queryFn: () =>
+      fetchAndTransform(
+        supabase
+          .from('properties')
+          .select(LISTING_COLUMNS)
+          .eq('status', 'approved')
+          .eq('property_type', 'airbnb')
+          .order('created_at', { ascending: false })
           .limit(8)
       ),
     staleTime: STALE_TIME,
