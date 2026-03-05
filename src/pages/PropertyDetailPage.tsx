@@ -503,14 +503,16 @@ const PropertyDetailPage = () => {
 
       {/* Floating mobile WhatsApp button */}
       {hasActiveSubscription && landlordPhone && (
-        <button
-          type="button"
-          onClick={() => { const w = window.top || window.parent || window; w.open(whatsAppUrl, '_blank', 'noopener,noreferrer'); }}
+        <a
+          href={whatsAppUrl}
+          target="_top"
+          rel="noopener noreferrer"
+          onClick={(e) => { const w = window.open(whatsAppUrl, '_blank', 'noopener,noreferrer'); if (w) e.preventDefault(); }}
           className="fixed bottom-20 right-4 z-40 md:hidden flex items-center justify-center h-14 w-14 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#1da851] transition-colors"
           aria-label="Chat on WhatsApp"
         >
           <Phone className="h-6 w-6" />
-        </button>
+        </a>
       )}
 
       <Footer />
