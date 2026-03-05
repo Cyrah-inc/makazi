@@ -11,7 +11,7 @@ interface LazySectionProps {
  * Defers rendering of children until the section enters (or is near) the viewport.
  * Reduces initial DOM nodes and delays data fetching for below-fold content.
  */
-export function LazySection({ children, rootMargin = '200px', minHeight = '300px' }: LazySectionProps) {
+export function LazySection({ children, rootMargin = '200px', minHeight = '300px', onVisible }: LazySectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
