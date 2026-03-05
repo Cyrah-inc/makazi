@@ -396,6 +396,74 @@ export default function EditPropertyPage() {
                   placeholder="Describe your property..."
                   rows={4}
                 />
+                <div className="flex items-center gap-2 mt-2">
+                  <Select value={aiTone} onValueChange={(v: 'professional' | 'friendly' | 'luxury') => setAiTone(v)}>
+                    <SelectTrigger className="w-[140px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="friendly">Friendly</SelectItem>
+                      <SelectItem value="luxury">Luxury</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!hasActiveSubscription || isGenerating}
+                            onClick={async () => {
+                              setIsGenerating(true);
+                              try {
+                                const priceParts: string[] = [];
+                                if (formData.forSale && formData.salePrice) priceParts.push(`Sale: KES ${formData.salePrice}`);
+                                if (formData.forRent && formData.monthlyRent) priceParts.push(`Rent: KES ${formData.monthlyRent}/mo`);
+                                if (formData.forAirbnb && formData.nightlyRate) priceParts.push(`Airbnb: KES ${formData.nightlyRate}/night`);
+
+                                const { data, error } = await supabase.functions.invoke('generate-description', {
+                                  body: {
+                                    title: formData.title,
+                                    category: formData.property_category,
+                                    bedrooms: formData.bedrooms,
+                                    bathrooms: formData.bathrooms,
+                                    amenities: formData.amenities,
+                                    location: [formData.address, formData.city, formData.state].filter(Boolean).join(', '),
+                                    pricing: priceParts.join(' | ') || 'Not set',
+                                    tone: aiTone,
+                                  },
+                                });
+                                if (error) throw error;
+                                if (data?.description) {
+                                  setFormData(prev => ({ ...prev, description: data.description }));
+                                  toast({ title: 'Description generated!', description: 'Feel free to edit it to your liking.' });
+                                } else if (data?.error) {
+                                  toast({ title: 'Error', description: data.error, variant: 'destructive' });
+                                }
+                              } catch (err: any) {
+                                toast({ title: 'Error', description: err.message || 'Failed to generate description', variant: 'destructive' });
+                              } finally {
+                                setIsGenerating(false);
+                              }
+                            }}
+                            className="gap-1.5"
+                          >
+                            {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : hasActiveSubscription ? <Sparkles className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                            {isGenerating ? 'Generating...' : '✨ Generate with AI'}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {!hasActiveSubscription && (
+                        <TooltipContent>
+                          <p>Subscribe to Makazi Pro to unlock AI descriptions</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </CardContent>
           </Card>
