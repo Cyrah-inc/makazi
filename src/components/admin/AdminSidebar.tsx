@@ -51,7 +51,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
   };
 
   return (
-    <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
+    <aside className="w-64 h-full max-h-screen bg-card border-r border-border flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <NavLink to="/" onClick={handleNavClick} className="flex items-center gap-2">
@@ -66,7 +66,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto p-4 space-y-1">
         {sidebarItems.map((item) => (
           <NavLink
             key={item.path}

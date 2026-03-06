@@ -21,11 +21,11 @@ export function StatsCard({
 }: StatsCardProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold text-foreground">{value}</p>
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-foreground">{value}</p>
             {change && (
               <p className={cn(
                 'text-sm font-medium',
