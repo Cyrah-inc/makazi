@@ -273,7 +273,7 @@ export default function AdminUsersPage() {
               No users found
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
