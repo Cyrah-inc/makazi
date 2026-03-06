@@ -483,7 +483,7 @@ export default function AddPropertyPage() {
                   </div>
                 </div>
                 {formData.forSale && (
-                  <div className="mt-4 ml-7">
+                  <div className="mt-4 ml-0 sm:ml-7">
                     <Label htmlFor="salePrice">Sale Price (KES) *</Label>
                     <Input
                       id="salePrice"
