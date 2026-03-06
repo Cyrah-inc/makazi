@@ -12,12 +12,39 @@ serve(async (req) => {
   }
 
   try {
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    // Optional: verify shared secret if configured
+    const callbackSecret = Deno.env.get('MPESA_CALLBACK_SECRET');
+    if (callbackSecret) {
+      const url = new URL(req.url);
+      const token = url.searchParams.get('secret');
+      if (token !== callbackSecret) {
+        console.warn('mpesa-b2c-callback: Invalid callback secret');
+        return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      console.warn('mpesa-b2c-callback: Invalid JSON body');
+      return new Response(JSON.stringify({ ResultCode: 0, ResultDesc: 'Invalid body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     console.log('B2C Callback received:', JSON.stringify(body));
 
     // Safaricom B2C callback structure
