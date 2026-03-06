@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Loader2, ImageIcon, Star, Video } from 'lucide-react';
+import { compressImages } from '@/lib/imageCompression';
 
 interface PropertyImageUploadProps {
   images: string[];
@@ -64,15 +65,18 @@ export function PropertyImageUpload({
       return;
     }
 
-    const maxSize = 5 * 1024 * 1024;
+    const maxSize = 10 * 1024 * 1024; // 10MB pre-compression limit
     const oversizedFiles = filesToUpload.filter(f => f.size > maxSize);
     if (oversizedFiles.length > 0) {
-      toast({ title: 'File too large', description: 'Each image must be less than 5MB', variant: 'destructive' });
+      toast({ title: 'File too large', description: 'Each image must be less than 10MB', variant: 'destructive' });
       return;
     }
 
     setUploading(true);
-    const results = await Promise.all(filesToUpload.map(uploadFile));
+    
+    // Compress images before upload
+    const compressedFiles = await compressImages(filesToUpload);
+    const results = await Promise.all(compressedFiles.map(uploadFile));
     const successfulUrls = results.filter((url): url is string => url !== null);
 
     if (successfulUrls.length > 0) {
