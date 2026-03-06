@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPrice } from '@/lib/formatters';
-import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
+import { getOptimizedImageUrl } from '@/lib/imageUtils';
 import { HeroProperty } from '@/hooks/useHeroProperties';
 import { cn } from '@/lib/utils';
 
