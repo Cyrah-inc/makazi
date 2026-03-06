@@ -483,7 +483,7 @@ export default function AddPropertyPage() {
                   </div>
                 </div>
                 {formData.forSale && (
-                  <div className="mt-4 ml-7">
+                  <div className="mt-4 ml-0 sm:ml-7">
                     <Label htmlFor="salePrice">Sale Price (KES) *</Label>
                     <Input
                       id="salePrice"
@@ -512,7 +512,7 @@ export default function AddPropertyPage() {
                   </div>
                 </div>
                 {formData.forRent && (
-                  <div className="mt-4 ml-7 space-y-4">
+                  <div className="mt-4 ml-0 sm:ml-7 space-y-4">
                     {/* Multi-unit toggle */}
                     {showMultiUnitOption && (
                       <div className="flex items-center justify-between rounded-md border border-border p-3 bg-muted/30">
@@ -539,7 +539,7 @@ export default function AddPropertyPage() {
                       <div className="space-y-3">
                         <Label>Rental Units</Label>
                         {rentalUnits.map((unit, index) => (
-                          <div key={index} className="grid grid-cols-[1fr_80px_1fr_40px] gap-2 items-end">
+                          <div key={index} className="grid grid-cols-1 sm:grid-cols-[1fr_80px_1fr_40px] gap-2 items-end">
                             <div>
                               {index === 0 && <Label className="text-xs text-muted-foreground mb-1 block">Unit Type</Label>}
                               <Select value={unit.type} onValueChange={(v) => updateRentalUnit(index, 'type', v)}>
