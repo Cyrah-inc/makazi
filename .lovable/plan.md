@@ -1,44 +1,51 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+## Plan: Replace Hero with Jumia-inspired Property Showcase Carousel
 
-## Issues Found
+### What we're building
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+Replace the current text + search bar hero section with a full-width, auto-rotating carousel that showcases top trending properties from Buy, Rent, and Airbnb categories. Each slide fills the hero area with the property's image as a background, overlaid with property details (title, location, price, category badge) and a "View Property" CTA. The search bar moves below the carousel. Think Jumia's homepage banner carousel but for real estate.
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+### Design
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+- Full-width carousel with ~6 slides (2 top trending from each category: buy, rent, airbnb)
+- Each slide: full-bleed property image as background, dark gradient overlay, property info (title, location, price, purpose badge), and "View Details" button linking to `/property/:id`
+- Category tab indicators (Buy / Rent / Airbnb dots or pills) alongside carousel dots
+- Auto-advances every 5 seconds, pausable on hover
+- Mobile: shorter height, stacked text, touch-swipeable via Embla
+- The HeroSearch bar is preserved but moved below the carousel as a compact search strip
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+### New component
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+**`src/components/HeroCarousel.tsx`** — A new component that:
+- Accepts trending properties from all 3 categories
+- Uses Embla carousel (already installed) with autoplay loop
+- Renders each property as a full-width slide with:
+  - Background image with gradient overlay
+  - Purpose badge (Buy / Rent / Airbnb) color-coded
+  - Property title, location (county, town), formatted price
+  - "View Details" button (Link to property page)
+  - Bed/bath/size quick stats
+- Dot indicators at the bottom
+- Left/right arrow navigation (desktop)
+- Auto-advances every 5s, pauses on hover/touch
 
-## Plan
+### New hook
 
-### Files Changed
+**`src/hooks/useHeroProperties.ts`** — Fetches top 2 trending from each category (sale, rent, airbnb) in a single hook, returning up to 6 properties with their purpose tagged. Uses the existing `fetchAndTransform` helper and `LISTING_COLUMNS`.
+
+### Changes to Index.tsx
+
+- Remove the old hero `<section>` (lines 79-101)
+- Import and render `<HeroCarousel>` at the top, passing the hero properties
+- Move `<HeroSearch>` below the carousel in a compact container with a subtle background
+- Keep all existing property carousels below unchanged
+
+### Files changed
 
 | File | Change |
 |------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
-
-### Technical Details
-
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
-
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
-
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
-
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
-
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+| `src/hooks/useHeroProperties.ts` | New hook — fetches top 2 trending from buy, rent, airbnb |
+| `src/components/HeroCarousel.tsx` | New component — full-width Embla carousel with property slides |
+| `src/pages/Index.tsx` | Replace hero section with HeroCarousel + compact search bar below |
 
