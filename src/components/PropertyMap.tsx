@@ -1,5 +1,8 @@
 import { useCallback, useState, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+
+// Must match the same libraries array used in LocationPicker to avoid loader conflicts
+const libraries: ("places" | "maps")[] = ['places'];
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader2, Satellite, Map, Navigation, ExternalLink } from 'lucide-react';
