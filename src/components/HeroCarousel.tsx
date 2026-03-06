@@ -73,6 +73,8 @@ const HeroCarousel = ({ properties, isLoading }: HeroCarouselProps) => {
                   alt={property.title}
                   className="absolute inset-0 w-full h-full object-cover"
                   loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
                 />
 
                 {/* Gradient overlay */}
