@@ -249,7 +249,7 @@ const LocationPickerMap = ({
       </div>
 
       {/* Map Container */}
-      <div className="relative rounded-lg overflow-hidden border border-border" style={{ height: 'clamp(300px, 50vw, 420px)' }}>
+      <div className="relative rounded-lg overflow-hidden border border-border" style={{ height: 'clamp(350px, 60vw, 420px)' }}>
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={marker || defaultCenter}
