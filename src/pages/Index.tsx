@@ -52,6 +52,9 @@ const Index = () => {
 
   const nearbyCounty = detectedCounty || 'Nairobi';
 
+  // Hero carousel
+  const heroProperties = useHeroProperties();
+
   // Above-fold: fetch immediately
   const newlyListed = useNewlyListed();
   const trending = useTrendingProperties();
@@ -77,28 +80,16 @@ const Index = () => {
       <Navbar />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative bg-primary overflow-hidden">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-primary-foreground blur-3xl animate-float" />
-            <div className="absolute bottom-10 right-20 w-96 h-96 rounded-full bg-primary-foreground blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-            <div className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full bg-gold blur-3xl animate-pulse-soft" />
-          </div>
+        {/* Hero Carousel */}
+        <HeroCarousel
+          properties={heroProperties.data ?? []}
+          isLoading={heroProperties.isLoading}
+        />
 
-          <div className="relative container py-16 md:py-24">
-            <div className="text-center mb-8 space-y-3">
-              <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground animate-fade-in-up">
-                Find Your Dream Home
-                <span className="block text-gold">in Kenya</span>
-              </h1>
-              <p className="text-lg md:text-xl text-primary-foreground/80 max-w-2xl mx-auto animate-fade-in-up delay-200">
-                Discover thousands of verified properties for sale, rent, or short-term stays across Kenya.
-              </p>
-            </div>
-
-            <div className="animate-fade-in-up delay-300">
-              <HeroSearch />
-            </div>
+        {/* Compact Search Bar */}
+        <section className="bg-card border-b border-border shadow-sm">
+          <div className="container py-4">
+            <HeroSearch />
           </div>
         </section>
 
