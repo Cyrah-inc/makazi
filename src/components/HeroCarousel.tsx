@@ -59,7 +59,7 @@ const HeroCarousel = ({ properties, isLoading }: HeroCarouselProps) => {
       <div ref={emblaRef} className="overflow-hidden">
         <div className="flex">
           {properties.map((property) => {
-            const imgUrl = getOptimizedImageUrl(property.images[0], IMAGE_SIZES.HERO ?? 1200);
+            const imgUrl = getOptimizedImageUrl(property.images[0], 1200);
             const cat = CATEGORY_CONFIG[property.heroCategory];
 
             return (

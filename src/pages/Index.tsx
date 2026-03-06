@@ -2,6 +2,7 @@ import { useEffect, useMemo, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import HeroCarousel from '@/components/HeroCarousel';
 import HeroSearch, { HeroFilters } from '@/components/HeroSearch';
 import PropertyCarousel from '@/components/PropertyCarousel';
 import { LazySection } from '@/components/LazySection';
@@ -18,6 +19,7 @@ import {
   useNewlyListed,
   detectCounty,
 } from '@/hooks/useHomeSections';
+import { useHeroProperties } from '@/hooks/useHeroProperties';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles } from 'lucide-react';
 
