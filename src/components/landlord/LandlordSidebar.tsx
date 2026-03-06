@@ -68,7 +68,7 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
   };
 
   return (
-    <aside className="w-72 min-h-screen bg-card border-r border-border flex flex-col">
+    <aside className="w-72 h-full max-h-screen bg-card border-r border-border flex flex-col">
       {/* Logo */}
       <div className="p-5 border-b border-border">
         <Link to="/" onClick={handleNavClick} className="flex items-center gap-3">
