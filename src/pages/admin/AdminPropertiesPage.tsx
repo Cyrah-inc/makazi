@@ -324,11 +324,11 @@ export default function AdminPropertiesPage() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">Properties</h1>
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Properties</h1>
             <p className="text-muted-foreground mt-1">
               Manage all property listings and approvals
             </p>
@@ -450,7 +450,7 @@ export default function AdminPropertiesPage() {
         </div>
 
         {/* Properties Table */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="bg-card rounded-lg border border-border overflow-hidden overflow-x-auto">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -460,7 +460,7 @@ export default function AdminPropertiesPage() {
               No properties found
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Property</TableHead>

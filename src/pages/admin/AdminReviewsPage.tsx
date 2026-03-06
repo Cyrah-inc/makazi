@@ -140,7 +140,7 @@ export default function AdminReviewsPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-8">
         <h1 className="font-heading text-2xl font-bold">Reviews Management</h1>
 
         {/* Stats */}
@@ -294,8 +294,8 @@ export default function AdminReviewsPage() {
               </div>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
+            <div className="rounded-md border overflow-x-auto">
+              <Table className="min-w-[700px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Guest</TableHead>

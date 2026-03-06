@@ -123,10 +123,10 @@ export default function AdminListingsPage() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Listings Overview</h1>
-          <p className="text-muted-foreground mt-1">Property listings grouped by landlord</p>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Listings Overview</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Property listings grouped by landlord</p>
         </div>
 
         {isLoading ? (

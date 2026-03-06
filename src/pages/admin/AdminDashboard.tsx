@@ -66,21 +66,21 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Dashboard</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening with your platform.</p>
         </div>
 
         {isLoading ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
               {Array.from({ length: 4 }).map((_, i) => (
                 <AdminStatsCardSkeleton key={i} />
               ))}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
               {Array.from({ length: 3 }).map((_, i) => (
                 <AdminStatsCardSkeleton key={i} />
               ))}
@@ -89,7 +89,7 @@ export default function AdminDashboard() {
         ) : (
           <>
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
               <StatsCard
                 title="Total Users"
                 value={formatNumber(stats?.totalUsers ?? 0)}
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Secondary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
               <StatsCard
                 title="Properties for Sale"
                 value={stats?.forSale ?? 0}
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Activity & Approvals */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <PendingApprovals />
               <RecentActivity />
             </div>
