@@ -489,6 +489,15 @@ const PropertyDetailPage = () => {
                           <div className="text-sm text-muted-foreground">
                             {property.landlordVerified ? 'Verified Property Owner' : 'Property Owner'}
                           </div>
+                          {hasActiveSubscription && landlordPhone && (
+                            <a
+                              href={`tel:${landlordPhone}`}
+                              className="text-sm text-primary hover:underline flex items-center gap-1 mt-1"
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                              {landlordPhone}
+                            </a>
+                          )}
                         </div>
                       </div>
                       <PropertyReviewsSummary propertyId={property.id} />
