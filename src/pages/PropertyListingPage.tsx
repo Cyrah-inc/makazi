@@ -48,10 +48,13 @@ interface PropertyListingPageProps {
 
 const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySections }: PropertyListingPageProps) => {
   const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get('type') as PropertyType | null;
+  const categoryParam = searchParams.get('category');
   const [filters, setFilters] = useState<PropertyFilter>({
     purpose,
     county: searchParams.get('county') || undefined,
     search: searchParams.get('q') || undefined,
+    propertyType: typeParam || undefined,
   });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
