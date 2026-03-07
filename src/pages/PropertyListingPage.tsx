@@ -9,7 +9,7 @@ import { useProperties } from '@/hooks/useProperties';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { haversineDistance, formatDistance } from '@/lib/geoUtils';
 import { PropertyPurpose, PropertyFilter, PropertyType } from '@/types/property';
-import { SlidersHorizontal, Grid3X3, List, Loader2, ShoppingCart, Home, Palmtree, Car, Bus, PersonStanding, X, Navigation } from 'lucide-react';
+import { SlidersHorizontal, Grid3X3, List, Loader2, ShoppingCart, Home, Palmtree, Car, Bus, PersonStanding, X, Navigation, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -45,6 +45,35 @@ interface PropertyListingPageProps {
   heroIcon: React.ReactNode;
   categorySections?: React.ReactNode;
 }
+
+const getCategoryLabel = (purpose: PropertyPurpose, type: string | null, category: string | null): string | null => {
+  const purposeLabel = purpose === 'buy' ? 'for Sale' : purpose === 'rent' ? 'for Rent' : 'Stays';
+  
+  if (type) {
+    const typeLabels: Record<string, string> = {
+      house: 'Houses', villa: 'Villas', bungalow: 'Bungalows', apartment: 'Apartments',
+      studio: 'Studios', bedsitter: 'Bedsitters', land: 'Land & Plots',
+      commercial: 'Commercial Properties', townhouse: 'Townhouses & Maisonettes',
+      maisonette: 'Maisonettes', mansion: 'Mansions', office: 'Offices',
+      warehouse: 'Warehouses', shop: 'Shops',
+    };
+    const label = typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+    return `${label} ${purposeLabel}`;
+  }
+  
+  if (category) {
+    const categoryLabels: Record<string, string> = {
+      new: 'Just Added', trending: 'Trending', luxury: 'Luxury',
+      furnished: 'Furnished', budget: 'Budget', exotic: 'Exotic',
+      beach: 'Beach', safari: 'Safari', mountain: 'Mountain Retreats',
+      city: 'City Breaks',
+    };
+    const label = categoryLabels[category] || category.charAt(0).toUpperCase() + category.slice(1);
+    return `${label} ${purposeLabel}`;
+  }
+  
+  return null;
+};
 
 const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySections }: PropertyListingPageProps) => {
   const [searchParams] = useSearchParams();
@@ -385,6 +414,18 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
 
             {/* Results */}
             <div className="flex-1 min-w-0">
+              {/* Category Breadcrumb */}
+              {getCategoryLabel(purpose, typeParam, categoryParam) && (
+                <div className="flex items-center gap-2 mb-4 text-sm">
+                  <Link to={`/${purpose === 'buy' ? 'buy' : purpose === 'rent' ? 'rent' : 'airbnb'}`} className="text-muted-foreground hover:text-foreground transition-colors">
+                    {title}
+                  </Link>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  <span className="font-semibold text-foreground">
+                    {getCategoryLabel(purpose, typeParam, categoryParam)}
+                  </span>
+                </div>
+              )}
               {/* Results Toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex flex-wrap items-center gap-3">
