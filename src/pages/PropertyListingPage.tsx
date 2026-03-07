@@ -229,7 +229,7 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
   }, [commuteSettings.destination, commuteSettings.mode, properties, geo]);
 
   const filteredProperties = useMemo(() => {
-    return properties.filter((property) => {
+    let result = properties.filter((property) => {
       if (filters.county && property.county !== filters.county) return false;
       if (filters.town && property.town !== filters.town) return false;
       if (filters.search) {
@@ -256,6 +256,34 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
       // Location filters no longer exclude — they only affect sort order
       return true;
     });
+
+    // Apply category-based filtering/sorting for "See All" views
+    if (categoryParam) {
+      switch (categoryParam) {
+        case 'new':
+          result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          break;
+        case 'trending':
+          result = [...result].sort((a, b) => b.views - a.views);
+          break;
+        case 'luxury': {
+          const priceKey = purpose === 'buy' ? 'salePrice' : purpose === 'rent' ? 'monthlyRent' : 'nightlyRate';
+          result = [...result].sort((a, b) => (b[priceKey] ?? 0) - (a[priceKey] ?? 0));
+          break;
+        }
+        case 'furnished':
+          result = result.filter(p => p.amenities.some(a => a.toLowerCase().includes('furnished')));
+          break;
+        case 'budget': {
+          const pk = purpose === 'buy' ? 'salePrice' : purpose === 'rent' ? 'monthlyRent' : 'nightlyRate';
+          result = [...result].sort((a, b) => (a[pk] ?? Infinity) - (b[pk] ?? Infinity));
+          break;
+        }
+      }
+    }
+
+    return result;
+  }, [filters, properties, purpose, categoryParam]);
   }, [filters, properties, purpose]);
 
   // Check if any sidebar filter is active (beyond just purpose)
