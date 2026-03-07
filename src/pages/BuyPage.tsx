@@ -22,8 +22,8 @@ const BuyPage = () => {
 
   const sections = (
     <>
-      <PropertyCarousel title="Just Added for Sale" subtitle="Newest properties on the market" properties={newlyListed.data ?? []} isLoading={newlyListed.isLoading} seeAllLink="/buy" icon={<Sparkles className="h-5 w-5 text-primary" />} />
-      <PropertyCarousel title="Trending for Sale" subtitle="Most popular properties on the market" properties={trending.data ?? []} isLoading={trending.isLoading} seeAllLink="/buy" icon={<TrendingUp className="h-5 w-5 text-primary" />} />
+      <PropertyCarousel title="Just Added for Sale" subtitle="Newest properties on the market" properties={newlyListed.data ?? []} isLoading={newlyListed.isLoading} seeAllLink="/buy?category=new" icon={<Sparkles className="h-5 w-5 text-primary" />} />
+      <PropertyCarousel title="Trending for Sale" subtitle="Most popular properties on the market" properties={trending.data ?? []} isLoading={trending.isLoading} seeAllLink="/buy?category=trending" icon={<TrendingUp className="h-5 w-5 text-primary" />} />
       <PropertyCarousel title="Houses for Sale" subtitle="Houses, villas & bungalows" properties={houses.data ?? []} isLoading={houses.isLoading} seeAllLink="/buy?type=house" icon={<Home className="h-5 w-5 text-primary" />} />
       <PropertyCarousel title="Land & Plots" subtitle="Investment opportunities across Kenya" properties={land.data ?? []} isLoading={land.isLoading} seeAllLink="/buy?type=land" icon={<MapPin className="h-5 w-5 text-primary" />} />
       <PropertyCarousel title="Commercial & Industrial" subtitle="Business premises & commercial spaces" properties={commercial.data ?? []} isLoading={commercial.isLoading} seeAllLink="/buy?type=commercial" icon={<Building2 className="h-5 w-5 text-primary" />} />
