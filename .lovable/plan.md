@@ -1,44 +1,46 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+## Plan: Category "See All" Pages
 
-## Issues Found
+### Problem
+Currently, clicking "See all" on carousels like "Houses for Sale" links to `/buy?type=house`, but `PropertyListingPage` ignores the `type` query parameter. The user lands on the generic Buy page with no category filter applied.
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+### Solution
+Read the `type` and `category` query parameters from the URL in `PropertyListingPage` and use them to initialize the `propertyType` filter. This way, existing `seeAllLink` values like `/buy?type=house` will automatically filter results to that category. Also update carousel `seeAllLink` values on the homepage and Airbnb page to use meaningful category params.
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+### Changes
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+**1. `src/pages/PropertyListingPage.tsx`**
+- Read `type` from `searchParams` and initialize `filters.propertyType` with it
+- When `type` param is present, set `shouldFetchMain = true` so the grid loads immediately instead of showing only carousels
+- Show a clear heading like "Houses for Sale" based on the active `propertyType` filter
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+**2. `src/pages/Index.tsx`**
+- Update `seeAllLink` values to include meaningful category params:
+  - "Just Added" → `/buy` (no change)
+  - "Trending Homes" → `/buy` (no change)
+  - "Exotic Getaways" → `/airbnb` (no change)
+  - "Prime Land & Plots" → `/buy?type=land` (already correct)
+  - "Urban Apartments" → `/rent?type=apartment` (already correct)
+  - "Family Homes for Sale" → `/buy?type=house` (already correct)
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+**3. `src/pages/BuyPage.tsx`, `src/pages/RentPage.tsx`, `src/pages/AirbnbPage.tsx`**
+- Update generic `seeAllLink="/buy"` or `seeAllLink="/rent"` or `seeAllLink="/airbnb"` to include category-specific query params where applicable (e.g., luxury, furnished, budget, etc.)
 
-## Plan
+### Technical detail
+The key change is in `PropertyListingPage` initialization (around line 51):
+```typescript
+const typeParam = searchParams.get('type');
+const [filters, setFilters] = useState<PropertyFilter>({
+  purpose,
+  county: searchParams.get('county') || undefined,
+  search: searchParams.get('q') || undefined,
+  propertyType: typeParam as PropertyType || undefined,
+});
+```
 
-### Files Changed
+And gating logic (line 83) already checks `hasAnyFilter`, which will be `true` when `propertyType` is set from the URL, so the main grid will load automatically.
 
-| File | Change |
-|------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
-
-### Technical Details
-
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
-
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
-
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
-
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
-
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+### No new files or routes needed
+The existing `/buy`, `/rent`, `/airbnb` routes with query params handle everything. No new pages required.
 
