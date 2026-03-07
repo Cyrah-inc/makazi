@@ -105,14 +105,17 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
   const [nearMeActive, setNearMeActive] = useState(false);
   const geo = useGeolocation();
 
+  // When a category/type param is in the URL, we're in "see all" mode — hide carousels
+  const isCategoryView = !!(typeParam || categoryParam);
+
   // Fetch properties
   // Check if any sidebar filter is active early (for query gating)
   const hasAnyFilter = Object.keys(filters).some(key => 
     key !== 'purpose' && filters[key as keyof PropertyFilter] !== undefined
   );
 
-  // Defer main grid query when category sections exist and no filters active
-  const shouldFetchMain = !categorySections || hasAnyFilter || nearMeActive || commuteActive;
+  // Defer main grid query when category sections exist and no filters active (but always fetch in category view)
+  const shouldFetchMain = isCategoryView || !categorySections || hasAnyFilter || nearMeActive || commuteActive;
   const { data: properties = [], isLoading, error } = useProperties(purpose, false, shouldFetchMain);
 
   // Calculate distances client-side when we have user location
@@ -528,8 +531,8 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
                 </div>
               )}
 
-              {/* Category Carousels (inside results area) */}
-              {categorySections && (
+              {/* Category Carousels (inside results area) — hidden when viewing a specific category */}
+              {categorySections && !isCategoryView && (
                 <div className="mb-6 border-b border-border/50 pb-6">
                   {categorySections}
                 </div>
