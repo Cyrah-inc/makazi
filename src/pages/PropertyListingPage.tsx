@@ -284,7 +284,7 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
 
     return result;
   }, [filters, properties, purpose, categoryParam]);
-  }, [filters, properties, purpose]);
+  
 
   // Check if any sidebar filter is active (beyond just purpose)
   const hasActiveFilters = useMemo(() => {
