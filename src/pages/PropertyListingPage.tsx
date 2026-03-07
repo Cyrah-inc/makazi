@@ -567,7 +567,7 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
               )}
 
               {/* Loading State — uses skeleton grid instead of spinner */}
-              {isLoading && !categorySections && (
+              {isLoading && (!categorySections || isCategoryView) && (
                 <PropertyGrid
                   properties={[]}
                   isLoading={true}
