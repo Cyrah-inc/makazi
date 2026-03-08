@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -8,9 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Users, UserCheck, Eye, TrendingUp, Clock, Heart, Building2, CalendarDays, Loader2 } from 'lucide-react';
-import { format, subDays, differenceInMinutes, startOfMonth } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import {
+  Users, UserCheck, Eye, TrendingUp, Clock, Heart, Building2,
+  Loader2, DollarSign, MessageCircle, Zap, ShieldCheck, Home,
+  CreditCard, Star, ArrowRightLeft
+} from 'lucide-react';
+import { format, subDays, differenceInMinutes, startOfMonth, startOfWeek } from 'date-fns';
 
 const COLORS = [
   'hsl(var(--primary))',
@@ -27,7 +30,13 @@ function formatDuration(minutes: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-async function fetchAnalyticsData() {
+function formatKES(amount: number): string {
+  if (amount >= 1000000) return `KES ${(amount / 1000000).toFixed(1)}M`;
+  if (amount >= 1000) return `KES ${(amount / 1000).toFixed(0)}K`;
+  return `KES ${amount.toLocaleString()}`;
+}
+
+async function fetchFullAnalytics() {
   const now = new Date();
   const weekAgo = subDays(now, 7);
   const monthAgo = subDays(now, 30);
@@ -39,164 +48,301 @@ async function fetchAnalyticsData() {
     { data: bookings },
     { data: inquiries },
     { data: favorites },
+    { data: subscriptions },
+    { data: reviews },
+    { data: leads },
+    { data: landlordProfiles },
   ] = await Promise.all([
     supabase.from('profiles').select('user_id, created_at, full_name, email, status'),
     supabase.from('user_roles').select('user_id, role, created_at'),
-    supabase.from('properties').select('id, title, landlord_id, property_type, status, views_count, city, state'),
-    supabase.from('bookings').select('id, status, total_amount, created_at, property_id'),
-    supabase.from('inquiries').select('id, landlord_id, created_at, replied_at, status'),
+    supabase.from('properties').select('id, title, landlord_id, property_type, property_category, status, views_count, city, state, price, sale_price, monthly_rent, nightly_rate, created_at'),
+    supabase.from('bookings').select('id, status, total_amount, service_fee, created_at, property_id, landlord_id, nightly_rate, nights, check_in_date, check_out_date'),
+    supabase.from('inquiries').select('id, landlord_id, property_id, created_at, replied_at, status'),
     supabase.from('favorites').select('id, property_id'),
+    supabase.from('subscriptions').select('id, user_id, plan, amount, status, payment_method, starts_at, expires_at, created_at'),
+    supabase.from('reviews').select('id, property_id, rating, created_at'),
+    supabase.from('leads').select('id, user_id, property_id, landlord_id, lead_type, created_at'),
+    supabase.from('landlord_profiles').select('user_id, verification_status'),
   ]);
 
-  const allProfiles = profiles || [];
-  const allRoles = roles || [];
-  const allProperties = properties || [];
-  const allBookings = bookings || [];
-  const allInquiries = inquiries || [];
-  const allFavorites = favorites || [];
+  const all = {
+    profiles: profiles || [],
+    roles: roles || [],
+    properties: properties || [],
+    bookings: bookings || [],
+    inquiries: inquiries || [],
+    favorites: favorites || [],
+    subscriptions: subscriptions || [],
+    reviews: reviews || [],
+    leads: leads || [],
+    landlordProfiles: landlordProfiles || [],
+  };
 
-  const landlordUserIds = new Set(allRoles.filter(r => r.role === 'landlord').map(r => r.user_id));
+  const profileMap = new Map(all.profiles.map(p => [p.user_id, p]));
+  const landlordIds = new Set(all.roles.filter(r => r.role === 'landlord').map(r => r.user_id));
 
-  // User stats
-  const totalUsers = allProfiles.length;
-  const totalLandlords = landlordUserIds.size;
-  const newUsersWeek = allProfiles.filter(p => new Date(p.created_at) >= weekAgo).length;
-  const newUsersMonth = allProfiles.filter(p => new Date(p.created_at) >= monthAgo).length;
-  const newLandlordsWeek = allRoles.filter(r => r.role === 'landlord' && new Date(r.created_at) >= weekAgo).length;
-  const newLandlordsMonth = allRoles.filter(r => r.role === 'landlord' && new Date(r.created_at) >= monthAgo).length;
+  // === OVERVIEW ===
+  const totalUsers = all.profiles.length;
+  const totalLandlords = landlordIds.size;
+  const totalProperties = all.properties.length;
+  const totalLeads = all.leads.length;
+  const newUsersWeek = all.profiles.filter(p => new Date(p.created_at) >= weekAgo).length;
+  const newLandlordsWeek = all.roles.filter(r => r.role === 'landlord' && new Date(r.created_at) >= weekAgo).length;
 
-  // Profile map for name lookups
-  const profileMap = new Map(allProfiles.map(p => [p.user_id, p]));
+  const activeSubscribers = all.subscriptions.filter(s => s.status === 'active' && s.expires_at && new Date(s.expires_at) >= now).length;
 
-  // Inquiry response leaderboard
-  const landlordInquiries = new Map<string, { total: number; replied: number; totalMinutes: number }>();
-  allInquiries.forEach(inq => {
-    const entry = landlordInquiries.get(inq.landlord_id) || { total: 0, replied: 0, totalMinutes: 0 };
-    entry.total++;
-    if (inq.replied_at) {
-      entry.replied++;
-      entry.totalMinutes += differenceInMinutes(new Date(inq.replied_at), new Date(inq.created_at));
-    }
-    landlordInquiries.set(inq.landlord_id, entry);
+  const paidBookings = all.bookings.filter(b => ['paid', 'checked_in', 'completed'].includes(b.status));
+  const totalRevenue = paidBookings.reduce((s, b) => s + Number(b.total_amount || 0), 0);
+  const totalCommission = paidBookings.reduce((s, b) => s + Number(b.service_fee || 0), 0);
+  const subRevenue = all.subscriptions.filter(s => s.status === 'active').reduce((s, sub) => s + Number(sub.amount || 0), 0);
+
+  // User growth by month
+  const userGrowth = new Map<string, number>();
+  all.profiles.forEach(p => {
+    const m = format(startOfMonth(new Date(p.created_at)), 'MMM yy');
+    userGrowth.set(m, (userGrowth.get(m) || 0) + 1);
   });
-
-  const responseLeaderboard = Array.from(landlordInquiries.entries())
-    .map(([userId, stats]) => ({
-      userId,
-      name: profileMap.get(userId)?.full_name || profileMap.get(userId)?.email || 'Unknown',
-      avgMinutes: stats.replied > 0 ? stats.totalMinutes / stats.replied : null,
-      totalInquiries: stats.total,
-      unanswered: stats.total - stats.replied,
-      responseRate: stats.total > 0 ? Math.round((stats.replied / stats.total) * 100) : 0,
-    }))
-    .sort((a, b) => {
-      if (a.avgMinutes === null) return 1;
-      if (b.avgMinutes === null) return -1;
-      return a.avgMinutes - b.avgMinutes;
-    })
-    .slice(0, 10);
-
-  // Most viewed properties
-  const topViewed = [...allProperties]
-    .sort((a, b) => (b.views_count || 0) - (a.views_count || 0))
-    .slice(0, 10)
-    .map(p => ({
-      ...p,
-      landlordName: profileMap.get(p.landlord_id)?.full_name || profileMap.get(p.landlord_id)?.email || 'Unknown',
-    }));
-
-  // Booking analytics
-  const bookingsByStatus: Record<string, number> = {};
-  allBookings.forEach(b => {
-    bookingsByStatus[b.status] = (bookingsByStatus[b.status] || 0) + 1;
-  });
-
-  const totalRevenue = allBookings
-    .filter(b => ['paid', 'checked_in', 'completed'].includes(b.status))
-    .reduce((sum, b) => sum + Number(b.total_amount || 0), 0);
-
-  const avgBookingValue = allBookings.length > 0
-    ? allBookings.reduce((sum, b) => sum + Number(b.total_amount || 0), 0) / allBookings.length
-    : 0;
+  const userGrowthData = Array.from(userGrowth.entries()).map(([month, count]) => ({ month, count })).slice(-12);
 
   // Revenue by month
-  const revenueByMonth = new Map<string, number>();
-  allBookings
-    .filter(b => ['paid', 'checked_in', 'completed'].includes(b.status))
-    .forEach(b => {
-      const month = format(startOfMonth(new Date(b.created_at)), 'MMM yyyy');
-      revenueByMonth.set(month, (revenueByMonth.get(month) || 0) + Number(b.total_amount || 0));
-    });
-
-  const revenueChartData = Array.from(revenueByMonth.entries())
-    .map(([month, amount]) => ({ month, amount }))
-    .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
-    .slice(-12);
+  const revByMonth = new Map<string, number>();
+  paidBookings.forEach(b => {
+    const m = format(startOfMonth(new Date(b.created_at)), 'MMM yy');
+    revByMonth.set(m, (revByMonth.get(m) || 0) + Number(b.total_amount || 0));
+  });
+  const revenueChartData = Array.from(revByMonth.entries()).map(([month, amount]) => ({ month, amount })).slice(-12);
 
   // Property distribution
   const byType: Record<string, number> = {};
   const byStatus: Record<string, number> = {};
   const byCity: Record<string, number> = {};
-  allProperties.forEach(p => {
+  all.properties.forEach(p => {
     byType[p.property_type] = (byType[p.property_type] || 0) + 1;
     byStatus[p.status] = (byStatus[p.status] || 0) + 1;
-    const loc = p.city || 'Unknown';
-    byCity[loc] = (byCity[loc] || 0) + 1;
+    byCity[p.city || 'Unknown'] = (byCity[p.city || 'Unknown'] || 0) + 1;
   });
 
-  const typeChartData = Object.entries(byType).map(([name, value]) => ({ name, value }));
-  const statusChartData = Object.entries(byStatus).map(([name, value]) => ({ name, value }));
-  const cityChartData = Object.entries(byCity)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, value]) => ({ name, value }));
-
-  // Favorites insights
-  const favCounts = new Map<string, number>();
-  allFavorites.forEach(f => {
-    favCounts.set(f.property_id, (favCounts.get(f.property_id) || 0) + 1);
+  // Response leaderboard
+  const landlordInq = new Map<string, { total: number; replied: number; totalMin: number }>();
+  all.inquiries.forEach(inq => {
+    const e = landlordInq.get(inq.landlord_id) || { total: 0, replied: 0, totalMin: 0 };
+    e.total++;
+    if (inq.replied_at) { e.replied++; e.totalMin += differenceInMinutes(new Date(inq.replied_at), new Date(inq.created_at)); }
+    landlordInq.set(inq.landlord_id, e);
   });
-  const topFavorited = Array.from(favCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([propId, count]) => {
-      const prop = allProperties.find(p => p.id === propId);
-      return {
-        propertyId: propId,
-        title: prop?.title || 'Unknown',
-        landlordName: prop ? (profileMap.get(prop.landlord_id)?.full_name || 'Unknown') : 'Unknown',
-        count,
-        type: prop?.property_type || 'unknown',
-      };
+  const responseLeaderboard = Array.from(landlordInq.entries())
+    .map(([uid, s]) => ({
+      name: profileMap.get(uid)?.full_name || profileMap.get(uid)?.email || 'Unknown',
+      avgMin: s.replied > 0 ? s.totalMin / s.replied : null,
+      total: s.total, unanswered: s.total - s.replied,
+      rate: s.total > 0 ? Math.round((s.replied / s.total) * 100) : 0,
+    }))
+    .sort((a, b) => (a.avgMin ?? Infinity) - (b.avgMin ?? Infinity)).slice(0, 10);
+
+  // Verification breakdown
+  const verificationCounts: Record<string, number> = {};
+  all.landlordProfiles.forEach(lp => {
+    verificationCounts[lp.verification_status] = (verificationCounts[lp.verification_status] || 0) + 1;
+  });
+
+  // Avg property rating
+  const avgRating = all.reviews.length > 0
+    ? all.reviews.reduce((s, r) => s + r.rating, 0) / all.reviews.length
+    : 0;
+
+  // === CATEGORY HELPERS ===
+  const propsByType = (type: string) => all.properties.filter(p => p.property_type === type);
+  const leadsByType = (type: string) => {
+    const propIds = new Set(propsByType(type).map(p => p.id));
+    return all.leads.filter(l => propIds.has(l.property_id));
+  };
+  const inquiriesByType = (type: string) => {
+    const propIds = new Set(propsByType(type).map(p => p.id));
+    return all.inquiries.filter(i => propIds.has(i.property_id));
+  };
+
+  const buildCategoryStats = (type: string) => {
+    const props = propsByType(type);
+    const catLeads = leadsByType(type);
+    const catInquiries = inquiriesByType(type);
+    const totalViews = props.reduce((s, p) => s + (p.views_count || 0), 0);
+    const topViewed = [...props].sort((a, b) => (b.views_count || 0) - (a.views_count || 0)).slice(0, 10)
+      .map(p => ({ ...p, landlordName: profileMap.get(p.landlord_id)?.full_name || 'Unknown' }));
+    const locationData: Record<string, number> = {};
+    props.forEach(p => { locationData[p.city || 'Unknown'] = (locationData[p.city || 'Unknown'] || 0) + 1; });
+    const locationChart = Object.entries(locationData).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
+    return { props, catLeads, catInquiries, totalViews, topViewed, locationChart };
+  };
+
+  // === BUY ===
+  const buy = buildCategoryStats('sale');
+  const avgSalePrice = buy.props.length > 0
+    ? buy.props.reduce((s, p) => s + Number(p.sale_price || p.price || 0), 0) / buy.props.length : 0;
+
+  // === RENT ===
+  const rent = buildCategoryStats('rent');
+  const avgMonthlyRent = rent.props.length > 0
+    ? rent.props.reduce((s, p) => s + Number(p.monthly_rent || p.price || 0), 0) / rent.props.length : 0;
+
+  // === AIRBNB ===
+  const airbnb = buildCategoryStats('airbnb');
+  const airbnbBookings = all.bookings.filter(b => {
+    const propIds = new Set(airbnb.props.map(p => p.id));
+    return propIds.has(b.property_id);
+  });
+  const airbnbRevenue = airbnbBookings.filter(b => ['paid', 'checked_in', 'completed'].includes(b.status))
+    .reduce((s, b) => s + Number(b.total_amount || 0), 0);
+  const avgNightlyRate = airbnb.props.length > 0
+    ? airbnb.props.reduce((s, p) => s + Number(p.nightly_rate || p.price || 0), 0) / airbnb.props.length : 0;
+
+  // Airbnb revenue by month
+  const airbnbRevByMonth = new Map<string, number>();
+  airbnbBookings.filter(b => ['paid', 'checked_in', 'completed'].includes(b.status)).forEach(b => {
+    const m = format(startOfMonth(new Date(b.created_at)), 'MMM yy');
+    airbnbRevByMonth.set(m, (airbnbRevByMonth.get(m) || 0) + Number(b.total_amount || 0));
+  });
+  const airbnbRevenueChart = Array.from(airbnbRevByMonth.entries()).map(([month, amount]) => ({ month, amount })).slice(-12);
+
+  // Booking status breakdown
+  const bookingsByStatus: Record<string, number> = {};
+  airbnbBookings.forEach(b => { bookingsByStatus[b.status] = (bookingsByStatus[b.status] || 0) + 1; });
+  const bookingStatusChart = Object.entries(bookingsByStatus).map(([name, value]) => ({ name, value }));
+
+  // Top Airbnb by revenue
+  const revenueByProp = new Map<string, number>();
+  airbnbBookings.filter(b => ['paid', 'checked_in', 'completed'].includes(b.status)).forEach(b => {
+    revenueByProp.set(b.property_id, (revenueByProp.get(b.property_id) || 0) + Number(b.total_amount || 0));
+  });
+  const topAirbnbByRevenue = Array.from(revenueByProp.entries())
+    .sort((a, b) => b[1] - a[1]).slice(0, 10)
+    .map(([pid, rev]) => {
+      const p = all.properties.find(pr => pr.id === pid);
+      return { title: p?.title || 'Unknown', revenue: rev, landlord: p ? (profileMap.get(p.landlord_id)?.full_name || 'Unknown') : 'Unknown' };
     });
 
+  // === LEADS ===
+  const whatsappLeads = all.leads.filter(l => l.lead_type === 'whatsapp').length;
+  const chatLeads = all.leads.filter(l => l.lead_type === 'chat').length;
+  const leadsThisWeek = all.leads.filter(l => new Date(l.created_at) >= weekAgo).length;
+  const leadsThisMonth = all.leads.filter(l => new Date(l.created_at) >= monthAgo).length;
+
+  // Leads by week trend
+  const leadsByWeek = new Map<string, number>();
+  all.leads.forEach(l => {
+    const w = format(startOfWeek(new Date(l.created_at)), 'MMM dd');
+    leadsByWeek.set(w, (leadsByWeek.get(w) || 0) + 1);
+  });
+  const leadsTrendData = Array.from(leadsByWeek.entries()).map(([week, count]) => ({ week, count })).slice(-12);
+
+  // Top landlords by leads
+  const leadsByLandlord = new Map<string, number>();
+  all.leads.forEach(l => { leadsByLandlord.set(l.landlord_id, (leadsByLandlord.get(l.landlord_id) || 0) + 1); });
+  const topLandlordsByLeads = Array.from(leadsByLandlord.entries())
+    .sort((a, b) => b[1] - a[1]).slice(0, 10)
+    .map(([uid, count]) => ({ name: profileMap.get(uid)?.full_name || 'Unknown', count }));
+
+  // Top properties by leads
+  const leadsByProp = new Map<string, number>();
+  all.leads.forEach(l => { leadsByProp.set(l.property_id, (leadsByProp.get(l.property_id) || 0) + 1); });
+  const topPropsByLeads = Array.from(leadsByProp.entries())
+    .sort((a, b) => b[1] - a[1]).slice(0, 10)
+    .map(([pid, count]) => {
+      const p = all.properties.find(pr => pr.id === pid);
+      return { title: p?.title || 'Unknown', count, type: p?.property_type || '' };
+    });
+
+  // === SUBSCRIPTIONS ===
+  const activeSubs = all.subscriptions.filter(s => s.status === 'active' && s.expires_at && new Date(s.expires_at) >= now);
+  const expiredSubs = all.subscriptions.filter(s => s.status === 'expired' || (s.expires_at && new Date(s.expires_at) < now));
+  const cancelledSubs = all.subscriptions.filter(s => s.status === 'cancelled');
+  const totalSubRevenue = all.subscriptions.filter(s => s.status === 'active' || s.status === 'expired').reduce((s, sub) => s + Number(sub.amount || 0), 0);
+
+  const subStatusChart = [
+    { name: 'Active', value: activeSubs.length },
+    { name: 'Expired', value: expiredSubs.length },
+    { name: 'Cancelled', value: cancelledSubs.length },
+  ].filter(d => d.value > 0);
+
+  // Subscription trend by month
+  const subsByMonth = new Map<string, number>();
+  all.subscriptions.forEach(s => {
+    const m = format(startOfMonth(new Date(s.created_at)), 'MMM yy');
+    subsByMonth.set(m, (subsByMonth.get(m) || 0) + 1);
+  });
+  const subTrendData = Array.from(subsByMonth.entries()).map(([month, count]) => ({ month, count })).slice(-12);
+
+  // Subscribers list
+  const subscribersList = all.subscriptions
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 20)
+    .map(s => ({
+      ...s,
+      landlordName: profileMap.get(s.user_id)?.full_name || profileMap.get(s.user_id)?.email || 'Unknown',
+    }));
+
   return {
-    totalUsers,
-    totalLandlords,
-    newUsersWeek,
-    newUsersMonth,
-    newLandlordsWeek,
-    newLandlordsMonth,
-    responseLeaderboard,
-    topViewed,
-    bookingsByStatus,
-    totalRevenue,
-    avgBookingValue,
-    revenueChartData,
-    typeChartData,
-    statusChartData,
-    cityChartData,
-    topFavorited,
-    totalBookings: allBookings.length,
-    totalProperties: allProperties.length,
+    // Overview
+    totalUsers, totalLandlords, totalProperties, totalLeads, totalRevenue, totalCommission,
+    subRevenue, activeSubscribers, newUsersWeek, newLandlordsWeek,
+    userGrowthData, revenueChartData,
+    typeChartData: Object.entries(byType).map(([name, value]) => ({ name, value })),
+    statusChartData: Object.entries(byStatus).map(([name, value]) => ({ name, value })),
+    cityChartData: Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value })),
+    responseLeaderboard, verificationCounts, avgRating,
+    // Buy
+    buy: { count: buy.props.length, views: buy.totalViews, avgPrice: avgSalePrice, leads: buy.catLeads.length, topViewed: buy.topViewed, locationChart: buy.locationChart },
+    // Rent
+    rent: { count: rent.props.length, views: rent.totalViews, avgRent: avgMonthlyRent, leads: rent.catLeads.length, inquiries: rent.catInquiries.length, topViewed: rent.topViewed, locationChart: rent.locationChart },
+    // Airbnb
+    airbnb: {
+      count: airbnb.props.length, totalBookings: airbnbBookings.length, revenue: airbnbRevenue,
+      avgNightlyRate, leads: airbnb.catLeads.length, revenueChart: airbnbRevenueChart,
+      bookingStatusChart, topByRevenue: topAirbnbByRevenue, topViewed: airbnb.topViewed,
+    },
+    // Leads
+    leads: { total: totalLeads, whatsapp: whatsappLeads, chat: chatLeads, thisWeek: leadsThisWeek, thisMonth: leadsThisMonth, trendData: leadsTrendData, topLandlords: topLandlordsByLeads, topProperties: topPropsByLeads },
+    // Subscriptions
+    subs: {
+      active: activeSubs.length, expired: expiredSubs.length, cancelled: cancelledSubs.length,
+      totalRevenue: totalSubRevenue, statusChart: subStatusChart, trendData: subTrendData, list: subscribersList,
+    },
   };
 }
 
+const chartConfig = {
+  amount: { label: 'Revenue', color: 'hsl(var(--primary))' },
+  value: { label: 'Count', color: 'hsl(var(--primary))' },
+  count: { label: 'Count', color: 'hsl(var(--primary))' },
+};
+
+function PropertyTable({ items }: { items: { id?: string; title: string; landlordName: string; property_type?: string; views_count?: number }[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>#</TableHead>
+          <TableHead>Property</TableHead>
+          <TableHead>Landlord</TableHead>
+          <TableHead>Views</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((p, i) => (
+          <TableRow key={p.id || i}>
+            <TableCell>{i + 1}</TableCell>
+            <TableCell className="font-medium max-w-[200px] truncate">{p.title}</TableCell>
+            <TableCell>{p.landlordName}</TableCell>
+            <TableCell className="font-semibold">{(p.views_count || 0).toLocaleString()}</TableCell>
+          </TableRow>
+        ))}
+        {items.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No data yet</TableCell></TableRow>}
+      </TableBody>
+    </Table>
+  );
+}
+
 export default function AdminAnalyticsPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-analytics'],
-    queryFn: fetchAnalyticsData,
-  });
+  const { data, isLoading } = useQuery({ queryKey: ['admin-analytics-v2'], queryFn: fetchFullAnalytics });
 
   if (isLoading || !data) {
     return (
@@ -208,239 +354,375 @@ export default function AdminAnalyticsPage() {
     );
   }
 
-  const chartConfig = {
-    amount: { label: 'Revenue', color: 'hsl(var(--primary))' },
-    value: { label: 'Count', color: 'hsl(var(--primary))' },
-  };
-
   return (
     <AdminLayout>
       <div className="p-4 md:p-6 space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Analytics</h1>
-          <p className="text-muted-foreground">Platform insights and performance metrics</p>
+          <p className="text-muted-foreground">Comprehensive platform insights</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatsCard title="Total Users" value={data.totalUsers} icon={Users} change={`+${data.newUsersWeek} this week`} changeType="positive" />
-          <StatsCard title="Total Landlords" value={data.totalLandlords} icon={UserCheck} change={`+${data.newLandlordsWeek} this week`} changeType="positive" />
-          <StatsCard title="Total Properties" value={data.totalProperties} icon={Building2} change={`+${data.newUsersMonth} users/mo`} changeType="neutral" />
-          <StatsCard title="Total Revenue" value={`KES ${(data.totalRevenue / 1000).toFixed(0)}K`} icon={TrendingUp} change={`${data.totalBookings} bookings`} changeType="positive" />
-        </div>
-
-        {/* Revenue Chart */}
-        {data.revenueChartData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Revenue Trend</CardTitle>
-              <CardDescription>Monthly booking revenue (KES)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <BarChart data={data.revenueChartData}>
-                  <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}K`} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4,4,0,0]} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Distribution Charts */}
-        <div className="grid md:grid-cols-3 gap-4">
-          {[
-            { title: 'By Type', data: data.typeChartData },
-            { title: 'By Status', data: data.statusChartData },
-          ].map(chart => (
-            <Card key={chart.title}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{chart.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                  <PieChart>
-                    <Pie data={chart.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>
-                      {chart.data.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Top Locations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                <BarChart data={data.cityChartData} layout="vertical">
-                  <XAxis type="number" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis type="category" dataKey="name" fontSize={11} tickLine={false} axisLine={false} width={80} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0,4,4,0]} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="leaderboard">
-          <TabsList className="w-full md:w-auto">
-            <TabsTrigger value="leaderboard">Response Leaderboard</TabsTrigger>
-            <TabsTrigger value="views">Most Viewed</TabsTrigger>
-            <TabsTrigger value="favorites">Most Favorited</TabsTrigger>
-            <TabsTrigger value="bookings">Booking Status</TabsTrigger>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="flex flex-wrap gap-1">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="buy">Buy</TabsTrigger>
+            <TabsTrigger value="rent">Rent</TabsTrigger>
+            <TabsTrigger value="airbnb">Airbnb</TabsTrigger>
+            <TabsTrigger value="leads">Leads</TabsTrigger>
+            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
           </TabsList>
 
-          {/* Response Leaderboard */}
-          <TabsContent value="leaderboard">
+          {/* ===== OVERVIEW ===== */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <StatsCard title="Total Users" value={data.totalUsers} icon={Users} change={`+${data.newUsersWeek} this week`} changeType="positive" />
+              <StatsCard title="Landlords" value={data.totalLandlords} icon={UserCheck} change={`+${data.newLandlordsWeek} this week`} changeType="positive" />
+              <StatsCard title="Properties" value={data.totalProperties} icon={Building2} />
+              <StatsCard title="Revenue" value={formatKES(data.totalRevenue)} icon={TrendingUp} change={`Commission: ${formatKES(data.totalCommission)}`} changeType="positive" />
+              <StatsCard title="Leads" value={data.totalLeads} icon={Zap} />
+              <StatsCard title="Active Subs" value={data.activeSubscribers} icon={CreditCard} change={`Sub rev: ${formatKES(data.subRevenue)}`} changeType="positive" />
+            </div>
+
+            {/* User growth + Revenue trend */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-lg">User Growth</CardTitle><CardDescription>Monthly registrations</CardDescription></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <BarChart data={data.userGrowthData}>
+                      <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={11} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4,4,0,0]} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+              {data.revenueChartData.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">Revenue Trend</CardTitle><CardDescription>Monthly booking revenue</CardDescription></CardHeader>
+                  <CardContent>
+                    <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                      <BarChart data={data.revenueChartData}>
+                        <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}K`} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="amount" fill="hsl(var(--chart-2, 160 60% 45%))" radius={[4,4,0,0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Distribution charts */}
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                { title: 'By Type', data: data.typeChartData },
+                { title: 'By Status', data: data.statusChartData },
+              ].map(chart => (
+                <Card key={chart.title}>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">{chart.title}</CardTitle></CardHeader>
+                  <CardContent>
+                    <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                      <PieChart>
+                        <Pie data={chart.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>
+                          {chart.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        </Pie>
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                      </PieChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              ))}
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Top Locations</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                    <BarChart data={data.cityChartData} layout="vertical">
+                      <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" fontSize={10} tickLine={false} axisLine={false} width={80} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0,4,4,0]} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Additional overview metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCard title="Avg Rating" value={data.avgRating.toFixed(1)} icon={Star} />
+              <StatsCard title="Total Reviews" value={data.leads.total} icon={MessageCircle} change="All leads" changeType="neutral" />
+              <StatsCard title="Verified" value={data.verificationCounts['verified'] || 0} icon={ShieldCheck} change={`Pending: ${data.verificationCounts['pending'] || 0}`} changeType="neutral" />
+              <StatsCard title="Conversion" value={`${data.leads.total > 0 ? Math.round((data.airbnb.totalBookings / data.leads.total) * 100) : 0}%`} icon={ArrowRightLeft} change="Lead → Booking" changeType="neutral" />
+            </div>
+
+            {/* Response leaderboard */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2"><Clock className="w-5 h-5" /> Inquiry Response Leaderboard</CardTitle>
-                <CardDescription>Landlords ranked by average response time</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Landlord</TableHead>
-                      <TableHead>Avg Response</TableHead>
-                      <TableHead>Response Rate</TableHead>
-                      <TableHead>Unanswered</TableHead>
+                      <TableHead>#</TableHead><TableHead>Landlord</TableHead><TableHead>Avg Response</TableHead><TableHead>Rate</TableHead><TableHead>Unanswered</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {data.responseLeaderboard.map((ll, i) => (
-                      <TableRow key={ll.userId}>
-                        <TableCell className="font-medium">{i + 1}</TableCell>
+                      <TableRow key={i}>
+                        <TableCell>{i + 1}</TableCell>
                         <TableCell className="font-medium">{ll.name}</TableCell>
-                        <TableCell>
-                          {ll.avgMinutes !== null ? (
-                            <Badge variant={ll.avgMinutes < 120 ? 'default' : 'secondary'}>
-                              {formatDuration(ll.avgMinutes)}
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">No replies</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{ll.responseRate}%</TableCell>
-                        <TableCell>
-                          {ll.unanswered > 0 ? (
-                            <span className="text-destructive font-medium">{ll.unanswered}</span>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
-                        </TableCell>
+                        <TableCell>{ll.avgMin !== null ? <Badge variant={ll.avgMin < 120 ? 'default' : 'secondary'}>{formatDuration(ll.avgMin)}</Badge> : <Badge variant="destructive">No replies</Badge>}</TableCell>
+                        <TableCell>{ll.rate}%</TableCell>
+                        <TableCell>{ll.unanswered > 0 ? <span className="text-destructive font-medium">{ll.unanswered}</span> : '0'}</TableCell>
                       </TableRow>
                     ))}
-                    {data.responseLeaderboard.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No inquiry data yet</TableCell></TableRow>
-                    )}
+                    {data.responseLeaderboard.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No data</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Most Viewed */}
-          <TabsContent value="views">
+          {/* ===== BUY ===== */}
+          <TabsContent value="buy" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCard title="Sale Listings" value={data.buy.count} icon={Home} />
+              <StatsCard title="Total Views" value={data.buy.views.toLocaleString()} icon={Eye} />
+              <StatsCard title="Avg Sale Price" value={formatKES(data.buy.avgPrice)} icon={DollarSign} />
+              <StatsCard title="Leads" value={data.buy.leads} icon={Zap} />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Listings by Location</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <BarChart data={data.buy.locationChart} layout="vertical">
+                      <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" fontSize={10} tickLine={false} axisLine={false} width={80} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0,4,4,0]} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Top Viewed Sale Properties</CardTitle></CardHeader>
+                <CardContent><PropertyTable items={data.buy.topViewed} /></CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ===== RENT ===== */}
+          <TabsContent value="rent" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCard title="Rental Listings" value={data.rent.count} icon={Home} />
+              <StatsCard title="Total Views" value={data.rent.views.toLocaleString()} icon={Eye} />
+              <StatsCard title="Avg Monthly Rent" value={formatKES(data.rent.avgRent)} icon={DollarSign} />
+              <StatsCard title="Leads" value={data.rent.leads} icon={Zap} change={`${data.rent.inquiries} inquiries`} changeType="neutral" />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Rentals by Location</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <BarChart data={data.rent.locationChart} layout="vertical">
+                      <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="name" fontSize={10} tickLine={false} axisLine={false} width={80} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="value" fill="hsl(var(--chart-2, 160 60% 45%))" radius={[0,4,4,0]} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Top Viewed Rentals</CardTitle></CardHeader>
+                <CardContent><PropertyTable items={data.rent.topViewed} /></CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ===== AIRBNB ===== */}
+          <TabsContent value="airbnb" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCard title="Airbnb Listings" value={data.airbnb.count} icon={Home} />
+              <StatsCard title="Total Bookings" value={data.airbnb.totalBookings} icon={CreditCard} />
+              <StatsCard title="Airbnb Revenue" value={formatKES(data.airbnb.revenue)} icon={TrendingUp} />
+              <StatsCard title="Avg Nightly Rate" value={formatKES(data.airbnb.avgNightlyRate)} icon={DollarSign} />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {data.airbnb.revenueChart.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">Airbnb Revenue Trend</CardTitle></CardHeader>
+                  <CardContent>
+                    <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                      <LineChart data={data.airbnb.revenueChart}>
+                        <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}K`} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Line type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Booking Status</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <PieChart>
+                      <Pie data={data.airbnb.bookingStatusChart} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>
+                        {data.airbnb.bookingStatusChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2"><Eye className="w-5 h-5" /> Most Viewed Properties</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">Top Airbnb by Revenue</CardTitle></CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Landlord</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Views</TableHead>
-                    </TableRow>
+                    <TableRow><TableHead>#</TableHead><TableHead>Property</TableHead><TableHead>Landlord</TableHead><TableHead>Revenue</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.topViewed.map((p, i) => (
-                      <TableRow key={p.id}>
+                    {data.airbnb.topByRevenue.map((p, i) => (
+                      <TableRow key={i}>
                         <TableCell>{i + 1}</TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">{p.title}</TableCell>
-                        <TableCell>{p.landlordName}</TableCell>
-                        <TableCell><Badge variant="outline">{p.property_type}</Badge></TableCell>
-                        <TableCell className="font-semibold">{p.views_count?.toLocaleString()}</TableCell>
+                        <TableCell>{p.landlord}</TableCell>
+                        <TableCell className="font-semibold">{formatKES(p.revenue)}</TableCell>
                       </TableRow>
                     ))}
-                    {data.topViewed.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No properties yet</TableCell></TableRow>
-                    )}
+                    {data.airbnb.topByRevenue.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No data</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Favorites */}
-          <TabsContent value="favorites">
+          {/* ===== LEADS ===== */}
+          <TabsContent value="leads" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCard title="Total Leads" value={data.leads.total} icon={Zap} change={`${data.leads.thisMonth} this month`} changeType="positive" />
+              <StatsCard title="WhatsApp" value={data.leads.whatsapp} icon={MessageCircle} />
+              <StatsCard title="Chat" value={data.leads.chat} icon={MessageCircle} />
+              <StatsCard title="This Week" value={data.leads.thisWeek} icon={TrendingUp} />
+            </div>
+            {data.leads.trendData.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Leads Trend</CardTitle><CardDescription>Weekly lead generation</CardDescription></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <BarChart data={data.leads.trendData}>
+                      <XAxis dataKey="week" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={11} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="count" fill="hsl(var(--chart-3, 30 80% 55%))" radius={[4,4,0,0]} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Top Landlords by Leads</CardTitle></CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Landlord</TableHead><TableHead>Leads</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {data.leads.topLandlords.map((l, i) => (
+                        <TableRow key={i}><TableCell>{i + 1}</TableCell><TableCell className="font-medium">{l.name}</TableCell><TableCell className="font-semibold">{l.count}</TableCell></TableRow>
+                      ))}
+                      {data.leads.topLandlords.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No leads yet</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Top Properties by Leads</CardTitle></CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Property</TableHead><TableHead>Type</TableHead><TableHead>Leads</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {data.leads.topProperties.map((p, i) => (
+                        <TableRow key={i}><TableCell>{i + 1}</TableCell><TableCell className="font-medium max-w-[200px] truncate">{p.title}</TableCell><TableCell><Badge variant="outline">{p.type}</Badge></TableCell><TableCell className="font-semibold">{p.count}</TableCell></TableRow>
+                      ))}
+                      {data.leads.topProperties.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No leads yet</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ===== SUBSCRIPTIONS ===== */}
+          <TabsContent value="subscriptions" className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatsCard title="Active" value={data.subs.active} icon={CreditCard} changeType="positive" />
+              <StatsCard title="Expired" value={data.subs.expired} icon={CreditCard} changeType="negative" />
+              <StatsCard title="Cancelled" value={data.subs.cancelled} icon={CreditCard} changeType="negative" />
+              <StatsCard title="Sub Revenue" value={formatKES(data.subs.totalRevenue)} icon={DollarSign} />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Subscriber Status</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <PieChart>
+                      <Pie data={data.subs.statusChart} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>
+                        {data.subs.statusChart.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+              {data.subs.trendData.length > 0 && (
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">Subscription Trend</CardTitle><CardDescription>New subscriptions by month</CardDescription></CardHeader>
+                  <CardContent>
+                    <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                      <BarChart data={data.subs.trendData}>
+                        <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={11} tickLine={false} axisLine={false} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4,4,0,0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2"><Heart className="w-5 h-5" /> Most Favorited Properties</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-lg">Recent Subscribers</CardTitle></CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Landlord</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Favorites</TableHead>
-                    </TableRow>
+                    <TableRow><TableHead>Landlord</TableHead><TableHead>Plan</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Expires</TableHead></TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.topFavorited.map((p, i) => (
-                      <TableRow key={p.propertyId}>
-                        <TableCell>{i + 1}</TableCell>
-                        <TableCell className="font-medium max-w-[200px] truncate">{p.title}</TableCell>
-                        <TableCell>{p.landlordName}</TableCell>
-                        <TableCell><Badge variant="outline">{p.type}</Badge></TableCell>
-                        <TableCell className="font-semibold">{p.count}</TableCell>
+                    {data.subs.list.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{s.landlordName}</TableCell>
+                        <TableCell className="capitalize">{s.plan}</TableCell>
+                        <TableCell>{formatKES(Number(s.amount))}</TableCell>
+                        <TableCell>
+                          <Badge variant={s.status === 'active' ? 'default' : s.status === 'cancelled' ? 'destructive' : 'secondary'}>
+                            {s.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{s.expires_at ? format(new Date(s.expires_at), 'MMM dd, yyyy') : '—'}</TableCell>
                       </TableRow>
                     ))}
-                    {data.topFavorited.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No favorites yet</TableCell></TableRow>
-                    )}
+                    {data.subs.list.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No subscriptions yet</TableCell></TableRow>}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Booking Status */}
-          <TabsContent value="bookings">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2"><CalendarDays className="w-5 h-5" /> Booking Status Breakdown</CardTitle>
-                <CardDescription>Avg booking value: KES {data.avgBookingValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {Object.entries(data.bookingsByStatus).map(([status, count]) => (
-                    <div key={status} className="rounded-lg border bg-muted/50 p-4 text-center">
-                      <p className="text-2xl font-bold text-foreground">{count}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{status.replace('_', ' ')}</p>
-                    </div>
-                  ))}
-                  {Object.keys(data.bookingsByStatus).length === 0 && (
-                    <p className="col-span-full text-center text-muted-foreground py-4">No bookings yet</p>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
