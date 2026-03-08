@@ -25,6 +25,7 @@ const AdminLandlordsPage = lazy(() => import("./pages/admin/AdminLandlordsPage")
 const AdminPropertiesPage = lazy(() => import("./pages/admin/AdminPropertiesPage"));
 const AdminListingsPage = lazy(() => import("./pages/admin/AdminListingsPage"));
 const AdminRevenuePage = lazy(() => import("./pages/admin/AdminRevenuePage"));
+const AdminFinancePage = lazy(() => import("./pages/admin/AdminFinancePage"));
 const AdminAirbnbPage = lazy(() => import("./pages/admin/AdminAirbnbPage"));
 const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
 const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage"));
@@ -89,6 +90,7 @@ const App = () => (
                   <Route path="/admin/landlords" element={<AdminLandlordsPage />} />
                   <Route path="/admin/properties" element={<AdminPropertiesPage />} />
                   <Route path="/admin/listings" element={<AdminListingsPage />} />
+                  <Route path="/admin/finance" element={<AdminFinancePage />} />
                   <Route path="/admin/revenue" element={<AdminRevenuePage />} />
                   <Route path="/admin/airbnb" element={<AdminAirbnbPage />} />
                   <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
