@@ -114,10 +114,10 @@ const PropertyCarousel = ({
           >
             {isLoading
               ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
+                  <div key={i} className="w-[300px] shrink-0 snap-start">
                     <div className="bg-card rounded-2xl overflow-hidden shadow-md">
                       <Skeleton className="aspect-[4/3] w-full" />
-                      <div className="p-4 space-y-3">
+                      <div className="p-4 space-y-3 min-h-[180px]">
                         <Skeleton className="h-7 w-28" />
                         <Skeleton className="h-5 w-3/4" />
                         <div className="flex items-start gap-1.5">
@@ -140,7 +140,7 @@ const PropertyCarousel = ({
                   <div
                     key={property.id}
                     className={cn(
-                      "min-w-[280px] max-w-[320px] shrink-0 snap-start animate-fade-in-up opacity-0"
+                      "w-[300px] shrink-0 snap-start animate-fade-in-up opacity-0"
                     )}
                     style={{ animationDelay: `${Math.min(index * 40, 160)}ms`, animationFillMode: 'forwards' }}
                   >

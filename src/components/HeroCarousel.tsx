@@ -58,7 +58,7 @@ const HeroCarousel = ({ properties, isLoading }: HeroCarouselProps) => {
     <section className="relative w-full group">
       <div ref={emblaRef} className="overflow-hidden">
         <div className="flex">
-          {properties.map((property) => {
+          {properties.map((property, idx) => {
             const imgUrl = getOptimizedImageUrl(property.images[0], 1200);
             const cat = CATEGORY_CONFIG[property.heroCategory];
 
@@ -72,9 +72,8 @@ const HeroCarousel = ({ properties, isLoading }: HeroCarouselProps) => {
                   src={imgUrl}
                   alt={property.title}
                   className="absolute inset-0 w-full h-full object-cover"
-                  loading="eager"
+                  loading={idx === 0 ? 'eager' : 'lazy'}
                   decoding="async"
-                  fetchPriority="high"
                 />
 
                 {/* Gradient overlay */}

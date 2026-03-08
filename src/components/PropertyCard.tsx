@@ -2,7 +2,7 @@ import React, { memo, useState, useCallback } from 'react';
 import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Maximize, Eye, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,6 @@ const PropertyCard = ({
 }: PropertyCardProps) => {
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [imageStatuses, setImageStatuses] = useState<Record<number, 'loading' | 'loaded' | 'error'>>({});
   const favorited = isFavorite(property.id);
   const images = property.images?.length ? property.images : [];
   const hasMultipleImages = images.length > 1;
@@ -58,9 +57,8 @@ const PropertyCard = ({
     setCurrentIndex(index);
   }, []);
 
-  const setImageStatus = useCallback((index: number, status: 'loaded' | 'error') => {
-    setImageStatuses((prev) => ({ ...prev, [index]: status }));
-  }, []);
+
+
 
   const getPrice = () => {
     if (property.purposes.includes('buy') && property.salePrice) {
@@ -95,9 +93,13 @@ const PropertyCard = ({
             </div>
           ) : (
             <div className="relative w-full h-full">
+              {/* Only render active image + preload adjacent */}
               {images.map((img, i) => {
+                const isActive = i === currentIndex;
+                const isAdjacent = i === (currentIndex + 1) % images.length || i === (currentIndex - 1 + images.length) % images.length;
+                if (!isActive && !isAdjacent) return null;
+
                 const url = getOptimizedImageUrl(img, IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality);
-                const status = imageStatuses[i] ?? 'loading';
                 return (
                   <img
                     key={i}
@@ -107,10 +109,8 @@ const PropertyCard = ({
                     decoding="async"
                     className={cn(
                       "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
-                      i === currentIndex && status === 'loaded' ? "opacity-100" : "opacity-0"
+                      isActive ? "opacity-100" : "opacity-0"
                     )}
-                    onLoad={() => setImageStatus(i, 'loaded')}
-                    onError={() => setImageStatus(i, 'error')}
                   />
                 );
               })}
@@ -229,29 +229,19 @@ const PropertyCard = ({
             </div>
           </div>
 
-          {/* Features */}
+          {/* Features — always shown for uniform height */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t border-border">
-            {property.bedrooms > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Bed className="h-4 w-4" />
-                <span>{property.bedrooms} Beds</span>
-              </div>
-            )}
-            {property.bathrooms > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Bath className="h-4 w-4" />
-                <span>{property.bathrooms} Baths</span>
-              </div>
-            )}
-            {property.parkingSpaces > 0 && (
-              <div className="flex items-center gap-1.5">
-                <CarIcon className="h-4 w-4" />
-                <span>{property.parkingSpaces}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1.5">
+              <Bed className="h-4 w-4" />
+              <span>{property.bedrooms || '—'} Beds</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Bath className="h-4 w-4" />
+              <span>{property.bathrooms || '—'} Baths</span>
+            </div>
             <div className="flex items-center gap-1.5 ml-auto">
               <Maximize className="h-4 w-4" />
-              <span>{property.size} m²</span>
+              <span>{property.size || '—'} m²</span>
             </div>
           </div>
         </div>
