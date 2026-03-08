@@ -3,9 +3,10 @@ import { MessageCircle } from 'lucide-react';
 interface WhatsAppButtonProps {
   phone: string;
   propertyTitle: string;
+  onLeadCapture?: () => void;
 }
 
-export function WhatsAppButton({ phone, propertyTitle }: WhatsAppButtonProps) {
+export function WhatsAppButton({ phone, propertyTitle, onLeadCapture }: WhatsAppButtonProps) {
   const cleanPhone = phone.replace(/[\s\-()]/g, '').replace(/^0/, '254');
   const message = encodeURIComponent(
     `Hi, I'm interested in "${propertyTitle}" listed on Makazi. Is it still available?`
@@ -13,13 +14,11 @@ export function WhatsAppButton({ phone, propertyTitle }: WhatsAppButtonProps) {
   const url = `https://wa.me/${cleanPhone}?text=${message}`;
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    // Try opening as popup first (best UX — doesn't navigate away)
+    onLeadCapture?.();
     const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
     if (newWindow) {
-      e.preventDefault(); // Popup succeeded, stop anchor navigation
+      e.preventDefault();
     }
-    // If popup blocked, let the <a target="_top"> handle it natively
-    // target="_top" breaks out of iframe at HTML level (no cross-origin JS needed)
   };
 
   return (
