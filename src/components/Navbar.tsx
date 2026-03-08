@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut, ChevronRight } from 'lucide-react';
+import { Home, Building, Key, Palmtree, Heart, User, Menu, Shield, LogOut, ChevronRight } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -90,11 +91,14 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-2">
           <ThemeToggle />
           {user && (
-            <Link to="/dashboard/favorites">
-              <Button variant="ghost" size="icon" className="relative">
-                <Heart className="h-5 w-5" />
-              </Button>
-            </Link>
+            <>
+              <NotificationBell />
+              <Link to="/dashboard/favorites">
+                <Button variant="ghost" size="icon" className="relative">
+                  <Heart className="h-5 w-5" />
+                </Button>
+              </Link>
+            </>
           )}
           
           {user ? (
