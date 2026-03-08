@@ -17,6 +17,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -98,6 +99,10 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
             <p className="text-sm font-medium truncate">{user?.email}</p>
             <p className="text-xs text-muted-foreground">Administrator</p>
           </div>
+        </div>
+        <div className="flex items-center justify-between px-2 py-1">
+          <span className="text-xs text-muted-foreground">Theme</span>
+          <ThemeToggle />
         </div>
         <Button
           variant="ghost"

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut, ChevronRight } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -86,7 +87,8 @@ const Navbar = () => {
         </div>
 
         {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2">
+          <ThemeToggle />
           {user && (
             <Link to="/dashboard/favorites">
               <Button variant="ghost" size="icon" className="relative">
@@ -232,7 +234,11 @@ const Navbar = () => {
               </div>
 
               {/* Footer Actions */}
-              <div className="p-4 border-t border-border bg-background">
+              <div className="p-4 border-t border-border bg-background space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Theme</span>
+                  <ThemeToggle />
+                </div>
                 {user ? (
                   <Button 
                     variant="outline" 

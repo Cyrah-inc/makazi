@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useLandlordProfile } from '@/hooks/useLandlordProfile';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navGroups = [
   {
@@ -133,6 +134,10 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
             <p className="text-sm font-medium truncate">{user?.email}</p>
             <p className="text-xs text-muted-foreground">Landlord</p>
           </div>
+        </div>
+        <div className="flex items-center justify-between px-3 py-1">
+          <span className="text-xs text-muted-foreground">Theme</span>
+          <ThemeToggle />
         </div>
         <button
           onClick={handleSignOut}
