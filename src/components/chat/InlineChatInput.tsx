@@ -13,9 +13,10 @@ interface InlineChatInputProps {
   propertyId: string;
   landlordId: string;
   propertyTitle: string;
+  onLeadCapture?: () => void;
 }
 
-export function InlineChatInput({ propertyId, landlordId, propertyTitle }: InlineChatInputProps) {
+export function InlineChatInput({ propertyId, landlordId, propertyTitle, onLeadCapture }: InlineChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const { user } = useAuth();
