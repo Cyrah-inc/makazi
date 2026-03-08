@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User, CalendarDays, ChevronRight, Shield, Banknote, Star } from 'lucide-react';
+import { Home, Building2, Plus, MessageSquare, BarChart3, LogOut, User, CalendarDays, ChevronRight, Shield, Banknote, Star, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useLandlordProfile } from '@/hooks/useLandlordProfile';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navGroups = [
@@ -29,6 +30,7 @@ const navGroups = [
       { href: '/landlord/payouts', icon: Banknote, label: 'Payouts' },
       { href: '/landlord/reviews', icon: Star, label: 'Reviews' },
       { href: '/landlord/chats', icon: MessageSquare, label: 'Chats' },
+      { href: '/landlord/notifications', icon: Bell, label: 'Notifications' },
     ],
   },
   {
@@ -49,6 +51,7 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
   const { signOut, user } = useAuth();
   const { landlordProfile } = useLandlordProfile();
   const unreadCount = useUnreadCount();
+  const { data: unreadNotifCount } = useUnreadNotificationCount();
 
   const verificationBadge = (status?: string) => {
     if (!status || status === 'unverified') return <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-accent/10 text-accent">Unverified</Badge>;
@@ -110,6 +113,11 @@ export function LandlordSidebar({ onNavigate }: LandlordSidebarProps) {
                     {item.label === 'Chats' && unreadCount > 0 && (
                       <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
                         {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                    {item.label === 'Notifications' && (unreadNotifCount ?? 0) > 0 && (
+                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
+                        {unreadNotifCount! > 99 ? '99+' : unreadNotifCount}
                       </span>
                     )}
                     {item.href === '/landlord/profile' && verificationBadge(landlordProfile?.verification_status)}
