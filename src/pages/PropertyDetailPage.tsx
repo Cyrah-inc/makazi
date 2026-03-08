@@ -451,12 +451,14 @@ const PropertyDetailPage = () => {
                             propertyId={property.id}
                             landlordId={property.landlordId}
                             propertyTitle={property.title}
+                            onLeadCapture={() => captureLeadFn('chat')}
                           />
                         )}
                         {hasActiveSubscription && landlordPhone && (
                           <WhatsAppButton
                             phone={landlordPhone}
                             propertyTitle={property.title}
+                            onLeadCapture={() => captureLeadFn('whatsapp')}
                           />
                         )}
                         {property.purposes.includes('airbnb') && property.nightlyRate && (
