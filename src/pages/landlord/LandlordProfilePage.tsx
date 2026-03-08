@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 
 export default function LandlordProfilePage() {
   const { user } = useAuth();
@@ -220,6 +221,10 @@ export default function LandlordProfilePage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+        {/* Security - Change Password */}
+        <ChangePasswordCard />
       </div>
 
       <SubscriptionPaymentDialog open={subscriptionOpen} onOpenChange={setSubscriptionOpen} />

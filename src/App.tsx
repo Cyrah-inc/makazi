@@ -51,6 +51,7 @@ const LandlordProfilePage = lazy(() => import("./pages/landlord/LandlordProfileP
 const LandlordPayoutsPage = lazy(() => import("./pages/landlord/LandlordPayoutsPage"));
 const LandlordReviewsPage = lazy(() => import("./pages/landlord/LandlordReviewsPage"));
 const LandlordNotificationsPage = lazy(() => import("./pages/landlord/LandlordNotificationsPage"));
+const UserNotificationsPage = lazy(() => import("./pages/user/UserNotificationsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -112,6 +113,7 @@ const App = () => (
                   <Route path="/dashboard/favorites" element={<UserFavoritesPage />} />
                   <Route path="/dashboard/bookings" element={<UserBookingsPage />} />
                   <Route path="/dashboard/bookings/:id" element={<UserBookingDetailPage />} />
+                  <Route path="/dashboard/notifications" element={<UserNotificationsPage />} />
                   <Route path="/landlord/airbnb-bookings" element={<LandlordAirbnbPage />} />
                   <Route path="/landlord/airbnb-bookings/:id" element={<LandlordBookingDetailPage />} />
                   <Route path="/landlord/payouts" element={<LandlordPayoutsPage />} />

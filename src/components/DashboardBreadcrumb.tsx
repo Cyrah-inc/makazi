@@ -82,6 +82,7 @@ export function UserBreadcrumb() {
     { path: '/dashboard/messages', label: 'Messages' },
     { path: '/dashboard/inquiries', label: 'My Inquiries' },
     { path: '/dashboard/favorites', label: 'Saved Properties' },
+    { path: '/dashboard/notifications', label: 'Notifications' },
   ];
 
   return <DashboardBreadcrumb basePath="/dashboard" baseLabel="My Profile" routes={routes} />;

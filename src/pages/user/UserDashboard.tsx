@@ -22,6 +22,7 @@ import { formatRelativeDate, formatFullPrice, formatDate } from '@/lib/formatter
 import { getBookingRelativeLabel } from '@/lib/bookingUtils';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 
 // User profile dashboard
 export default function UserDashboard() {
@@ -540,6 +541,8 @@ export default function UserDashboard() {
             )}
           </CardContent>
         </Card>
+        {/* Security - Change Password */}
+        <ChangePasswordCard />
       </div>
     </UserLayout>
   );

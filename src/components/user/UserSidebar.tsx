@@ -1,14 +1,16 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MessageSquare, Heart, User, LogOut, CalendarDays } from 'lucide-react';
+import { Home, MessageSquare, Heart, User, LogOut, CalendarDays, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 
 const navItems = [
   { href: '/dashboard', icon: User, label: 'My Profile' },
   { href: '/dashboard/bookings', icon: CalendarDays, label: 'My Bookings' },
   { href: '/dashboard/chats', icon: MessageSquare, label: 'Chats' },
+  { href: '/dashboard/notifications', icon: Bell, label: 'Notifications' },
   { href: '/dashboard/favorites', icon: Heart, label: 'Saved Properties' },
 ];
 
@@ -21,6 +23,7 @@ export function UserSidebar({ onNavigate }: UserSidebarProps) {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const unreadCount = useUnreadCount();
+  const { data: unreadNotifications } = useUnreadNotificationCount();
 
   const handleNavClick = () => {
     onNavigate?.();
@@ -68,6 +71,11 @@ export function UserSidebar({ onNavigate }: UserSidebarProps) {
               {item.label === 'Chats' && unreadCount > 0 && (
                 <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
                   {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+              {item.label === 'Notifications' && (unreadNotifications ?? 0) > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
+                  {(unreadNotifications ?? 0) > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
             </Link>
