@@ -34,8 +34,33 @@ const PropertyCard = ({
   showDistanceBadge = false,
 }: PropertyCardProps) => {
   const { isFavorite, toggleFavorite } = useFavoritesContext();
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [imageStatuses, setImageStatuses] = useState<Record<number, 'loading' | 'loaded' | 'error'>>({});
   const favorited = isFavorite(property.id);
+  const images = property.images?.length ? property.images : [];
+  const hasMultipleImages = images.length > 1;
+
+  const handlePrev = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const handleNext = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
+  const handleDotClick = useCallback((e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex(index);
+  }, []);
+
+  const setImageStatus = useCallback((index: number, status: 'loaded' | 'error') => {
+    setImageStatuses((prev) => ({ ...prev, [index]: status }));
+  }, []);
 
   const getPrice = () => {
     if (property.purposes.includes('buy') && property.salePrice) {
@@ -52,7 +77,6 @@ const PropertyCard = ({
 
   const { price, label } = getPrice();
   const showBadge = showDistanceBadge || showCommuteBadge;
-  const imageUrl = getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality);
 
   return (
     <Link to={`/property/${property.id}`} className="block group">
