@@ -13,9 +13,10 @@ interface InlineChatInputProps {
   propertyId: string;
   landlordId: string;
   propertyTitle: string;
+  onLeadCapture?: () => void;
 }
 
-export function InlineChatInput({ propertyId, landlordId, propertyTitle }: InlineChatInputProps) {
+export function InlineChatInput({ propertyId, landlordId, propertyTitle, onLeadCapture }: InlineChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const { user } = useAuth();
@@ -64,6 +65,7 @@ export function InlineChatInput({ propertyId, landlordId, propertyTitle }: Inlin
         last_message_preview: message.trim().substring(0, 100),
       }).eq('id', conversationId);
 
+      onLeadCapture?.();
       toast({ title: 'Message sent!', description: 'The landlord will respond soon.' });
       setMessage('');
       

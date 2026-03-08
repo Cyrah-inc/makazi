@@ -13,6 +13,7 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { BookingDialog } from '@/components/booking/BookingDialog';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   MapPin, Bed, Bath, Car, Maximize, Heart, Share2, Phone, 
   Calendar, ChevronLeft, ChevronRight, Star,
@@ -31,6 +32,17 @@ const PropertyDetailPage = () => {
   const { id } = useParams();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
+  const { user } = useAuth();
+
+  const captureLeadFn = (leadType: 'whatsapp' | 'chat') => {
+    if (!dbProperty) return;
+    supabase.from('leads').insert({
+      user_id: user?.id || null,
+      property_id: dbProperty.id,
+      landlord_id: dbProperty.landlord_id,
+      lead_type: leadType,
+    }).then(() => {});
+  };
 
   // Fetch from Supabase
   const { data: dbProperty, isLoading } = useQuery({
@@ -439,12 +451,14 @@ const PropertyDetailPage = () => {
                             propertyId={property.id}
                             landlordId={property.landlordId}
                             propertyTitle={property.title}
+                            onLeadCapture={() => captureLeadFn('chat')}
                           />
                         )}
                         {hasActiveSubscription && landlordPhone && (
                           <WhatsAppButton
                             phone={landlordPhone}
                             propertyTitle={property.title}
+                            onLeadCapture={() => captureLeadFn('whatsapp')}
                           />
                         )}
                         {property.purposes.includes('airbnb') && property.nightlyRate && (
@@ -516,7 +530,7 @@ const PropertyDetailPage = () => {
           href={whatsAppUrl}
           target="_top"
           rel="noopener noreferrer"
-          onClick={(e) => { const w = window.open(whatsAppUrl, '_blank', 'noopener,noreferrer'); if (w) e.preventDefault(); }}
+          onClick={(e) => { captureLeadFn('whatsapp'); const w = window.open(whatsAppUrl, '_blank', 'noopener,noreferrer'); if (w) e.preventDefault(); }}
           className="fixed bottom-20 right-4 z-40 md:hidden flex items-center justify-center h-14 w-14 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#1da851] transition-colors"
           aria-label="Chat on WhatsApp"
         >
