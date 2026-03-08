@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building2, Eye, Plus, Clock, CheckCircle, XCircle, CalendarDays, DollarSign, Users, Star } from 'lucide-react';
+import { BulkImageOptimizer } from '@/components/landlord/BulkImageOptimizer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StatsCardCompactSkeleton } from '@/components/skeletons/StatsCardSkeleton';
 import { DashboardListItemSkeleton } from '@/components/skeletons/ListSkeletons';
@@ -332,6 +333,11 @@ export default function LandlordDashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Bulk Image Optimizer */}
+      <div className="mt-6">
+        <BulkImageOptimizer />
       </div>
       {/* Mobile FAB for Add Property */}
       <MobileAddPropertyFAB />
