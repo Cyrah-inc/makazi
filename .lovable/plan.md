@@ -1,44 +1,34 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+## Uniform Property Cards & Performance Improvements
 
-## Issues Found
+### Problem Analysis
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+**Card uniformity**: Cards in carousels use `min-w-[280px] max-w-[320px]`, meaning widths vary. The content section has no fixed height, so cards with missing data (no bedrooms, no parking) appear shorter than others, creating an uneven carousel.
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+**Slow loading**: The main performance bottleneck is the PropertyCard image slideshow — it renders `<img>` tags for ALL images in a property (some may have 5-10+), even though only 1 is visible at a time. Each card eagerly creates DOM nodes and begins loading every image. On the homepage, with ~40+ cards across carousels, this means potentially 200+ images loading simultaneously. Additionally, the hero carousel loads 6 properties with `fetchPriority="high"` and `loading="eager"` for all slides.
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+### Plan
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+**1. Fix card uniformity in carousels**
+- Change carousel card width from `min-w-[280px] max-w-[320px]` to a fixed `w-[300px]` so all cards are the same width
+- Set a fixed minimum height on the card content section (`min-h-[180px]`) so cards align even when some properties have fewer features
+- Always show bedrooms/bathrooms/size rows (display "—" or "0" for missing data) to maintain consistent vertical rhythm
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+**2. Only render the active image in PropertyCard (major perf fix)**
+- Instead of rendering ALL images as hidden `<img>` elements, only render the current image (`images[currentIndex]`) and optionally preload the next one
+- This eliminates 80%+ of unnecessary image loads across the page
+- Keep the transition smooth by preloading `currentIndex ± 1` via `<link rel="prefetch">` or a hidden img for just the adjacent slides
 
-## Plan
+**3. Limit hero carousel image loading**
+- Only use `loading="eager"` and `fetchPriority="high"` on the first hero slide
+- Set `loading="lazy"` on remaining hero slides since they're off-screen initially
 
-### Files Changed
+**4. Fix the `fetchPriority` React warning**
+- Change `fetchPriority="high"` to use the correct React 18 lowercase prop or remove it (React 18 doesn't support it natively — use a ref-based approach or just remove it)
 
-| File | Change |
-|------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
-
-### Technical Details
-
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
-
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
-
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
-
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
-
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+### Files to modify
+- `src/components/PropertyCard.tsx` — render only active + adjacent images instead of all
+- `src/components/PropertyCarousel.tsx` — fixed card width, consistent content height
+- `src/components/HeroCarousel.tsx` — lazy load non-first slides, fix fetchPriority warning
 
