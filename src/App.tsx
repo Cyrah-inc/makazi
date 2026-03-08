@@ -9,6 +9,7 @@ import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { BottomNav } from "@/components/BottomNav";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 import { ChatNotificationsProvider } from "@/components/ChatNotificationsProvider";
+import { ThemeProvider } from "next-themes";
 
 // Lazy-loaded pages for code splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -64,11 +65,12 @@ const queryClient = new QueryClient({
 const PageLoader = () => <PageSkeleton />;
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <ChatNotificationsProvider />
-      <FavoritesProvider>
-        <TooltipProvider>
+  <ThemeProvider attribute="class" defaultTheme="light" storageKey="makazi-theme" disableTransitionOnChange>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ChatNotificationsProvider />
+        <FavoritesProvider>
+          <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -119,10 +121,11 @@ const App = () => (
               <BottomNav />
             </div>
           </BrowserRouter>
-      </TooltipProvider>
-      </FavoritesProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+        </TooltipProvider>
+        </FavoritesProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
