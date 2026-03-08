@@ -65,6 +65,7 @@ export function InlineChatInput({ propertyId, landlordId, propertyTitle, onLeadC
         last_message_preview: message.trim().substring(0, 100),
       }).eq('id', conversationId);
 
+      onLeadCapture?.();
       toast({ title: 'Message sent!', description: 'The landlord will respond soon.' });
       setMessage('');
       
