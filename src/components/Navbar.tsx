@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Building, Key, Palmtree, Heart, User, Menu, X, Shield, LogOut, ChevronRight } from 'lucide-react';
+import { Home, Building, Key, Palmtree, Heart, User, Menu, Shield, LogOut, ChevronRight } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
