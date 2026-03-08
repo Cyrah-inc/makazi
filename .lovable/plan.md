@@ -1,44 +1,59 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+## Combine Revenue & Payouts into a Unified "Finance" Section
 
-## Issues Found
+### Current State
+Two separate admin pages with overlapping data:
+- **AdminRevenuePage** (`/admin/revenue`): Stats (total revenue, sub revenue, airbnb commissions, active subscribers), searchable/filterable tables for subscriptions and booking commissions
+- **AdminPayoutsPage** (`/admin/payouts`): Stats (total commissions, airbnb fees, sub revenue, available balance), withdrawal dialog, tables for commission sources and withdrawal history
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+Both fetch similar data (bookings, subscriptions) independently. The separation creates redundancy and forces admins to navigate between pages to get a full financial picture.
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+### Plan
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+**1. Create a unified `AdminFinancePage.tsx` at `/admin/finance`**
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+A single page with 5 tabs covering all monetary functions:
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+**Tab: Overview**
+- Stats row: Total Revenue, Available Balance, Total Withdrawn, Pending Payouts (landlord), Active Subscribers
+- Revenue trend chart (monthly bar chart using Recharts — subscriptions vs commissions stacked)
+- Withdraw button with the existing M-Pesa dialog
 
-## Plan
+**Tab: Subscriptions**
+- Existing subscription table from Revenue page (searchable, filterable by status)
+- Stats: active, expired, cancelled counts and total subscription revenue
 
-### Files Changed
+**Tab: Booking Commissions**
+- Existing booking commissions table from Revenue page (searchable, filterable)
+- Stats: total bookings, total commission earned, avg commission per booking
 
-| File | Change |
-|------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
+**Tab: Landlord Payouts**
+- Table of all payouts from the `payouts` table (amount, landlord name, phone, status, receipt, date)
+- Stats: total paid out to landlords, pending payouts, failed payouts
 
-### Technical Details
+**Tab: Admin Withdrawals**
+- Existing withdrawal history table from Payouts page
+- Stats: total withdrawn, last withdrawal date
 
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
+**2. Update sidebar and routes**
+- Replace both "Revenue" and "Payouts" sidebar items with a single "Finance" item using `Wallet` icon
+- Remove the `/admin/revenue` and `/admin/payouts` routes, add `/admin/finance`
+- Keep old routes redirecting to `/admin/finance` for bookmarks
 
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
+**3. Additional suggested features to include**
+- **Revenue trend chart**: Monthly stacked bar chart (subscriptions + commissions) on Overview tab
+- **Escrow summary**: Show total funds held in escrow (bookings with status `paid` — money collected but not yet released)
+- **Refund tracking**: Display cancelled/refunded bookings and amounts lost
+- **Payment method breakdown**: Pie chart showing M-Pesa vs Stripe split across all transactions
+- **Export to CSV**: Button on each table tab to download data as CSV
 
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
+### Files to modify
+- **New**: `src/pages/admin/AdminFinancePage.tsx` — unified page combining both
+- **Edit**: `src/components/admin/AdminSidebar.tsx` — single "Finance" nav item
+- **Edit**: `src/App.tsx` — replace routes, add redirect
+- **Delete content from**: `AdminRevenuePage.tsx` and `AdminPayoutsPage.tsx` — redirect to finance
 
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
-
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+### Data fetching
+Single `fetchFinanceData()` function that pulls bookings, subscriptions, admin_withdrawals, payouts, and profiles in parallel. All metrics derived client-side. Reuses existing `useAdminWithdraw()` mutation for the withdrawal dialog.
 
