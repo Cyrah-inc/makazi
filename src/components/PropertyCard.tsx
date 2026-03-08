@@ -2,7 +2,7 @@ import React, { memo, useState, useCallback } from 'react';
 import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Maximize, Eye, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
