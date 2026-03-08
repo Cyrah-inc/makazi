@@ -1,44 +1,32 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+## Add User Notifications Page + Password Reset in Profiles
 
-## Issues Found
+### 1. User Notifications Page (`/dashboard/notifications`)
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+Create a new page mirroring the existing `LandlordNotificationsPage` pattern but wrapped in `UserLayout`.
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+**Files to create/modify:**
+- **New**: `src/pages/user/UserNotificationsPage.tsx` — same UI as `LandlordNotificationsPage` but using `UserLayout`
+- **Edit**: `src/components/user/UserSidebar.tsx` — add "Notifications" nav item with `Bell` icon and unread badge (using `useUnreadNotificationCount`)
+- **Edit**: `src/components/DashboardBreadcrumb.tsx` — add `{ path: '/dashboard/notifications', label: 'Notifications' }` to UserBreadcrumb routes
+- **Edit**: `src/App.tsx` — add lazy import and route for `/dashboard/notifications`
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+### 2. Password Reset on Profile Pages
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+Add a "Change Password" section to both user and landlord profile pages. Uses `supabase.auth.updateUser({ password })` for logged-in users.
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+**UI**: A collapsible card/section with two fields (new password, confirm password) and a "Update Password" button. Shows success/error toast.
 
-## Plan
+**Files to modify:**
+- **Edit**: `src/pages/user/UserDashboard.tsx` — add a "Security" card below the profile card with password change form
+- **Edit**: `src/pages/landlord/LandlordProfilePage.tsx` — add the same "Security" card
 
-### Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
+No database changes needed — Supabase auth handles password updates natively via `updateUser`.
 
 ### Technical Details
 
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
-
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
-
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
-
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
-
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+- Password reset uses `supabase.auth.updateUser({ password: newPassword })` which works for any authenticated user regardless of role
+- Minimum password length validation (6 chars) and confirm-password match check before submission
+- The notifications page reuses existing `useNotifications`, `useMarkNotificationRead`, `useMarkAllNotificationsRead` hooks
 
