@@ -47,7 +47,6 @@ serve(async (req) => {
     }
     console.log('B2C Callback received:', JSON.stringify(body));
 
-    // Safaricom B2C callback structure
     const result = body.Result;
     if (!result) {
       console.error('Invalid callback: no Result field');
@@ -62,6 +61,13 @@ serve(async (req) => {
 
     console.log(`B2C Result: ConversationID=${conversationId}, ResultCode=${resultCode}, TransactionID=${transactionId}`);
 
+    // Find the payout to get the landlord_id for notifications
+    const { data: payout } = await supabase
+      .from('payouts')
+      .select('landlord_id, amount, phone_number')
+      .eq('mpesa_conversation_id', conversationId)
+      .maybeSingle();
+
     if (resultCode === 0) {
       // Success — update payout record
       const { error } = await supabase
@@ -75,6 +81,18 @@ serve(async (req) => {
 
       if (error) console.error('Failed to update payout:', error);
       else console.log(`Payout ${conversationId} marked as completed`);
+
+      // Notify landlord of successful payout
+      if (payout) {
+        const formattedAmount = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(payout.amount);
+        await supabase.from('notifications').insert({
+          user_id: payout.landlord_id,
+          title: 'Payout Received',
+          message: `Your payout of ${formattedAmount} to ${payout.phone_number} was successful. Receipt: ${transactionId}`,
+          type: 'payout_success',
+          link: '/landlord/payouts',
+        });
+      }
     } else {
       // Failed
       const { error } = await supabase
@@ -84,6 +102,18 @@ serve(async (req) => {
 
       if (error) console.error('Failed to update payout:', error);
       console.log(`Payout ${conversationId} marked as failed: ${result.ResultDesc}`);
+
+      // Notify landlord of failed payout
+      if (payout) {
+        const formattedAmount = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(payout.amount);
+        await supabase.from('notifications').insert({
+          user_id: payout.landlord_id,
+          title: 'Payout Failed',
+          message: `Your payout of ${formattedAmount} to ${payout.phone_number} failed. Please try again or contact support.`,
+          type: 'payout_failed',
+          link: '/landlord/payouts',
+        });
+      }
     }
 
     return new Response(JSON.stringify({ ResultCode: 0, ResultDesc: 'Accepted' }), {
