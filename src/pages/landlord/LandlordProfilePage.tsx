@@ -221,7 +221,6 @@ export default function LandlordProfilePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
         {/* Security - Change Password */}
         <ChangePasswordCard />
