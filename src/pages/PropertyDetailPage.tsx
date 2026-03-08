@@ -13,6 +13,7 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { BookingDialog } from '@/components/booking/BookingDialog';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   MapPin, Bed, Bath, Car, Maximize, Heart, Share2, Phone, 
   Calendar, ChevronLeft, ChevronRight, Star,
@@ -31,6 +32,17 @@ const PropertyDetailPage = () => {
   const { id } = useParams();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
+  const { user } = useAuth();
+
+  const captureLeadFn = (leadType: 'whatsapp' | 'chat') => {
+    if (!dbProperty) return;
+    supabase.from('leads').insert({
+      user_id: user?.id || null,
+      property_id: dbProperty.id,
+      landlord_id: dbProperty.landlord_id,
+      lead_type: leadType,
+    }).then(() => {});
+  };
 
   // Fetch from Supabase
   const { data: dbProperty, isLoading } = useQuery({
