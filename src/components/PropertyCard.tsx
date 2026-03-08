@@ -1,8 +1,8 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star, ImageOff } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Car as CarIcon, Maximize, Eye, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -34,8 +34,33 @@ const PropertyCard = ({
   showDistanceBadge = false,
 }: PropertyCardProps) => {
   const { isFavorite, toggleFavorite } = useFavoritesContext();
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [imageStatuses, setImageStatuses] = useState<Record<number, 'loading' | 'loaded' | 'error'>>({});
   const favorited = isFavorite(property.id);
+  const images = property.images?.length ? property.images : [];
+  const hasMultipleImages = images.length > 1;
+
+  const handlePrev = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  }, [images.length]);
+
+  const handleNext = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  }, [images.length]);
+
+  const handleDotClick = useCallback((e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex(index);
+  }, []);
+
+  const setImageStatus = useCallback((index: number, status: 'loaded' | 'error') => {
+    setImageStatuses((prev) => ({ ...prev, [index]: status }));
+  }, []);
 
   const getPrice = () => {
     if (property.purposes.includes('buy') && property.salePrice) {
@@ -52,7 +77,6 @@ const PropertyCard = ({
 
   const { price, label } = getPrice();
   const showBadge = showDistanceBadge || showCommuteBadge;
-  const imageUrl = getOptimizedImageUrl(property.images[0], IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality);
 
   return (
     <Link to={`/property/${property.id}`} className="block group">
@@ -62,30 +86,79 @@ const PropertyCard = ({
           variant === 'featured' && "ring-2 ring-gold/30"
         )}
       >
-        {/* Image */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          {imageStatus === 'error' ? (
+        {/* Image Slideshow */}
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted group/image">
+          {images.length === 0 ? (
             <div className="w-full h-full flex flex-col items-center justify-center bg-muted text-muted-foreground">
               <ImageOff className="w-8 h-8 mb-1" />
               <span className="text-xs">No image</span>
             </div>
           ) : (
-            <img
-              src={imageUrl}
-              alt={property.title}
-              loading="lazy"
-              decoding="async"
-              className={cn(
-                "w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 transition-transform",
-                imageStatus === 'loaded' ? "opacity-100" : "opacity-0"
+            <div className="relative w-full h-full">
+              {images.map((img, i) => {
+                const url = getOptimizedImageUrl(img, IMAGE_SIZES.CARD.width, IMAGE_SIZES.CARD.quality);
+                const status = imageStatuses[i] ?? 'loading';
+                return (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`${property.title} - ${i + 1}`}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    decoding="async"
+                    className={cn(
+                      "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
+                      i === currentIndex && status === 'loaded' ? "opacity-100" : "opacity-0"
+                    )}
+                    onLoad={() => setImageStatus(i, 'loaded')}
+                    onError={() => setImageStatus(i, 'error')}
+                  />
+                );
+              })}
+
+              {/* Prev/Next arrows */}
+              {hasMultipleImages && (
+                <>
+                  <button
+                    onClick={handlePrev}
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10 h-7 w-7 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-md hover:bg-card"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10 h-7 w-7 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity shadow-md hover:bg-card"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
               )}
-              onLoad={() => setImageStatus('loaded')}
-              onError={() => setImageStatus('error')}
-            />
+            </div>
+          )}
+
+          {/* Dot indicators */}
+          {hasMultipleImages && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
+              {images.slice(0, 5).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => handleDotClick(e, i)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all",
+                    i === currentIndex ? "w-3 bg-white" : "w-1.5 bg-white/60 hover:bg-white/80"
+                  )}
+                  aria-label={`Go to image ${i + 1}`}
+                />
+              ))}
+              {images.length > 5 && (
+                <span className="text-[9px] text-white/80 ml-0.5 self-center">+{images.length - 5}</span>
+              )}
+            </div>
           )}
           
           {/* Overlay badges */}
-          <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+          <div className="absolute top-3 left-3 flex flex-wrap gap-2 z-10">
             {property.featured && (
               <Badge variant="featured" className="gap-1">
                 <Star className="h-3 w-3 fill-current" />
@@ -104,7 +177,7 @@ const PropertyCard = ({
             variant="ghost"
             size="icon"
             className={cn(
-              "absolute top-3 right-3 h-9 w-9 rounded-full bg-card/80 backdrop-blur-sm hover:bg-card shadow-md",
+              "absolute top-3 right-3 h-9 w-9 rounded-full bg-card/80 backdrop-blur-sm hover:bg-card shadow-md z-10",
               favorited && "text-airbnb"
             )}
             onClick={(e) => {
@@ -116,7 +189,7 @@ const PropertyCard = ({
           </Button>
 
           {/* Views */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-card/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-xs font-medium">
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-card/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-xs font-medium z-10">
             <Eye className="h-3.5 w-3.5" />
             {property.views.toLocaleString()}
           </div>
