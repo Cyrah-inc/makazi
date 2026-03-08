@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageSquare, Heart, User, LogOut, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 
 const navItems = [
@@ -84,6 +85,10 @@ export function UserSidebar({ onNavigate }: UserSidebarProps) {
             <p className="text-sm font-medium truncate">{user?.email}</p>
             <p className="text-xs text-muted-foreground">User</p>
           </div>
+        </div>
+        <div className="flex items-center justify-between px-4 py-2">
+          <span className="text-xs text-muted-foreground">Theme</span>
+          <ThemeToggle />
         </div>
         <button
           onClick={handleSignOut}
