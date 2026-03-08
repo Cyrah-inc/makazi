@@ -445,16 +445,24 @@ const PropertyListingPage = ({ purpose, title, subtitle, heroIcon, categorySecti
 
             {/* Results */}
             <div className="flex-1 min-w-0">
-              {/* Category Breadcrumb */}
-              {getCategoryLabel(purpose, typeParam, categoryParam) && (
-                <div className="flex items-center gap-2 mb-4 text-sm">
-                  <Link to={`/${purpose === 'buy' ? 'buy' : purpose === 'rent' ? 'rent' : 'airbnb'}`} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {title}
+              {/* Category Breadcrumb with Back Button */}
+              {isCategoryView && getCategoryLabel(purpose, typeParam, categoryParam) && (
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Link to={`/${purpose === 'buy' ? 'buy' : purpose === 'rent' ? 'rent' : 'airbnb'}`} className="text-muted-foreground hover:text-foreground transition-colors">
+                      {title}
+                    </Link>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <span className="font-semibold text-foreground">
+                      {getCategoryLabel(purpose, typeParam, categoryParam)}
+                    </span>
+                  </div>
+                  <Link to={`/${purpose === 'buy' ? 'buy' : purpose === 'rent' ? 'rent' : 'airbnb'}`}>
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <X className="h-3.5 w-3.5" />
+                      Clear Filter
+                    </Button>
                   </Link>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-                  <span className="font-semibold text-foreground">
-                    {getCategoryLabel(purpose, typeParam, categoryParam)}
-                  </span>
                 </div>
               )}
               {/* Results Toolbar */}
