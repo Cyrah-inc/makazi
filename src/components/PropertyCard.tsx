@@ -57,9 +57,8 @@ const PropertyCard = ({
     setCurrentIndex(index);
   }, []);
 
-  const setImageStatus = useCallback((index: number, status: 'loaded' | 'error') => {
-    setImageStatuses((prev) => ({ ...prev, [index]: status }));
-  }, []);
+
+
 
   const getPrice = () => {
     if (property.purposes.includes('buy') && property.salePrice) {
