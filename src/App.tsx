@@ -50,6 +50,7 @@ const LandlordBookingDetailPage = lazy(() => import("./pages/landlord/LandlordBo
 const LandlordProfilePage = lazy(() => import("./pages/landlord/LandlordProfilePage"));
 const LandlordPayoutsPage = lazy(() => import("./pages/landlord/LandlordPayoutsPage"));
 const LandlordReviewsPage = lazy(() => import("./pages/landlord/LandlordReviewsPage"));
+const LandlordNotificationsPage = lazy(() => import("./pages/landlord/LandlordNotificationsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -116,6 +117,7 @@ const App = () => (
                   <Route path="/landlord/payouts" element={<LandlordPayoutsPage />} />
                   <Route path="/landlord/reviews" element={<LandlordReviewsPage />} />
                   <Route path="/landlord/profile" element={<LandlordProfilePage />} />
+                  <Route path="/landlord/notifications" element={<LandlordNotificationsPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
