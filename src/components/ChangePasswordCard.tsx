@@ -22,7 +22,7 @@ export function ChangePasswordCard() {
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({ title: 'Passwords don't match', description: 'Please make sure both fields match.', variant: 'destructive' });
+      toast({ title: 'Passwords don\'t match', description: 'Please make sure both fields match.', variant: 'destructive' });
       return;
     }
 
