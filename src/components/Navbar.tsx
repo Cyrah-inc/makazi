@@ -91,11 +91,14 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-2">
           <ThemeToggle />
           {user && (
-            <Link to="/dashboard/favorites">
-              <Button variant="ghost" size="icon" className="relative">
-                <Heart className="h-5 w-5" />
-              </Button>
-            </Link>
+            <>
+              <NotificationBell />
+              <Link to="/dashboard/favorites">
+                <Button variant="ghost" size="icon" className="relative">
+                  <Heart className="h-5 w-5" />
+                </Button>
+              </Link>
+            </>
           )}
           
           {user ? (
