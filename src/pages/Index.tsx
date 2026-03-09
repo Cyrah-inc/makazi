@@ -19,7 +19,8 @@ import {
 } from '@/hooks/useHomeSections';
 import { useHeroProperties } from '@/hooks/useHeroProperties';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles } from 'lucide-react';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles, Clock } from 'lucide-react';
 
 const Index = () => {
   const geo = useGeolocation();
@@ -49,6 +50,7 @@ const Index = () => {
   const nearbyCounty = detectedCounty || 'Nairobi';
 
   const heroProperties = useHeroProperties();
+  const recentlyViewed = useRecentlyViewed();
   const newlyListed = useNewlyListed();
   const trending = useTrendingProperties();
 
@@ -71,6 +73,15 @@ const Index = () => {
 
         {/* Category Carousels */}
         <div className="bg-muted/30">
+          {/* Recently Viewed — only shows if user has history */}
+          <PropertyCarousel
+            title="Recently Viewed"
+            subtitle="Pick up where you left off"
+            properties={recentlyViewed.data ?? []}
+            isLoading={recentlyViewed.isLoading}
+            icon={<Clock className="h-6 w-6 text-primary" />}
+          />
+
           <PropertyCarousel
             title="Just Added"
             subtitle="Fresh listings you haven't seen yet"

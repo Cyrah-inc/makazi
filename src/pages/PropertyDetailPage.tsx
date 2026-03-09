@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
@@ -25,6 +25,8 @@ import { PropertyReviewsSection, PropertyReviewsSummary } from '@/components/Pro
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
+import { addRecentlyViewed } from '@/hooks/useRecentlyViewed';
+
 const ImageLightbox = lazy(() => import('@/components/ImageLightbox'));
 const SimilarProperties = lazy(() => import('@/components/SimilarProperties'));
 
@@ -37,6 +39,11 @@ const PropertyDetailPage = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { user } = useAuth();
+
+  // Track recently viewed
+  useEffect(() => {
+    if (id) addRecentlyViewed(id);
+  }, [id]);
 
   const captureLeadFn = (leadType: 'whatsapp' | 'chat') => {
     if (!dbProperty) return;
