@@ -52,6 +52,7 @@ async function fetchFullAnalytics() {
     { data: reviews },
     { data: leads },
     { data: landlordProfiles },
+    { data: viewLogs },
   ] = await Promise.all([
     supabase.from('profiles').select('user_id, created_at, full_name, email, status'),
     supabase.from('user_roles').select('user_id, role, created_at'),
@@ -63,6 +64,7 @@ async function fetchFullAnalytics() {
     supabase.from('reviews').select('id, property_id, rating, created_at'),
     supabase.from('leads').select('id, user_id, property_id, landlord_id, lead_type, created_at'),
     supabase.from('landlord_profiles').select('user_id, verification_status'),
+    supabase.from('property_view_logs').select('property_id, viewed_at').gte('viewed_at', subDays(now, 30).toISOString()),
   ]);
 
   const all = {
