@@ -543,6 +543,16 @@ const PropertyDetailPage = () => {
       )}
 
       <Footer />
+
+      {/* Image Lightbox */}
+      <Suspense fallback={null}>
+        <ImageLightbox
+          images={property?.images.filter(img => !isVideoUrl(img)) || []}
+          initialIndex={currentImageIndex}
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+        />
+      </Suspense>
     </div>
   );
 };
