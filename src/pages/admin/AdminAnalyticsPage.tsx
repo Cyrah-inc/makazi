@@ -450,14 +450,14 @@ export default function AdminAnalyticsPage() {
             {/* Views Trend + Views by Type */}
             <div className="grid md:grid-cols-3 gap-4">
               <Card className="md:col-span-2">
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Eye className="w-5 h-5" /> Property Views Trend</CardTitle><CardDescription>Total views by listing month ({data.totalViews.toLocaleString()} total)</CardDescription></CardHeader>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Eye className="w-5 h-5" /> Daily Property Views</CardTitle><CardDescription>Last 30 days ({data.viewsLast30.toLocaleString()} views)</CardDescription></CardHeader>
                 <CardContent>
                   <ChartContainer config={{ ...chartConfig, views: { label: 'Views', color: 'hsl(var(--chart-3, 30 80% 55%))' } }} className="h-[250px] w-full">
                     <LineChart data={data.viewsTrendData}>
-                      <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                      <XAxis dataKey="day" fontSize={10} tickLine={false} axisLine={false} interval={4} />
                       <YAxis fontSize={11} tickLine={false} axisLine={false} />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="views" stroke="hsl(var(--chart-3, 30 80% 55%))" strokeWidth={2} dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="views" stroke="hsl(var(--chart-3, 30 80% 55%))" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ChartContainer>
                 </CardContent>
