@@ -321,6 +321,7 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
             <div>
               <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4" /> Uploaded Documents ({landlord.documents.length})
+                {urlsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
               </h4>
               <div className="space-y-2">
                 {landlord.documents.map((doc, i) => {
@@ -330,11 +331,16 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
                       key={i}
                       className={cn(
                         'flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer',
-                        !url && 'opacity-50 pointer-events-none',
+                        (!url && !urlsLoading) && 'opacity-50 pointer-events-none',
+                        urlsLoading && 'opacity-70',
                       )}
                       onClick={() => url && setPreviewIndex(i)}
                     >
-                      {isImageFile(doc) && url ? (
+                      {urlsLoading ? (
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : isImageFile(doc) && url ? (
                         <img src={url} alt={getDocumentLabel(i)} className="w-10 h-10 rounded object-cover shrink-0" />
                       ) : (
                         <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
@@ -528,6 +534,12 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
           </DialogHeader>
 
           <div className="flex-1 min-h-0 relative">
+            {previewIndex !== null && !signedUrls.get(previewIndex) && (
+              <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+                <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                <p>Loading document...</p>
+              </div>
+            )}
             {previewIndex !== null && signedUrls.get(previewIndex) && (
               <>
                 {isImageFile(landlord.documents[previewIndex]) ? (
