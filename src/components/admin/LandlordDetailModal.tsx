@@ -117,13 +117,42 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Document preview state
+  const [signedUrls, setSignedUrls] = useState<Map<number, string>>(new Map());
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
       setVerifyNotes('');
       setCancelReason('');
+      setPreviewIndex(null);
+      setSignedUrls(new Map());
     }
   }, [open]);
+
+  // Generate signed URLs for all documents
+  useEffect(() => {
+    if (!open || !landlord?.documents?.length) return;
+
+    const generateUrls = async () => {
+      const urlMap = new Map<number, string>();
+      await Promise.all(
+        landlord.documents.map(async (doc, i) => {
+          const path = extractFilePath(doc);
+          const { data } = await supabase.storage
+            .from('landlord-documents')
+            .createSignedUrl(path, 3600);
+          if (data?.signedUrl) {
+            urlMap.set(i, data.signedUrl);
+          }
+        })
+      );
+      setSignedUrls(urlMap);
+    };
+    generateUrls();
+  }, [open, landlord?.documents]);
 
   if (!landlord) return null;
 
