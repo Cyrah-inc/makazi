@@ -2,7 +2,7 @@ import React, { memo, useState, useCallback } from 'react';
 import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, MapPin, Bed, Bath, Maximize, Eye, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Maximize, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -188,11 +188,6 @@ const PropertyCard = ({
             <Heart className={cn("h-4 w-4", favorited && "fill-current")} />
           </Button>
 
-          {/* Views */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-card/80 backdrop-blur-sm rounded-full px-2.5 py-1 text-xs font-medium z-10">
-            <Eye className="h-3.5 w-3.5" />
-            {property.views.toLocaleString()}
-          </div>
         </div>
 
         {/* Content */}
