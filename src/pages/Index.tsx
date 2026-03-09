@@ -50,6 +50,7 @@ const Index = () => {
   const nearbyCounty = detectedCounty || 'Nairobi';
 
   const heroProperties = useHeroProperties();
+  const recentlyViewed = useRecentlyViewed();
   const newlyListed = useNewlyListed();
   const trending = useTrendingProperties();
 
