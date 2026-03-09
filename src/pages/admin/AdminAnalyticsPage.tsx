@@ -112,6 +112,25 @@ async function fetchFullAnalytics() {
   });
   const revenueChartData = Array.from(revByMonth.entries()).map(([month, amount]) => ({ month, amount })).slice(-12);
 
+  // Views trend by month (aggregated by property creation month)
+  const viewsByMonth = new Map<string, number>();
+  all.properties.forEach(p => {
+    const m = format(startOfMonth(new Date(p.created_at)), 'MMM yy');
+    viewsByMonth.set(m, (viewsByMonth.get(m) || 0) + (p.views_count || 0));
+  });
+  const viewsTrendData = Array.from(viewsByMonth.entries()).map(([month, views]) => ({ month, views })).slice(-12);
+
+  // Total views
+  const totalViews = all.properties.reduce((s, p) => s + (p.views_count || 0), 0);
+
+  // Views by property type
+  const viewsByType: Record<string, number> = {};
+  all.properties.forEach(p => {
+    const type = p.property_type === 'sale' ? 'Buy' : p.property_type === 'rent' ? 'Rent' : 'Airbnb';
+    viewsByType[type] = (viewsByType[type] || 0) + (p.views_count || 0);
+  });
+  const viewsByTypeData = Object.entries(viewsByType).map(([name, value]) => ({ name, value }));
+
   // Property distribution
   const byType: Record<string, number> = {};
   const byStatus: Record<string, number> = {};
