@@ -133,10 +133,13 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
   }, [open]);
 
   // Generate signed URLs for all documents
+  const [urlsLoading, setUrlsLoading] = useState(false);
+
   useEffect(() => {
     if (!open || !landlord?.documents?.length) return;
 
     const generateUrls = async () => {
+      setUrlsLoading(true);
       const urlMap = new Map<number, string>();
       await Promise.all(
         landlord.documents.map(async (doc, i) => {
@@ -150,6 +153,7 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
         })
       );
       setSignedUrls(urlMap);
+      setUrlsLoading(false);
     };
     generateUrls();
   }, [open, landlord?.documents]);
