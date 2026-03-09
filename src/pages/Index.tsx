@@ -26,6 +26,7 @@ const Index = () => {
   const geo = useGeolocation();
 
   const [visibleSections, setVisibleSections] = useState({
+    trending: false,
     nearby: false,
     exotic: false,
     land: false,
@@ -52,7 +53,7 @@ const Index = () => {
   const heroProperties = useHeroProperties();
   const recentlyViewed = useRecentlyViewed();
   const newlyListed = useNewlyListed();
-  const trending = useTrendingProperties();
+  const trending = useTrendingProperties(visibleSections.trending);
 
   const nearby = useNearbyProperties(nearbyCounty, visibleSections.nearby);
   const exotic = useExoticGetaways(visibleSections.exotic);
@@ -91,14 +92,16 @@ const Index = () => {
             icon={<Sparkles className="h-6 w-6 text-primary" />}
           />
 
-          <PropertyCarousel
-            title="Trending Homes"
-            subtitle="The most viewed properties right now"
-            properties={trending.data ?? []}
-            isLoading={trending.isLoading}
-            seeAllLink="/buy"
-            icon={<TrendingUp className="h-6 w-6 text-primary" />}
-          />
+          <LazySection onVisible={() => onSectionVisible('trending')}>
+            <PropertyCarousel
+              title="Trending Homes"
+              subtitle="The most viewed properties right now"
+              properties={trending.data ?? []}
+              isLoading={trending.isLoading}
+              seeAllLink="/buy"
+              icon={<TrendingUp className="h-6 w-6 text-primary" />}
+            />
+          </LazySection>
 
           <LazySection onVisible={() => onSectionVisible('nearby')}>
             <PropertyCarousel
