@@ -19,7 +19,8 @@ import {
 } from '@/hooks/useHomeSections';
 import { useHeroProperties } from '@/hooks/useHeroProperties';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles } from 'lucide-react';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles, Clock } from 'lucide-react';
 
 const Index = () => {
   const geo = useGeolocation();
