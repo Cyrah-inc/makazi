@@ -16,7 +16,6 @@ import { StatsCardSkeleton } from '@/components/skeletons/StatsCardSkeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGuestBookings } from '@/hooks/useBookings';
-const { isLandlord: _isLandlord, isAdmin: _isAdmin } = { isLandlord: false, isAdmin: false }; // placeholder
 import { BOOKING_STATUS_CONFIG, BookingStatus } from '@/types/booking';
 import { Link } from 'react-router-dom';
 import { formatRelativeDate, formatFullPrice, formatDate } from '@/lib/formatters';
