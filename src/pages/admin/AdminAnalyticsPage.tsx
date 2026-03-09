@@ -115,24 +115,34 @@ async function fetchFullAnalytics() {
   });
   const revenueChartData = Array.from(revByMonth.entries()).map(([month, amount]) => ({ month, amount })).slice(-12);
 
-  // Views trend by month (aggregated by property creation month)
-  const viewsByMonth = new Map<string, number>();
-  all.properties.forEach(p => {
-    const m = format(startOfMonth(new Date(p.created_at)), 'MMM yy');
-    viewsByMonth.set(m, (viewsByMonth.get(m) || 0) + (p.views_count || 0));
+  // Daily views trend from real view logs (last 30 days)
+  const viewsByDay = new Map<string, number>();
+  // Pre-fill last 30 days with zeros for a complete chart
+  for (let i = 29; i >= 0; i--) {
+    const day = format(subDays(now, i), 'MMM dd');
+    viewsByDay.set(day, 0);
+  }
+  all.viewLogs.forEach((log: { property_id: string; viewed_at: string }) => {
+    const day = format(new Date(log.viewed_at), 'MMM dd');
+    if (viewsByDay.has(day)) {
+      viewsByDay.set(day, (viewsByDay.get(day) || 0) + 1);
+    }
   });
-  const viewsTrendData = Array.from(viewsByMonth.entries()).map(([month, views]) => ({ month, views })).slice(-12);
+  const viewsTrendData = Array.from(viewsByDay.entries()).map(([day, views]) => ({ day, views }));
 
-  // Total views
+  // Total views (all-time from properties table)
   const totalViews = all.properties.reduce((s, p) => s + (p.views_count || 0), 0);
+  const viewsLast30 = all.viewLogs.length;
 
-  // Views by property type
+  // Views by property type (from view logs with property lookup)
+  const propTypeMap = new Map(all.properties.map(p => [p.id, p.property_type]));
   const viewsByType: Record<string, number> = {};
-  all.properties.forEach(p => {
-    const type = p.property_type === 'sale' ? 'Buy' : p.property_type === 'rent' ? 'Rent' : 'Airbnb';
-    viewsByType[type] = (viewsByType[type] || 0) + (p.views_count || 0);
+  all.viewLogs.forEach((log: { property_id: string; viewed_at: string }) => {
+    const type = propTypeMap.get(log.property_id);
+    const label = type === 'sale' ? 'Buy' : type === 'rent' ? 'Rent' : type === 'airbnb' ? 'Airbnb' : 'Other';
+    viewsByType[label] = (viewsByType[label] || 0) + 1;
   });
-  const viewsByTypeData = Object.entries(viewsByType).map(([name, value]) => ({ name, value }));
+  const viewsByTypeData = Object.entries(viewsByType).filter(([name]) => name !== 'Other').map(([name, value]) => ({ name, value }));
 
   // Property distribution
   const byType: Record<string, number> = {};
