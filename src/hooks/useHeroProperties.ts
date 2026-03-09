@@ -8,42 +8,42 @@ export interface HeroProperty extends Property {
   heroCategory: 'buy' | 'rent' | 'airbnb';
 }
 
-const fetchTop2 = async (
-  propertyType: 'sale' | 'rent' | 'airbnb',
-  heroCategory: HeroProperty['heroCategory']
-): Promise<HeroProperty[]> => {
-  const { data, error } = await supabase
-    .from('properties')
-    .select(LISTING_COLUMNS)
-    .eq('status', 'approved')
-    .eq('property_type', propertyType)
-    .order('views_count', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(2);
-
-  if (error) throw error;
-  if (!data || data.length === 0) return [];
-
-  const profileMap = await fetchLandlordProfiles(
-    (data as DbProperty[]).map((p) => p.landlord_id)
-  );
-
-  return (data as DbProperty[]).map((p) => ({
-    ...transformProperty(p, profileMap),
-    heroCategory,
-  }));
-};
-
 export const useHeroProperties = () =>
   useQuery<HeroProperty[]>({
     queryKey: ['home', 'hero-carousel'],
     queryFn: async () => {
-      const [buy, rent, airbnb] = await Promise.all([
-        fetchTop2('sale', 'buy'),
-        fetchTop2('rent', 'rent'),
-        fetchTop2('airbnb', 'airbnb'),
-      ]);
-      return [...buy, ...rent, ...airbnb];
+      // Single query: fetch top 6 approved properties across all types
+      const { data, error } = await supabase
+        .from('properties')
+        .select(LISTING_COLUMNS)
+        .eq('status', 'approved')
+        .order('views_count', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(12);
+
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      const typed = data as DbProperty[];
+
+      // Pick top 2 per type from the result set
+      const byType: Record<string, DbProperty[]> = { sale: [], rent: [], airbnb: [] };
+      for (const p of typed) {
+        if (byType[p.property_type]?.length < 2) {
+          byType[p.property_type].push(p);
+        }
+      }
+
+      const selected = [...byType.sale, ...byType.rent, ...byType.airbnb];
+      if (selected.length === 0) return [];
+
+      // Single profile fetch for all selected properties
+      const profileMap = await fetchLandlordProfiles(selected.map(p => p.landlord_id));
+
+      return selected.map(p => ({
+        ...transformProperty(p, profileMap),
+        heroCategory: (p.property_type === 'sale' ? 'buy' : p.property_type) as HeroProperty['heroCategory'],
+      }));
     },
     staleTime: STALE_TIME,
   });
