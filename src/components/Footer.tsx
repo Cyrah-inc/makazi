@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Building, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import makaziLogo from '@/assets/makazi-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -13,9 +14,7 @@ const Footer = () => {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Building className="h-4 w-4 text-primary" />
-              </div>
+              <img src={makaziLogo} alt="Makazi" className="h-8 w-8 rounded-lg object-contain" />
               <span className="font-heading font-bold text-sm text-foreground">Makazi</span>
             </Link>
             <div className="flex gap-4 text-xs text-muted-foreground">
@@ -34,9 +33,7 @@ const Footer = () => {
             {/* Brand */}
             <div className="space-y-4">
               <Link to="/" className="flex items-center gap-2">
-                <div className="h-10 w-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
-                  <Building className="h-5 w-5" />
-                </div>
+                <img src={makaziLogo} alt="Makazi" className="h-10 w-10 rounded-xl object-contain" />
                 <div className="flex flex-col">
                   <span className="font-heading font-bold text-lg leading-none">Makazi</span>
                   <span className="text-[10px] text-primary-foreground/70 leading-none">Kenya Property</span>
