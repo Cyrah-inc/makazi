@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -15,7 +15,7 @@ import {
 import {
   CheckCircle, XCircle, Loader2, Mail, Phone, FileText, ExternalLink,
   Home, Star, CreditCard, Calendar, AlertTriangle, ShieldCheck, ShieldX,
-  Building2, BadgeCheck, Clock,
+  Building2, BadgeCheck, Clock, ChevronLeft, ChevronRight, Eye, Download,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,40 +31,21 @@ function extractFilePath(url: string): string {
   return match ? match[1] : url;
 }
 
-function AdminDocumentLink({ docPath, index }: { docPath: string; index: number }) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+const DOCUMENT_LABELS: Record<number, string> = {
+  0: 'National ID',
+  1: 'KRA Certificate',
+};
 
-  useEffect(() => {
-    const path = extractFilePath(docPath);
-    supabase.storage
-      .from('landlord-documents')
-      .createSignedUrl(path, 3600)
-      .then(({ data }) => {
-        if (data?.signedUrl) setSignedUrl(data.signedUrl);
-      });
-  }, [docPath]);
+function getDocumentLabel(index: number): string {
+  return DOCUMENT_LABELS[index] || `Document ${index + 1}`;
+}
 
-  return (
-    <a
-      href={signedUrl || '#'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        'flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors',
-        !signedUrl && 'opacity-50 pointer-events-none',
-      )}
-    >
-      {docPath.match(/\.(jpg|jpeg|png)$/i) && signedUrl ? (
-        <img src={signedUrl} alt="Doc" className="w-10 h-10 rounded object-cover shrink-0" />
-      ) : (
-        <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
-          <FileText className="w-5 h-5 text-accent" />
-        </div>
-      )}
-      <span className="text-sm truncate flex-1">Document {index + 1}</span>
-      <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
-    </a>
-  );
+function isImageFile(path: string): boolean {
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+}
+
+function isPdfFile(path: string): boolean {
+  return /\.pdf$/i.test(path);
 }
 
 /* ── types ── */
