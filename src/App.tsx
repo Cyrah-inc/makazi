@@ -52,6 +52,7 @@ const LandlordPayoutsPage = lazy(() => import("./pages/landlord/LandlordPayoutsP
 const LandlordReviewsPage = lazy(() => import("./pages/landlord/LandlordReviewsPage"));
 const LandlordNotificationsPage = lazy(() => import("./pages/landlord/LandlordNotificationsPage"));
 const UserNotificationsPage = lazy(() => import("./pages/user/UserNotificationsPage"));
+const BecomeAgentPage = lazy(() => import("./pages/BecomeAgentPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -87,6 +88,7 @@ const App = () => (
                   <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/property/:id" element={<PropertyDetailPage />} />
                   <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/become-agent" element={<BecomeAgentPage />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/admin/landlords" element={<AdminLandlordsPage />} />

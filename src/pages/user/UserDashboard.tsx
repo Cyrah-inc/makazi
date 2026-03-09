@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MessageSquare, Clock, CheckCircle, Heart, Building2, ArrowRight, 
-  User, Camera, Mail, Phone, Pencil, Save, X, Loader2, CalendarDays, DollarSign, MapPin
+  User, Camera, Mail, Phone, Pencil, Save, X, Loader2, CalendarDays, DollarSign, MapPin, Briefcase
 } from 'lucide-react';
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton';
 import { StatsCardSkeleton } from '@/components/skeletons/StatsCardSkeleton';
@@ -26,7 +26,7 @@ import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 
 // User profile dashboard
 export default function UserDashboard() {
-  const { user } = useAuth();
+  const { user, isLandlord, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -446,6 +446,27 @@ export default function UserDashboard() {
               </div>
             </CardContent>
           </Card>
+          {!isLandlord && !isAdmin && (
+            <Card className="hover:shadow-md transition-shadow border-primary/20 bg-primary/5">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm sm:text-base">Become an Agent</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Start listing properties on Makazi</p>
+                  </div>
+                  <Link to="/become-agent">
+                    <Button size="sm" className="shrink-0">
+                      <span className="hidden sm:inline">Apply</span>
+                      <ArrowRight className="w-4 h-4 sm:ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Recent Bookings */}

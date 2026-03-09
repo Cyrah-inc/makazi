@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, Building, Key, Palmtree, Heart, User, Menu, Shield, LogOut, ChevronRight } from 'lucide-react';
+import { Home, Building, Key, Palmtree, Heart, User, Menu, Shield, LogOut, ChevronRight, Briefcase } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useState } from 'react';
@@ -137,6 +137,15 @@ const Navbar = () => {
                   </DropdownMenuItem>
                 )}
                 
+                {!isLandlord && !isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/become-agent" className="flex items-center gap-2 cursor-pointer">
+                      <Briefcase className="h-4 w-4" />
+                      Become an Agent
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
                     <User className="h-4 w-4" />
@@ -222,6 +231,16 @@ const Navbar = () => {
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Landlord</h3>
                     <div className="space-y-1">
                       <MobileNavLink to="/landlord" icon={Building} label="Landlord Dashboard" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Become an Agent */}
+                {user && !isLandlord && !isAdmin && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Opportunities</h3>
+                    <div className="space-y-1">
+                      <MobileNavLink to="/become-agent" icon={Briefcase} label="Become an Agent" />
                     </div>
                   </div>
                 )}
