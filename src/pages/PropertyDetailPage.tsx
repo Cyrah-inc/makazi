@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
 const ImageLightbox = lazy(() => import('@/components/ImageLightbox'));
+const SimilarProperties = lazy(() => import('@/components/SimilarProperties'));
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.quicktime'];
 const isVideoUrl = (url: string) => VIDEO_EXTENSIONS.some(ext => url.toLowerCase().includes(ext));
