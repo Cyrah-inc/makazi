@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,8 +14,42 @@ export interface Notification {
   created_at: string;
 }
 
+function useNotificationRealtime() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`notifications-realtime-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ['notifications', user.id] });
+          qc.invalidateQueries({ queryKey: ['notifications-unread-count', user.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ['notifications', user.id] });
+          qc.invalidateQueries({ queryKey: ['notifications-unread-count', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, qc]);
+}
+
 export function useNotifications() {
   const { user } = useAuth();
+  useNotificationRealtime();
 
   return useQuery({
     queryKey: ['notifications', user?.id],
@@ -29,12 +64,12 @@ export function useNotifications() {
       if (error) throw error;
       return data as Notification[];
     },
-    refetchInterval: 30_000, // poll every 30s
   });
 }
 
 export function useUnreadNotificationCount() {
   const { user } = useAuth();
+  useNotificationRealtime();
 
   return useQuery({
     queryKey: ['notifications-unread-count', user?.id],
@@ -48,7 +83,6 @@ export function useUnreadNotificationCount() {
       if (error) throw error;
       return count || 0;
     },
-    refetchInterval: 30_000,
   });
 }
 
