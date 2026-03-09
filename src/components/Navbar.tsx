@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, Building, Key, Palmtree, Heart, User, Menu, Shield, LogOut, ChevronRight, Briefcase } from 'lucide-react';
-import makaziLogo from '@/assets/makazi-logo.png';
+import makaziLogo from '@/assets/makazi-logo.webp';
 import { NotificationBell } from '@/components/NotificationBell';
 import { NavbarSearch } from '@/components/NavbarSearch';
 import { ThemeToggle } from '@/components/ThemeToggle';

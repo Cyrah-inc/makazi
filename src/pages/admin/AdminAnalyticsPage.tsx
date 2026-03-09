@@ -52,6 +52,7 @@ async function fetchFullAnalytics() {
     { data: reviews },
     { data: leads },
     { data: landlordProfiles },
+    { data: viewLogs },
   ] = await Promise.all([
     supabase.from('profiles').select('user_id, created_at, full_name, email, status'),
     supabase.from('user_roles').select('user_id, role, created_at'),
@@ -63,6 +64,7 @@ async function fetchFullAnalytics() {
     supabase.from('reviews').select('id, property_id, rating, created_at'),
     supabase.from('leads').select('id, user_id, property_id, landlord_id, lead_type, created_at'),
     supabase.from('landlord_profiles').select('user_id, verification_status'),
+    supabase.from('property_view_logs').select('property_id, viewed_at').gte('viewed_at', subDays(now, 30).toISOString()),
   ]);
 
   const all = {
@@ -76,6 +78,7 @@ async function fetchFullAnalytics() {
     reviews: reviews || [],
     leads: leads || [],
     landlordProfiles: landlordProfiles || [],
+    viewLogs: viewLogs || [],
   };
 
   const profileMap = new Map(all.profiles.map(p => [p.user_id, p]));
@@ -112,24 +115,34 @@ async function fetchFullAnalytics() {
   });
   const revenueChartData = Array.from(revByMonth.entries()).map(([month, amount]) => ({ month, amount })).slice(-12);
 
-  // Views trend by month (aggregated by property creation month)
-  const viewsByMonth = new Map<string, number>();
-  all.properties.forEach(p => {
-    const m = format(startOfMonth(new Date(p.created_at)), 'MMM yy');
-    viewsByMonth.set(m, (viewsByMonth.get(m) || 0) + (p.views_count || 0));
+  // Daily views trend from real view logs (last 30 days)
+  const viewsByDay = new Map<string, number>();
+  // Pre-fill last 30 days with zeros for a complete chart
+  for (let i = 29; i >= 0; i--) {
+    const day = format(subDays(now, i), 'MMM dd');
+    viewsByDay.set(day, 0);
+  }
+  all.viewLogs.forEach((log: { property_id: string; viewed_at: string }) => {
+    const day = format(new Date(log.viewed_at), 'MMM dd');
+    if (viewsByDay.has(day)) {
+      viewsByDay.set(day, (viewsByDay.get(day) || 0) + 1);
+    }
   });
-  const viewsTrendData = Array.from(viewsByMonth.entries()).map(([month, views]) => ({ month, views })).slice(-12);
+  const viewsTrendData = Array.from(viewsByDay.entries()).map(([day, views]) => ({ day, views }));
 
-  // Total views
+  // Total views (all-time from properties table)
   const totalViews = all.properties.reduce((s, p) => s + (p.views_count || 0), 0);
+  const viewsLast30 = all.viewLogs.length;
 
-  // Views by property type
+  // Views by property type (from view logs with property lookup)
+  const propTypeMap = new Map(all.properties.map(p => [p.id, p.property_type]));
   const viewsByType: Record<string, number> = {};
-  all.properties.forEach(p => {
-    const type = p.property_type === 'sale' ? 'Buy' : p.property_type === 'rent' ? 'Rent' : 'Airbnb';
-    viewsByType[type] = (viewsByType[type] || 0) + (p.views_count || 0);
+  all.viewLogs.forEach((log: { property_id: string; viewed_at: string }) => {
+    const type = propTypeMap.get(log.property_id);
+    const label = type === 'sale' ? 'Buy' : type === 'rent' ? 'Rent' : type === 'airbnb' ? 'Airbnb' : 'Other';
+    viewsByType[label] = (viewsByType[label] || 0) + 1;
   });
-  const viewsByTypeData = Object.entries(viewsByType).map(([name, value]) => ({ name, value }));
+  const viewsByTypeData = Object.entries(viewsByType).filter(([name]) => name !== 'Other').map(([name, value]) => ({ name, value }));
 
   // Property distribution
   const byType: Record<string, number> = {};
@@ -303,7 +316,7 @@ async function fetchFullAnalytics() {
     // Overview
     totalUsers, totalLandlords, totalProperties, totalLeads, totalRevenue, totalCommission,
     subRevenue, activeSubscribers, newUsersWeek, newLandlordsWeek,
-    userGrowthData, revenueChartData, viewsTrendData, totalViews, viewsByTypeData,
+    userGrowthData, revenueChartData, viewsTrendData, totalViews, viewsLast30, viewsByTypeData,
     typeChartData: Object.entries(byType).map(([name, value]) => ({ name, value })),
     statusChartData: Object.entries(byStatus).map(([name, value]) => ({ name, value })),
     cityChartData: Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value })),
@@ -437,14 +450,14 @@ export default function AdminAnalyticsPage() {
             {/* Views Trend + Views by Type */}
             <div className="grid md:grid-cols-3 gap-4">
               <Card className="md:col-span-2">
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Eye className="w-5 h-5" /> Property Views Trend</CardTitle><CardDescription>Total views by listing month ({data.totalViews.toLocaleString()} total)</CardDescription></CardHeader>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Eye className="w-5 h-5" /> Daily Property Views</CardTitle><CardDescription>Last 30 days ({data.viewsLast30.toLocaleString()} views)</CardDescription></CardHeader>
                 <CardContent>
                   <ChartContainer config={{ ...chartConfig, views: { label: 'Views', color: 'hsl(var(--chart-3, 30 80% 55%))' } }} className="h-[250px] w-full">
                     <LineChart data={data.viewsTrendData}>
-                      <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                      <XAxis dataKey="day" fontSize={10} tickLine={false} axisLine={false} interval={4} />
                       <YAxis fontSize={11} tickLine={false} axisLine={false} />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="views" stroke="hsl(var(--chart-3, 30 80% 55%))" strokeWidth={2} dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="views" stroke="hsl(var(--chart-3, 30 80% 55%))" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ChartContainer>
                 </CardContent>

@@ -40,10 +40,17 @@ const PropertyDetailPage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { user } = useAuth();
 
-  // Track recently viewed
+  // Track recently viewed and log property view
   useEffect(() => {
-    if (id) addRecentlyViewed(id);
-  }, [id]);
+    if (id) {
+      addRecentlyViewed(id);
+      // Log view to property_view_logs for analytics
+      supabase.from('property_view_logs').insert({
+        property_id: id,
+        viewer_id: user?.id || null,
+      }).then(() => {});
+    }
+  }, [id, user?.id]);
 
   const captureLeadFn = (leadType: 'whatsapp' | 'chat') => {
     if (!dbProperty) return;

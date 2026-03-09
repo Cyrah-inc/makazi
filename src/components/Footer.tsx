@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
-import makaziLogo from '@/assets/makazi-logo.png';
+import makaziLogo from '@/assets/makazi-logo.webp';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
