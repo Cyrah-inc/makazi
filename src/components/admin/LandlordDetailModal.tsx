@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -15,7 +15,7 @@ import {
 import {
   CheckCircle, XCircle, Loader2, Mail, Phone, FileText, ExternalLink,
   Home, Star, CreditCard, Calendar, AlertTriangle, ShieldCheck, ShieldX,
-  Building2, BadgeCheck, Clock,
+  Building2, BadgeCheck, Clock, ChevronLeft, ChevronRight, Eye, Download,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,40 +31,21 @@ function extractFilePath(url: string): string {
   return match ? match[1] : url;
 }
 
-function AdminDocumentLink({ docPath, index }: { docPath: string; index: number }) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+const DOCUMENT_LABELS: Record<number, string> = {
+  0: 'National ID',
+  1: 'KRA Certificate',
+};
 
-  useEffect(() => {
-    const path = extractFilePath(docPath);
-    supabase.storage
-      .from('landlord-documents')
-      .createSignedUrl(path, 3600)
-      .then(({ data }) => {
-        if (data?.signedUrl) setSignedUrl(data.signedUrl);
-      });
-  }, [docPath]);
+function getDocumentLabel(index: number): string {
+  return DOCUMENT_LABELS[index] || `Document ${index + 1}`;
+}
 
-  return (
-    <a
-      href={signedUrl || '#'}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        'flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors',
-        !signedUrl && 'opacity-50 pointer-events-none',
-      )}
-    >
-      {docPath.match(/\.(jpg|jpeg|png)$/i) && signedUrl ? (
-        <img src={signedUrl} alt="Doc" className="w-10 h-10 rounded object-cover shrink-0" />
-      ) : (
-        <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
-          <FileText className="w-5 h-5 text-accent" />
-        </div>
-      )}
-      <span className="text-sm truncate flex-1">Document {index + 1}</span>
-      <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
-    </a>
-  );
+function isImageFile(path: string): boolean {
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+}
+
+function isPdfFile(path: string): boolean {
+  return /\.pdf$/i.test(path);
 }
 
 /* ── types ── */
@@ -136,13 +117,42 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Document preview state
+  const [signedUrls, setSignedUrls] = useState<Map<number, string>>(new Map());
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
       setVerifyNotes('');
       setCancelReason('');
+      setPreviewIndex(null);
+      setSignedUrls(new Map());
     }
   }, [open]);
+
+  // Generate signed URLs for all documents
+  useEffect(() => {
+    if (!open || !landlord?.documents?.length) return;
+
+    const generateUrls = async () => {
+      const urlMap = new Map<number, string>();
+      await Promise.all(
+        landlord.documents.map(async (doc, i) => {
+          const path = extractFilePath(doc);
+          const { data } = await supabase.storage
+            .from('landlord-documents')
+            .createSignedUrl(path, 3600);
+          if (data?.signedUrl) {
+            urlMap.set(i, data.signedUrl);
+          }
+        })
+      );
+      setSignedUrls(urlMap);
+    };
+    generateUrls();
+  }, [open, landlord?.documents]);
 
   if (!landlord) return null;
 
@@ -309,9 +319,29 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
                 <FileText className="w-4 h-4" /> Uploaded Documents ({landlord.documents.length})
               </h4>
               <div className="space-y-2">
-                {landlord.documents.map((doc, i) => (
-                  <AdminDocumentLink key={i} docPath={doc} index={i} />
-                ))}
+                {landlord.documents.map((doc, i) => {
+                  const url = signedUrls.get(i);
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        'flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer',
+                        !url && 'opacity-50 pointer-events-none',
+                      )}
+                      onClick={() => url && setPreviewIndex(i)}
+                    >
+                      {isImageFile(doc) && url ? (
+                        <img src={url} alt={getDocumentLabel(i)} className="w-10 h-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5 text-accent" />
+                        </div>
+                      )}
+                      <span className="text-sm truncate flex-1">{getDocumentLabel(i)}</span>
+                      <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -479,6 +509,99 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
           )}
         </div>
       </DialogContent>
+
+      {/* ── Document Preview Modal ── */}
+      <Dialog open={previewIndex !== null} onOpenChange={(isOpen) => !isOpen && setPreviewIndex(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {previewIndex !== null ? getDocumentLabel(previewIndex) : 'Document Preview'}
+            </DialogTitle>
+            <DialogDescription>
+              Document {previewIndex !== null ? previewIndex + 1 : ''} of {landlord.documents.length}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 relative">
+            {previewIndex !== null && signedUrls.get(previewIndex) && (
+              <>
+                {isImageFile(landlord.documents[previewIndex]) ? (
+                  <img
+                    src={signedUrls.get(previewIndex)}
+                    alt={getDocumentLabel(previewIndex)}
+                    className="max-h-[70vh] w-full object-contain rounded-lg"
+                  />
+                ) : isPdfFile(landlord.documents[previewIndex]) ? (
+                  <iframe
+                    src={signedUrls.get(previewIndex)}
+                    className="w-full h-[70vh] rounded-lg border border-border"
+                    title={getDocumentLabel(previewIndex)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+                    <FileText className="w-16 h-16 mb-4" />
+                    <p>Preview not available for this file type</p>
+                    <p className="text-sm">Use "Open in new tab" to view</p>
+                  </div>
+                )}
+
+                {/* Navigation arrows */}
+                {landlord.documents.length > 1 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm"
+                      onClick={() => setPreviewIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : landlord.documents.length - 1))}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm"
+                      onClick={() => setPreviewIndex((prev) => (prev !== null && prev < landlord.documents.length - 1 ? prev + 1 : 0))}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                if (previewIndex !== null && signedUrls.get(previewIndex)) {
+                  window.open(signedUrls.get(previewIndex), '_blank');
+                }
+              }}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open in new tab
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              asChild
+            >
+              <a
+                href={previewIndex !== null ? signedUrls.get(previewIndex) : '#'}
+                download={previewIndex !== null ? getDocumentLabel(previewIndex) : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

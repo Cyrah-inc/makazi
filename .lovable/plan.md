@@ -1,32 +1,44 @@
 
 
-## Plan: Add Document Preview Modal for Admin Landlord Review
+# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
 
-### Problem
-Currently, uploaded verification documents (ID, KRA certificate) open in a new browser tab via external links. Admins should be able to view them inline in a modal/lightbox without leaving the page.
+## Issues Found
 
-### Changes
+### 1. WhatsApp Button Blocked
+The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
 
-**`src/components/admin/LandlordDetailModal.tsx`** -- Single file change
+### 2. No Cover Photo Selection
+Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
 
-1. **Add document viewer state**: Track `previewDocUrl` and `previewDocIndex` state variables to control which document is being previewed.
+### 3. No Video Upload Support
+Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
 
-2. **Modify `AdminDocumentLink`**: Instead of rendering an `<a>` tag that opens in a new tab, make the document row clickable to open a preview modal. Keep the external link as a secondary action (small icon button).
+### 4. Map Too Small on Mobile
+`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
 
-3. **Add inline document preview dialog**: Render a nested `Dialog` at the bottom of the component that displays:
-   - For images (jpg/jpeg/png): Full-size image preview using `<img>` with the signed URL
-   - For PDFs: An `<iframe>` with the signed URL for inline PDF viewing
-   - Navigation arrows if multiple documents exist
-   - A "Download / Open in new tab" button in the footer
+### 5. No Property Owner Info
+`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
 
-4. **Collect signed URLs at parent level**: Move signed URL generation from individual `AdminDocumentLink` components to the parent, storing all signed URLs in a `Map<number, string>` state. This allows the preview modal to access any document's URL directly.
+## Plan
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
+| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
+| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
+| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
 
 ### Technical Details
 
-- Reuse the existing `Dialog` component for the preview (not `ImageLightbox`, since we also need PDF support)
-- Preview dialog will use `sm:max-w-3xl` for a wider view
-- Image preview: `<img className="max-h-[70vh] w-full object-contain" />`
-- PDF preview: `<iframe className="w-full h-[70vh]" />`
-- The document label will show "National ID" for index 0 and "KRA Certificate" for index 1 (matching the upload order convention)
-- Navigation between documents via left/right arrows
+**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
+
+**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
+
+**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
+
+**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
+
+**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
 
