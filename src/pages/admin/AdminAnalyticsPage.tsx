@@ -316,7 +316,7 @@ async function fetchFullAnalytics() {
     // Overview
     totalUsers, totalLandlords, totalProperties, totalLeads, totalRevenue, totalCommission,
     subRevenue, activeSubscribers, newUsersWeek, newLandlordsWeek,
-    userGrowthData, revenueChartData, viewsTrendData, totalViews, viewsByTypeData,
+    userGrowthData, revenueChartData, viewsTrendData, totalViews, viewsLast30, viewsByTypeData,
     typeChartData: Object.entries(byType).map(([name, value]) => ({ name, value })),
     statusChartData: Object.entries(byStatus).map(([name, value]) => ({ name, value })),
     cityChartData: Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value })),
