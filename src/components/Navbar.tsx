@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, Building, Key, Palmtree, Heart, User, Menu, Shield, LogOut, ChevronRight, Briefcase } from 'lucide-react';
+import makaziLogo from '@/assets/makazi-logo.png';
 import { NotificationBell } from '@/components/NotificationBell';
 import { NavbarSearch } from '@/components/NavbarSearch';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -56,9 +57,7 @@ const Navbar = () => {
       <nav className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="relative h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-            <Building className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={makaziLogo} alt="Makazi" className="h-10 w-10 rounded-xl object-contain" />
           <div className="flex flex-col">
             <span className="font-heading font-bold text-lg leading-none text-foreground">
               Makazi
