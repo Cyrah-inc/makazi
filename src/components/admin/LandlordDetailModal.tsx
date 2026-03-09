@@ -509,6 +509,99 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
           )}
         </div>
       </DialogContent>
+
+      {/* ── Document Preview Modal ── */}
+      <Dialog open={previewIndex !== null} onOpenChange={(isOpen) => !isOpen && setPreviewIndex(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {previewIndex !== null ? getDocumentLabel(previewIndex) : 'Document Preview'}
+            </DialogTitle>
+            <DialogDescription>
+              Document {previewIndex !== null ? previewIndex + 1 : ''} of {landlord.documents.length}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 relative">
+            {previewIndex !== null && signedUrls.get(previewIndex) && (
+              <>
+                {isImageFile(landlord.documents[previewIndex]) ? (
+                  <img
+                    src={signedUrls.get(previewIndex)}
+                    alt={getDocumentLabel(previewIndex)}
+                    className="max-h-[70vh] w-full object-contain rounded-lg"
+                  />
+                ) : isPdfFile(landlord.documents[previewIndex]) ? (
+                  <iframe
+                    src={signedUrls.get(previewIndex)}
+                    className="w-full h-[70vh] rounded-lg border border-border"
+                    title={getDocumentLabel(previewIndex)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+                    <FileText className="w-16 h-16 mb-4" />
+                    <p>Preview not available for this file type</p>
+                    <p className="text-sm">Use "Open in new tab" to view</p>
+                  </div>
+                )}
+
+                {/* Navigation arrows */}
+                {landlord.documents.length > 1 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm"
+                      onClick={() => setPreviewIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : landlord.documents.length - 1))}
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm"
+                      onClick={() => setPreviewIndex((prev) => (prev !== null && prev < landlord.documents.length - 1 ? prev + 1 : 0))}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                if (previewIndex !== null && signedUrls.get(previewIndex)) {
+                  window.open(signedUrls.get(previewIndex), '_blank');
+                }
+              }}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open in new tab
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              asChild
+            >
+              <a
+                href={previewIndex !== null ? signedUrls.get(previewIndex) : '#'}
+                download={previewIndex !== null ? getDocumentLabel(previewIndex) : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
