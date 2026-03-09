@@ -1,6 +1,8 @@
+import { useState, useMemo } from 'react';
 import { Property } from '@/types/property';
 import PropertyCard from './PropertyCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { TransportMode } from './LocationFilterBar';
 
 interface PropertyGridProps {
@@ -18,6 +20,7 @@ interface PropertyGridProps {
   showDistanceBadge?: boolean;
   priorityCount?: number;
   priorityLabel?: string;
+  pageSize?: number;
 }
 
 const PropertyGrid = ({ 
@@ -35,7 +38,9 @@ const PropertyGrid = ({
   showDistanceBadge = false,
   priorityCount,
   priorityLabel,
+  pageSize = 16,
 }: PropertyGridProps) => {
+  const [visibleCount, setVisibleCount] = useState(pageSize);
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -138,9 +143,23 @@ const PropertyGrid = ({
           </div>
         </>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {properties.map((property, index) => renderCard(property, index))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {properties.slice(0, visibleCount).map((property, index) => renderCard(property, index))}
+          </div>
+          {properties.length > visibleCount && (
+            <div className="flex justify-center pt-8">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setVisibleCount(prev => prev + pageSize)}
+                className="min-w-[200px]"
+              >
+                Load More ({properties.length - visibleCount} remaining)
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

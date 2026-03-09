@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
@@ -25,6 +25,8 @@ import { PropertyReviewsSection, PropertyReviewsSummary } from '@/components/Pro
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
+const ImageLightbox = lazy(() => import('@/components/ImageLightbox'));
+
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.quicktime'];
 const isVideoUrl = (url: string) => VIDEO_EXTENSIONS.some(ext => url.toLowerCase().includes(ext));
 
@@ -32,6 +34,7 @@ const PropertyDetailPage = () => {
   const { id } = useParams();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const { user } = useAuth();
 
   const captureLeadFn = (leadType: 'whatsapp' | 'chat') => {
@@ -201,7 +204,8 @@ const PropertyDetailPage = () => {
                   src={getOptimizedImageUrl(currentMedia, IMAGE_SIZES.DETAIL.width, IMAGE_SIZES.DETAIL.quality)}
                   alt={property.title}
                   loading="lazy"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover cursor-zoom-in"
+                  onClick={() => setLightboxOpen(true)}
                 />
               )}
               
