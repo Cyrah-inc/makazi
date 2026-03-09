@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Home, Loader2, Mail, Lock, User, Building2, Eye, EyeOff } from 'lucide-react';
+import { Home, Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { supabase } from '@/integrations/supabase/client';
 import { Separator } from '@/components/ui/separator';
 
@@ -18,7 +18,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [accountType, setAccountType] = useState<'user' | 'landlord'>('user');
+  const [showPassword, setShowPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ export default function AuthPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await signUp(email, password, fullName, accountType);
+    const { error } = await signUp(email, password, fullName);
 
     if (error) {
       toast({
@@ -68,9 +68,7 @@ export default function AuthPage() {
     } else {
       toast({
         title: 'Account created!',
-        description: accountType === 'landlord' 
-          ? 'Your landlord account is ready! Please check your email to verify.'
-          : 'Please check your email to verify your account.',
+        description: 'Please check your email to verify your account.',
       });
     }
 
@@ -254,43 +252,6 @@ export default function AuthPage() {
                 </div>
 
                 <form onSubmit={handleSignUp} className="space-y-4">
-                  {/* Account Type Selection */}
-                  <div className="space-y-3">
-                    <Label>Account Type</Label>
-                    <RadioGroup 
-                      value={accountType} 
-                      onValueChange={(value: 'user' | 'landlord') => setAccountType(value)}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <Label
-                        htmlFor="user"
-                        className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                          accountType === 'user' 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <RadioGroupItem value="user" id="user" className="sr-only" />
-                        <User className={`w-6 h-6 ${accountType === 'user' ? 'text-primary' : 'text-muted-foreground'}`} />
-                        <span className={`font-medium text-sm ${accountType === 'user' ? 'text-primary' : 'text-foreground'}`}>User</span>
-                        <span className="text-xs text-muted-foreground text-center">Browse & save properties</span>
-                      </Label>
-                      <Label
-                        htmlFor="landlord"
-                        className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                          accountType === 'landlord' 
-                            ? 'border-primary bg-primary/5' 
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <RadioGroupItem value="landlord" id="landlord" className="sr-only" />
-                        <Building2 className={`w-6 h-6 ${accountType === 'landlord' ? 'text-primary' : 'text-muted-foreground'}`} />
-                        <span className={`font-medium text-sm ${accountType === 'landlord' ? 'text-primary' : 'text-foreground'}`}>Landlord</span>
-                        <span className="text-xs text-muted-foreground text-center">List & manage properties</span>
-                      </Label>
-                    </RadioGroup>
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
                     <div className="relative">
@@ -351,7 +312,7 @@ export default function AuthPage() {
                         Creating account...
                       </>
                     ) : (
-                      accountType === 'landlord' ? 'Create Landlord Account' : 'Create Account'
+                      'Create Account'
                     )}
                   </Button>
                 </form>

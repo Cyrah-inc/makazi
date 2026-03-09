@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MessageSquare, Clock, CheckCircle, Heart, Building2, ArrowRight, 
-  User, Camera, Mail, Phone, Pencil, Save, X, Loader2, CalendarDays, DollarSign, MapPin
+  User, Camera, Mail, Phone, Pencil, Save, X, Loader2, CalendarDays, DollarSign, MapPin, Briefcase
 } from 'lucide-react';
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton';
 import { StatsCardSkeleton } from '@/components/skeletons/StatsCardSkeleton';
