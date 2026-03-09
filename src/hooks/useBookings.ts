@@ -67,7 +67,7 @@ export function useLandlordBookings() {
 
       const [propertiesRes, profilesRes] = await Promise.all([
         supabase.from('properties').select('id, title, images, city').in('id', propertyIds),
-        supabase.from('profiles').select('user_id, full_name, email').in('user_id', guestIds),
+        supabase.from('profiles_public').select('user_id, full_name, email').in('user_id', guestIds),
       ]);
 
       const propertyMap = new Map(propertiesRes.data?.map(p => [p.id, p]) || []);
