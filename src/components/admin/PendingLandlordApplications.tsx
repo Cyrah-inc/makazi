@@ -200,7 +200,7 @@ export function PendingLandlordApplications() {
           landlord={selectedLandlord}
           open={!!selectedLandlord}
           onOpenChange={(open) => !open && setSelectedLandlord(null)}
-          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['pending-landlord-applications'] })}
+          onActionComplete={() => queryClient.invalidateQueries({ queryKey: ['pending-landlord-applications'] })}
         />
       )}
     </>
