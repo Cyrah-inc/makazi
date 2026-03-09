@@ -73,6 +73,15 @@ const Index = () => {
 
         {/* Category Carousels */}
         <div className="bg-muted/30">
+          {/* Recently Viewed — only shows if user has history */}
+          <PropertyCarousel
+            title="Recently Viewed"
+            subtitle="Pick up where you left off"
+            properties={recentlyViewed.data ?? []}
+            isLoading={recentlyViewed.isLoading}
+            icon={<Clock className="h-6 w-6 text-primary" />}
+          />
+
           <PropertyCarousel
             title="Just Added"
             subtitle="Fresh listings you haven't seen yet"
