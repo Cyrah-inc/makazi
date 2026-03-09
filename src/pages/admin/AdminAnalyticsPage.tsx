@@ -78,6 +78,7 @@ async function fetchFullAnalytics() {
     reviews: reviews || [],
     leads: leads || [],
     landlordProfiles: landlordProfiles || [],
+    viewLogs: viewLogs || [],
   };
 
   const profileMap = new Map(all.profiles.map(p => [p.user_id, p]));
