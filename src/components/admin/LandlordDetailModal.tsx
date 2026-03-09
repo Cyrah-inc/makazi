@@ -319,9 +319,29 @@ export function LandlordDetailModal({ landlord, open, onOpenChange, onActionComp
                 <FileText className="w-4 h-4" /> Uploaded Documents ({landlord.documents.length})
               </h4>
               <div className="space-y-2">
-                {landlord.documents.map((doc, i) => (
-                  <AdminDocumentLink key={i} docPath={doc} index={i} />
-                ))}
+                {landlord.documents.map((doc, i) => {
+                  const url = signedUrls.get(i);
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        'flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer',
+                        !url && 'opacity-50 pointer-events-none',
+                      )}
+                      onClick={() => url && setPreviewIndex(i)}
+                    >
+                      {isImageFile(doc) && url ? (
+                        <img src={url} alt={getDocumentLabel(i)} className="w-10 h-10 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-accent/10 flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5 text-accent" />
+                        </div>
+                      )}
+                      <span className="text-sm truncate flex-1">{getDocumentLabel(i)}</span>
+                      <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
