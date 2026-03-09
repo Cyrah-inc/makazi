@@ -112,6 +112,25 @@ async function fetchFullAnalytics() {
   });
   const revenueChartData = Array.from(revByMonth.entries()).map(([month, amount]) => ({ month, amount })).slice(-12);
 
+  // Views trend by month (aggregated by property creation month)
+  const viewsByMonth = new Map<string, number>();
+  all.properties.forEach(p => {
+    const m = format(startOfMonth(new Date(p.created_at)), 'MMM yy');
+    viewsByMonth.set(m, (viewsByMonth.get(m) || 0) + (p.views_count || 0));
+  });
+  const viewsTrendData = Array.from(viewsByMonth.entries()).map(([month, views]) => ({ month, views })).slice(-12);
+
+  // Total views
+  const totalViews = all.properties.reduce((s, p) => s + (p.views_count || 0), 0);
+
+  // Views by property type
+  const viewsByType: Record<string, number> = {};
+  all.properties.forEach(p => {
+    const type = p.property_type === 'sale' ? 'Buy' : p.property_type === 'rent' ? 'Rent' : 'Airbnb';
+    viewsByType[type] = (viewsByType[type] || 0) + (p.views_count || 0);
+  });
+  const viewsByTypeData = Object.entries(viewsByType).map(([name, value]) => ({ name, value }));
+
   // Property distribution
   const byType: Record<string, number> = {};
   const byStatus: Record<string, number> = {};
@@ -284,7 +303,7 @@ async function fetchFullAnalytics() {
     // Overview
     totalUsers, totalLandlords, totalProperties, totalLeads, totalRevenue, totalCommission,
     subRevenue, activeSubscribers, newUsersWeek, newLandlordsWeek,
-    userGrowthData, revenueChartData,
+    userGrowthData, revenueChartData, viewsTrendData, totalViews, viewsByTypeData,
     typeChartData: Object.entries(byType).map(([name, value]) => ({ name, value })),
     statusChartData: Object.entries(byStatus).map(([name, value]) => ({ name, value })),
     cityChartData: Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value })),
@@ -413,6 +432,36 @@ export default function AdminAnalyticsPage() {
                   </CardContent>
                 </Card>
               )}
+            </div>
+
+            {/* Views Trend + Views by Type */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card className="md:col-span-2">
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Eye className="w-5 h-5" /> Property Views Trend</CardTitle><CardDescription>Total views by listing month ({data.totalViews.toLocaleString()} total)</CardDescription></CardHeader>
+                <CardContent>
+                  <ChartContainer config={{ ...chartConfig, views: { label: 'Views', color: 'hsl(var(--chart-3, 30 80% 55%))' } }} className="h-[250px] w-full">
+                    <LineChart data={data.viewsTrendData}>
+                      <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={11} tickLine={false} axisLine={false} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="views" stroke="hsl(var(--chart-3, 30 80% 55%))" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Views by Category</CardTitle></CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <PieChart>
+                      <Pie data={data.viewsByTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value.toLocaleString()}`}>
+                        {data.viewsByTypeData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Distribution charts */}
