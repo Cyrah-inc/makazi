@@ -23,7 +23,7 @@ const PropertyMapInner = ({
 }: PropertyMapProps & { apiKey: string }) => {
   const [showInfoWindow, setShowInfoWindow] = useState(false);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [mapType, setMapType] = useState<string>('roadmap');
+  const [viewMode, setViewMode] = useState<'map' | 'satellite' | 'street'>('map');
   const [gettingLocation, setGettingLocation] = useState(false);
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -37,11 +37,31 @@ const PropertyMapInner = ({
 
   const onLoad = useCallback((map: google.maps.Map) => { setMap(map); }, []);
 
-  const toggleMapType = () => {
-    const next = mapType === 'roadmap' ? 'hybrid' : 'roadmap';
-    setMapType(next);
-    map?.setMapTypeId(next);
+  const switchView = (mode: 'map' | 'satellite' | 'street') => {
+    if (!map) return;
+    const sv = map.getStreetView();
+    if (mode === 'street') {
+      sv.setPosition(center);
+      sv.setPov({ heading: 0, pitch: 0 });
+      sv.setVisible(true);
+    } else {
+      sv.setVisible(false);
+      map.setMapTypeId(mode === 'satellite' ? 'hybrid' : 'roadmap');
+    }
+    setViewMode(mode);
   };
+
+  // Sync state when user exits street view via Google's X button
+  useEffect(() => {
+    if (!map) return;
+    const sv = map.getStreetView();
+    const listener = sv.addListener('visible_changed', () => {
+      if (!sv.getVisible() && viewMode === 'street') {
+        setViewMode('map');
+      }
+    });
+    return () => google.maps.event.removeListener(listener);
+  }, [map, viewMode]);
 
   const handleGetDirections = () => {
     setGettingLocation(true);
@@ -86,6 +106,12 @@ const PropertyMapInner = ({
     );
   }
 
+  const viewButtons: { mode: 'map' | 'satellite' | 'street'; icon: React.ReactNode; label: string }[] = [
+    { mode: 'map', icon: <Map className="w-3.5 h-3.5" />, label: 'Map' },
+    { mode: 'satellite', icon: <Satellite className="w-3.5 h-3.5" />, label: 'Satellite' },
+    { mode: 'street', icon: <Layers className="w-3.5 h-3.5" />, label: 'Street' },
+  ];
+
   return (
     <div className="space-y-3">
       <div className="relative rounded-lg overflow-hidden border border-border" style={{ height }}>
@@ -95,12 +121,19 @@ const PropertyMapInner = ({
           zoom={16}
           onLoad={onLoad}
           options={{
-            streetViewControl: true,
-            mapTypeControl: false,
-            fullscreenControl: true,
+            disableDefaultUI: true,
             zoomControl: true,
+            fullscreenControl: true,
+            streetViewControl: false,
+            mapTypeControl: false,
+            scaleControl: false,
+            rotateControl: false,
+            controlSize: 28,
             gestureHandling: 'cooperative',
-            mapTypeId: mapType as google.maps.MapTypeId,
+            mapTypeId: viewMode === 'satellite' ? ('hybrid' as google.maps.MapTypeId) : ('roadmap' as google.maps.MapTypeId),
+            styles: [
+              { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+            ],
           }}
         >
           <Marker position={center} onClick={() => setShowInfoWindow(true)} />
@@ -114,15 +147,23 @@ const PropertyMapInner = ({
           )}
         </GoogleMap>
 
-        <div className="absolute top-3 left-3 z-10">
-          <Button type="button" variant="secondary" size="sm" onClick={toggleMapType}
-            className="shadow-md bg-background/90 backdrop-blur-sm hover:bg-background gap-1.5 text-xs h-8 px-2.5">
-            {mapType === 'roadmap' ? (
-              <><Satellite className="w-3.5 h-3.5" /><span className="hidden sm:inline">Satellite</span></>
-            ) : (
-              <><Map className="w-3.5 h-3.5" /><span className="hidden sm:inline">Map</span></>
-            )}
-          </Button>
+        {/* View Switcher */}
+        <div className="absolute top-3 left-3 z-10 flex rounded-lg overflow-hidden shadow-md border border-border">
+          {viewButtons.map(({ mode, icon, label }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => switchView(mode)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === mode
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-background/90 backdrop-blur-sm text-foreground hover:bg-muted'
+              }`}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
