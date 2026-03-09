@@ -70,7 +70,7 @@ const PropertyDetailPage = () => {
     queryFn: async () => {
       const landlordId = dbProperty!.landlord_id;
       const [{ data: profile }, { data: verification }] = await Promise.all([
-        supabase.from('profiles_public').select('full_name, avatar_url').eq('user_id', landlordId).maybeSingle(),
+        supabase.rpc('get_public_profiles', { user_ids: [landlordId] }).maybeSingle(),
         supabase.from('landlord_public_info').select('verification_status').eq('user_id', landlordId).maybeSingle(),
       ]);
       return {
