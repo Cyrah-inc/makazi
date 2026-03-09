@@ -109,7 +109,7 @@ const PropertyMapInner = ({
   const viewButtons: { mode: 'map' | 'satellite' | 'street'; icon: React.ReactNode; label: string }[] = [
     { mode: 'map', icon: <Map className="w-3.5 h-3.5" />, label: 'Map' },
     { mode: 'satellite', icon: <Satellite className="w-3.5 h-3.5" />, label: 'Satellite' },
-    { mode: 'street', icon: <Layers className="w-3.5 h-3.5" />, label: 'Street' },
+    { mode: 'street', icon: <Eye className="w-3.5 h-3.5" />, label: 'Street' },
   ];
 
   return (
