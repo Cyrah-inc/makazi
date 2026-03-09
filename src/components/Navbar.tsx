@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, Building, Key, Palmtree, Heart, User, Menu, Shield, LogOut, ChevronRight, Briefcase } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
+import { NavbarSearch } from '@/components/NavbarSearch';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -89,6 +90,7 @@ const Navbar = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-2">
+          <NavbarSearch />
           <ThemeToggle />
           {user && (
             <>
