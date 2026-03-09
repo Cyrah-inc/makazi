@@ -543,6 +543,14 @@ const PropertyDetailPage = () => {
         </a>
       )}
 
+      {dbProperty && (
+        <SimilarProperties
+          propertyId={dbProperty.id}
+          propertyType={dbProperty.property_type}
+          state={dbProperty.state}
+        />
+      )}
+
       <Footer />
 
       {/* Image Lightbox */}

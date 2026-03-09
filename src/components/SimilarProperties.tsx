@@ -19,7 +19,7 @@ const SimilarProperties = ({ propertyId, propertyType, state }: SimilarPropertie
         .from('properties')
         .select(LISTING_COLUMNS)
         .eq('status', 'approved')
-        .eq('property_type', propertyType)
+        .eq('property_type', propertyType as 'sale' | 'rent' | 'airbnb')
         .neq('id', propertyId)
         .order('views_count', { ascending: false })
         .limit(6);
