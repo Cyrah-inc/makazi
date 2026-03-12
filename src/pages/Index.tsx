@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useCallback, useState } from 'react';
-import { Link } from 'react-router-dom';
+
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeroCarousel from '@/components/HeroCarousel';
@@ -21,7 +21,7 @@ import {
 import { useHeroProperties } from '@/hooks/useHeroProperties';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles, Clock, KeyRound } from 'lucide-react';
+import { TrendingUp, MapPin, Palmtree, TreePine, Building2, Home, Sparkles, Clock } from 'lucide-react';
 
 const Index = () => {
   const geo = useGeolocation();
@@ -67,22 +67,6 @@ const Index = () => {
       <Navbar />
 
       <main className="flex-1">
-        {/* Mobile Category Quick-Nav */}
-        <div className="grid grid-cols-3 md:hidden gap-2 px-4 py-3 bg-background border-b border-border">
-          <Link to="/buy" className="flex items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium bg-buy/10 text-buy">
-            <Building2 className="h-4 w-4" />
-            Buy
-          </Link>
-          <Link to="/rent" className="flex items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium bg-rent/10 text-rent">
-            <KeyRound className="h-4 w-4" />
-            Rent
-          </Link>
-          <Link to="/airbnb" className="flex items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium bg-airbnb/10 text-airbnb">
-            <Palmtree className="h-4 w-4" />
-            Airbnb
-          </Link>
-        </div>
-
         {/* Hero Carousel */}
         <HeroCarousel
           properties={heroProperties.data ?? []}

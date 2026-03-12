@@ -1,70 +1,44 @@
 
 
-## Plan: Enhanced Hero Carousel with Integrated Search
+# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
 
-### Concept
+## Issues Found
 
-Overlay the existing `HeroSearch` bar on top of the hero carousel slideshow, creating a modern "search-over-hero" layout similar to Airbnb, Booking.com, and Zillow. The slideshow continues behind as an ambient backdrop, while the search bar becomes the primary interaction point.
+### 1. WhatsApp Button Blocked
+The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
 
-### Changes
+### 2. No Cover Photo Selection
+Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
 
-**1. `src/components/HeroCarousel.tsx`**
-- Reduce hero height on mobile from `50vh/360px` to `45vh/320px` — the search bar adds visual weight
-- Overlay the `HeroSearch` component centered vertically in the hero area (above the property info, below center)
-- Add a welcome headline above the search: "Find Your Perfect Home in Kenya" in large white text
-- Simplify per-slide content: remove the title, stats, and "View Details" button from the overlay — the slide becomes purely visual with just the category badge and price as a subtle bottom-left label
-- Add a subtle Ken Burns (slow zoom/pan) CSS animation on the background images for a more dynamic feel
-- Improve the gradient overlay to be stronger in the center where the search sits
+### 3. No Video Upload Support
+Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
 
-**2. `src/pages/Index.tsx`**
-- Pass no additional props — HeroSearch is self-contained and already navigates on submit
-- Remove the mobile category quick-nav pills since the HeroSearch tabs (Buy/Rent/Airbnb) now serve that purpose directly in the hero
+### 4. Map Too Small on Mobile
+`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
 
-**3. `src/index.css`**
-- Add a `@keyframes kenBurns` animation (slow 20s scale from 1.0 to 1.1 with alternate direction) for the hero background images
+### 5. No Property Owner Info
+`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
 
-### Layout (Desktop)
+## Plan
 
-```text
-┌──────────────────────────────────────────────┐
-│  [Background Image Slideshow]                │
-│                                              │
-│       Find Your Perfect Home in Kenya        │
-│                                              │
-│     ┌──[Buy]──[Rent]──[Airbnb]──┐            │
-│     │ 🔍 Search │ County │ Type │ Search │   │
-│     └────────────────────────────┘            │
-│                                              │
-│  ● For Sale          KSh 12,500,000          │
-│  ○ ○ ● ○ ○                                   │
-└──────────────────────────────────────────────┘
-```
+### Files Changed
 
-### Layout (Mobile)
-
-```text
-┌────────────────────────┐
-│ [Background Slideshow] │
-│                        │
-│  Find Your Perfect     │
-│  Home in Kenya         │
-│                        │
-│  [Buy][Rent][Airbnb]   │
-│  ┌──────────────────┐  │
-│  │ 🔍 Search...     │  │
-│  │ County  │ Type   │  │
-│  │    [Search]       │  │
-│  └──────────────────┘  │
-│                        │
-│  ○ ○ ● ○               │
-└────────────────────────┘
-```
+| File | Change |
+|------|--------|
+| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
+| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
+| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
+| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
 
 ### Technical Details
 
-- HeroSearch already handles navigation to `/buy`, `/rent`, `/airbnb` with query params — no routing changes needed
-- Ken Burns animation uses CSS only (no JS), applied to the `<img>` element with `animation: kenBurns 20s ease-in-out infinite alternate`
-- The slide's bottom overlay is simplified to just the badge + price in a small glassmorphism strip
-- The search bar gets `backdrop-blur-md bg-card/90` for readability over any image
-- Mobile pills in Index.tsx are removed since the HeroSearch tabs replace them
+**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
+
+**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
+
+**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
+
+**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
+
+**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
 
