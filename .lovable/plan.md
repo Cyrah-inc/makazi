@@ -1,44 +1,33 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+## Plan: Add Mobile Category Tabs + UX Simplification
 
-## Issues Found
+### 1. Mobile Category Quick-Nav on Homepage
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+**`src/pages/Index.tsx`**
+- Add a horizontal row of 3 pill-style buttons (Buy, Rent, Airbnb) visible only on mobile (`md:hidden`), placed between the Navbar and HeroCarousel
+- Each links to `/buy`, `/rent`, `/airbnb` respectively with matching icons (Building, Key, Palmtree)
+- Styled as compact rounded pills with icons, using the existing brand color tokens
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+### 2. UX Simplification Suggestions
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+Based on the current codebase, here are concrete improvements to reduce complexity:
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+**a) Reduce homepage carousel overload** — The homepage currently shows up to 9 carousels (Recently Viewed, Just Added, Trending, Nearby, Exotic, Land, Urban, Family Homes, plus the hero). This is overwhelming. Consolidate to 4-5 max:
+- Keep: Hero, Just Added, Nearby, Trending
+- Remove or merge: Land/Urban/Family into a single "Browse by Type" section with horizontal chips that filter one carousel
+- Move Exotic Getaways into the Airbnb page only
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+**b) Simplify the hero carousel** — The hero takes up 65vh and shows detailed property info. On mobile, reduce to a simpler search-first hero with a prominent search bar and the category pills, rather than a full property showcase.
 
-## Plan
+**c) Reduce duplicate navigation paths** — Users currently have: top navbar links, bottom nav "Browse", the hero carousel CTAs, category pills (proposed), and the CategorySection further down. Remove the CategorySection component from the homepage since the new mobile pills + navbar already cover this.
 
-### Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
+I'll implement item 1 (mobile category tabs). Items 2a-2c are presented as recommendations for you to approve separately, since they involve larger structural changes.
 
 ### Technical Details
 
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
-
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
-
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
-
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
-
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+- New component: inline in `Index.tsx` (simple enough to not need its own file)
+- 3 `Link` components wrapped in a `div` with `flex md:hidden gap-2 px-4 py-3`
+- Each pill: `rounded-full px-4 py-2 text-sm font-medium` with icon + label
+- Uses existing color classes from the design system
 
