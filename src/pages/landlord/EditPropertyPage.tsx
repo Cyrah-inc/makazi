@@ -281,6 +281,7 @@ export default function EditPropertyPage() {
         amenities: formData.amenities,
         images: formData.images,
         rental_units: rentalUnitsJson as any,
+        sale_documents: formData.forSale ? formData.saleDocuments.filter(Boolean) : [],
       })
       .eq('id', id)
       .eq('landlord_id', user.id);
