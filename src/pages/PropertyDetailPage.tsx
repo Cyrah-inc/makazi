@@ -22,6 +22,7 @@ import {
 import { PropertyDetailSkeleton } from '@/components/skeletons/PropertyDetailSkeleton';
 import MortgageCalculator from '@/components/MortgageCalculator';
 import { PropertyReviewsSection, PropertyReviewsSummary } from '@/components/PropertyReviews';
+import { SaleDocumentsCard } from '@/components/SaleDocumentsCard';
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
