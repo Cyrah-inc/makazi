@@ -143,6 +143,13 @@ export default function EditPropertyPage() {
         })));
       }
 
+      // Load sale documents
+      const dbSaleDocs = property.sale_documents as string[] | null;
+      const saleDocsPadded: (string | null)[] = [null, null, null, null, null];
+      if (Array.isArray(dbSaleDocs)) {
+        dbSaleDocs.forEach((d, i) => { if (i < 5) saleDocsPadded[i] = d; });
+      }
+
       setFormData({
         title: property.title || '',
         description: property.description || '',
@@ -163,6 +170,7 @@ export default function EditPropertyPage() {
         longitude: property.longitude ?? null,
         amenities: property.amenities || [],
         images: property.images || [],
+        saleDocuments: saleDocsPadded,
       });
     }
   }, [property]);
