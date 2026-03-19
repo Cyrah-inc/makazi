@@ -91,6 +91,8 @@ export default function AddPropertyPage() {
     // Features
     amenities: [] as string[],
     images: [] as string[],
+    // Sale verification documents
+    saleDocuments: [null, null, null, null, null] as (string | null)[],
   });
 
   const [isMultiUnit, setIsMultiUnit] = useState(false);
