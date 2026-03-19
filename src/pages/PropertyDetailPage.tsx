@@ -504,7 +504,14 @@ const PropertyDetailPage = () => {
                     <MortgageCalculator salePrice={property.salePrice} />
                   )}
 
-                  {/* Agent Card */}
+                  {/* Sale Verification Documents */}
+                  {dbProperty && dbProperty.property_type === 'sale' && (dbProperty as any).sale_documents?.length > 0 && (
+                    <SaleDocumentsCard
+                      propertyId={dbProperty.id}
+                      saleDocuments={(dbProperty as any).sale_documents}
+                    />
+                  )}
+
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-center gap-4 mb-4">
