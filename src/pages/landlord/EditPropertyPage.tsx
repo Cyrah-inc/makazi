@@ -225,6 +225,10 @@ export default function EditPropertyPage() {
       toast({ title: 'Error', description: 'Please enter a sale price', variant: 'destructive' });
       return;
     }
+    if (formData.forSale && (!formData.saleDocuments[0] || !formData.saleDocuments[1])) {
+      toast({ title: 'Error', description: 'Please upload both the Title Deed and Land Search Certificate for sale listings', variant: 'destructive' });
+      return;
+    }
     if (formData.forRent && !isMultiUnit && !formData.monthlyRent) {
       toast({ title: 'Error', description: 'Please enter a monthly rent', variant: 'destructive' });
       return;
