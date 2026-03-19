@@ -1,44 +1,106 @@
 
 
-# Fix WhatsApp, Add Video Upload, Cover Selection, Map & Owner Info
+## Plan: Sale Document Verification, Paid Document Downloads, Enhanced Admin Preview
 
-## Issues Found
+### 1. Database Changes
 
-### 1. WhatsApp Button Blocked
-The `<a href="https://wa.me/...">` link opens inside the iframe context which blocks `api.whatsapp.com`. Fix: use `window.open()` with `onClick` instead of an anchor tag. Same fix needed for the floating mobile button.
+**New column on `properties` table:**
+- `sale_documents text[] DEFAULT '{}'::text[]` — stores paths to title deed, land search, and other verification documents uploaded by landlords
 
-### 2. No Cover Photo Selection
-Currently the first image is always the cover. Need to let landlords click any image to set it as cover (move it to index 0).
+**Migration SQL:**
+```sql
+ALTER TABLE properties ADD COLUMN sale_documents text[] DEFAULT '{}'::text[];
+```
 
-### 3. No Video Upload Support
-Need to add video upload to `PropertyImageUpload` (or a separate component), store in `property-images` bucket, and display videos in the property detail gallery. Client-side compression will use canvas-based frame reduction for lightweight optimization, with a 50MB size limit to keep things reasonable. Videos will play inline with `<video>` tag using `preload="metadata"` for fast initial load.
+No new tables needed. Documents will be stored in the existing `landlord-documents` bucket (private), keeping them inaccessible without signed URLs.
 
-### 4. Map Too Small on Mobile
-`PropertyMap` on detail page uses fixed `350px` height. Need to increase to `clamp(300px, 60vw, 500px)` and add a "Get Directions" button + "Open in Maps" button below the map (reuse pattern from `BookingLocationMap`).
+### 2. Landlord Add/Edit Property — Sale Documents Upload
 
-### 5. No Property Owner Info
-`property.landlordName` is hardcoded to `'Property Owner'`. Need to fetch the landlord's profile (name, avatar) and show verification badge in the sidebar card.
+**Files: `src/pages/landlord/AddPropertyPage.tsx`, `src/pages/landlord/EditPropertyPage.tsx`**
 
-## Plan
+When "For Sale" is checked, show a new section below the sale price input:
+- Title: "Verification Documents" with a description explaining these are required for sale listings
+- Upload fields using `SingleDocumentUpload` for:
+  - Title Deed (required)
+  - Land Search Certificate (required)  
+  - Additional Documents (optional, up to 3 more)
+- Store uploaded file paths in `formData.saleDocuments` array
+- On submit, save to the new `sale_documents` column
+- Validation: require at least title deed and land search when listing for sale
 
-### Files Changed
+### 3. Paid Document Download for Buyers (KES 1,500)
 
-| File | Change |
-|------|--------|
-| `src/components/chat/WhatsAppButton.tsx` | Replace `<a href>` with `window.open()` onClick handler |
-| `src/pages/PropertyDetailPage.tsx` | Fix floating WhatsApp to use `window.open()`; fetch landlord profile for name/avatar/verification; add directions buttons below map; increase mobile map height |
-| `src/components/PropertyImageUpload.tsx` | Add cover photo selection (click to set as cover); add video upload support with size validation |
-| `src/components/PropertyMap.tsx` | Accept `showDirections` prop; increase mobile height; add directions + open-in-maps buttons |
+**Files: `src/pages/PropertyDetailPage.tsx`, new edge function `create-document-checkout`**
 
-### Technical Details
+On the property detail page, for sale listings that have verification documents:
+- Show a card/section: "Property Verification Documents" with a lock icon
+- List document names (Title Deed, Land Search, etc.) but grayed out
+- CTA button: "Access Documents — KES 1,500"
+- Clicking triggers M-Pesa STK push (reuse existing `mpesa-stk-push` pattern) or Stripe checkout
+- On successful payment, generate signed URLs for the documents and display download links
+- Track purchases in a new `document_purchases` table
 
-**WhatsApp fix**: `window.open(`https://wa.me/...`, '_blank')` bypasses iframe blocking.
+**New table `document_purchases`:**
+```sql
+CREATE TABLE document_purchases (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  property_id uuid NOT NULL,
+  amount numeric NOT NULL DEFAULT 1500,
+  payment_method text NOT NULL DEFAULT 'mpesa',
+  payment_reference text,
+  status text NOT NULL DEFAULT 'pending',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE document_purchases ENABLE ROW LEVEL SECURITY;
+-- Users can view own purchases
+CREATE POLICY "Users can view own purchases" ON document_purchases FOR SELECT USING (auth.uid() = user_id);
+-- Users can insert own purchases
+CREATE POLICY "Users can insert purchases" ON document_purchases FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Admins can view all
+CREATE POLICY "Admins can view all purchases" ON document_purchases FOR SELECT USING (has_role(auth.uid(), 'admin'));
+```
 
-**Video upload**: Accept `video/mp4,video/webm,video/quicktime` up to 50MB. Store in same `property-images` bucket. In detail page, detect video URLs by extension and render `<video>` instead of `<img>`. Use `preload="metadata"`, `playsInline`, and lazy loading.
+**New edge function `create-document-checkout`:**
+- Accepts `property_id`, `phone_number`, `payment_method`
+- Creates a `document_purchases` record with status `pending`
+- Triggers M-Pesa STK push for KES 1,500
+- On callback, updates status to `completed`
 
-**Cover selection**: Add a "Set as Cover" button overlay on each image in the upload grid. Clicking moves that image to index 0.
+**PropertyDetailPage changes:**
+- Check if current user has a completed `document_purchases` record for this property
+- If yes: show download buttons with signed URLs
+- If no: show the payment CTA
 
-**Landlord info**: Query `profiles` table for `full_name` and `avatar_url` by `landlord_id`. Query `landlord_public_info` for verification status. Display in the existing Agent Card with avatar, name, and a verification badge.
+### 4. Enhanced Admin Property Preview Modal
 
-**Map directions**: Add Get Directions and Open in Maps buttons below the map on the property detail page (same pattern as `BookingLocationMap`). Use browser geolocation for origin.
+**File: `src/components/admin/PropertyPreviewModal.tsx`**
+
+Expand the modal significantly:
+- Change `max-w-3xl` to `max-w-5xl` for a wider view
+- Add all missing property fields:
+  - Property category badge
+  - Sale price / Monthly rent / Nightly rate (all applicable prices)
+  - Latitude/longitude coordinates
+  - Rental units breakdown (if multi-unit)
+  - Sale verification documents with signed URL previews/downloads
+  - Landlord verification status badge
+- Show ALL images in a scrollable grid (not just first 5)
+- Add a two-column layout: left for images/description, right for details/stats
+- Include the `sale_documents` section showing uploaded verification docs with preview links
+
+**Updated interface** to include new fields: `sale_price`, `monthly_rent`, `nightly_rate`, `property_category`, `latitude`, `longitude`, `rental_units`, `sale_documents`, landlord verification status.
+
+**AdminPropertiesPage.tsx** — update `fetchProperties` to also select `sale_documents`, `sale_price`, `monthly_rent`, `nightly_rate`, `latitude`, `longitude`, `rental_units` and pass them to the modal.
+
+### Summary of Files Changed
+
+1. **Migration** — add `sale_documents` column + `document_purchases` table
+2. `src/pages/landlord/AddPropertyPage.tsx` — sale documents upload section
+3. `src/pages/landlord/EditPropertyPage.tsx` — same upload section for editing
+4. `src/pages/PropertyDetailPage.tsx` — paid document access section
+5. `src/components/admin/PropertyPreviewModal.tsx` — enlarged modal with all property details
+6. `src/pages/admin/AdminPropertiesPage.tsx` — fetch and pass additional fields
+7. `src/integrations/supabase/types.ts` — auto-updated after migration
+8. New edge function: `supabase/functions/create-document-checkout/index.ts`
 
