@@ -72,15 +72,22 @@ interface PropertyWithLandlord {
   property_category: string | null;
   status: PropertyStatus;
   price: number;
+  sale_price: number | null;
+  monthly_rent: number | null;
+  nightly_rate: number | null;
   bedrooms: number;
   bathrooms: number;
   area_sqft: number | null;
+  latitude: number | null;
+  longitude: number | null;
   address: string;
   city: string;
   state: string | null;
   country: string;
   images: string[];
   amenities: string[];
+  rental_units: any;
+  sale_documents: string[];
   views_count: number;
   created_at: string;
   landlord_name: string | null;
@@ -181,6 +188,7 @@ export default function AdminPropertiesPage() {
           status: property.status as PropertyStatus,
           images: property.images || [],
           amenities: property.amenities || [],
+          sale_documents: (property as any).sale_documents || [],
           landlord_name: landlord?.full_name || null,
           landlord_email: landlord?.email || null,
           favorites_count: favoritesCount[property.id] || 0,

@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Home, Building, Landmark, Trees, Briefcase, Plus, Trash2, Sparkles, Lock, Eye } from 'lucide-react';
+import { Loader2, ArrowLeft, Home, Building, Landmark, Trees, Briefcase, Plus, Trash2, Sparkles, Lock, Eye, FileCheck } from 'lucide-react';
+import { SingleDocumentUpload } from '@/components/landlord/SingleDocumentUpload';
 import { Switch } from '@/components/ui/switch';
 import { Link } from 'react-router-dom';
 import { PropertyImageUpload } from '@/components/PropertyImageUpload';
@@ -69,27 +70,23 @@ export default function EditPropertyPage() {
     title: '',
     description: '',
     property_category: 'apartment',
-    // Listing purposes
     forSale: false,
     forRent: false,
     forAirbnb: false,
-    // Individual prices
     salePrice: '',
     monthlyRent: '',
     nightlyRate: '',
-    // Details
     bedrooms: '1',
     bathrooms: '1',
     area_sqft: '',
-    // Location
     address: '',
     city: '',
     state: '',
     latitude: null as number | null,
     longitude: null as number | null,
-    // Features
     amenities: [] as string[],
     images: [] as string[],
+    saleDocuments: [null, null, null, null, null] as (string | null)[],
   });
 
   const [isMultiUnit, setIsMultiUnit] = useState(false);
@@ -146,6 +143,13 @@ export default function EditPropertyPage() {
         })));
       }
 
+      // Load sale documents
+      const dbSaleDocs = property.sale_documents as string[] | null;
+      const saleDocsPadded: (string | null)[] = [null, null, null, null, null];
+      if (Array.isArray(dbSaleDocs)) {
+        dbSaleDocs.forEach((d, i) => { if (i < 5) saleDocsPadded[i] = d; });
+      }
+
       setFormData({
         title: property.title || '',
         description: property.description || '',
@@ -166,6 +170,7 @@ export default function EditPropertyPage() {
         longitude: property.longitude ?? null,
         amenities: property.amenities || [],
         images: property.images || [],
+        saleDocuments: saleDocsPadded,
       });
     }
   }, [property]);
@@ -220,6 +225,10 @@ export default function EditPropertyPage() {
       toast({ title: 'Error', description: 'Please enter a sale price', variant: 'destructive' });
       return;
     }
+    if (formData.forSale && (!formData.saleDocuments[0] || !formData.saleDocuments[1])) {
+      toast({ title: 'Error', description: 'Please upload both the Title Deed and Land Search Certificate for sale listings', variant: 'destructive' });
+      return;
+    }
     if (formData.forRent && !isMultiUnit && !formData.monthlyRent) {
       toast({ title: 'Error', description: 'Please enter a monthly rent', variant: 'destructive' });
       return;
@@ -272,6 +281,7 @@ export default function EditPropertyPage() {
         amenities: formData.amenities,
         images: formData.images,
         rental_units: rentalUnitsJson as any,
+        sale_documents: formData.forSale ? formData.saleDocuments.filter(Boolean) : [],
       })
       .eq('id', id)
       .eq('landlord_id', user.id);
@@ -535,15 +545,90 @@ export default function EditPropertyPage() {
                   </div>
                 </div>
                 {formData.forSale && (
-                  <div className="mt-4 ml-7">
-                    <Label htmlFor="salePrice">Sale Price (KES) *</Label>
-                    <Input
-                      id="salePrice"
-                      type="number"
-                      value={formData.salePrice}
-                      onChange={(e) => setFormData(prev => ({ ...prev, salePrice: e.target.value }))}
-                      placeholder="e.g., 15000000"
-                    />
+                  <div className="mt-4 ml-0 sm:ml-7 space-y-4">
+                    <div>
+                      <Label htmlFor="salePrice">Sale Price (KES) *</Label>
+                      <Input
+                        id="salePrice"
+                        type="number"
+                        value={formData.salePrice}
+                        onChange={(e) => setFormData(prev => ({ ...prev, salePrice: e.target.value }))}
+                        placeholder="e.g., 15000000"
+                      />
+                    </div>
+
+                    {/* Verification Documents */}
+                    <div className="border border-border rounded-lg p-4 bg-muted/30">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FileCheck className="w-4 h-4 text-primary" />
+                        <Label className="text-base font-medium">Verification Documents</Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Upload property ownership documents to verify your listing. These are required for sale listings.
+                      </p>
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Title Deed *</Label>
+                          <SingleDocumentUpload
+                            label="Upload Title Deed"
+                            value={formData.saleDocuments[0]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[0] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Land Search Certificate *</Label>
+                          <SingleDocumentUpload
+                            label="Upload Land Search Certificate"
+                            value={formData.saleDocuments[1]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[1] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Additional Document (optional)</Label>
+                          <SingleDocumentUpload
+                            label="Upload Additional Document"
+                            value={formData.saleDocuments[2]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[2] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Additional Document (optional)</Label>
+                          <SingleDocumentUpload
+                            label="Upload Additional Document"
+                            value={formData.saleDocuments[3]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[3] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Additional Document (optional)</Label>
+                          <SingleDocumentUpload
+                            label="Upload Additional Document"
+                            value={formData.saleDocuments[4]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[4] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

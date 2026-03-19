@@ -168,6 +168,47 @@ export type Database = {
           },
         ]
       }
+      document_purchases: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          payment_method: string
+          payment_reference: string | null
+          property_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          payment_reference?: string | null
+          property_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          payment_reference?: string | null
+          property_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_purchases_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -516,6 +557,7 @@ export type Database = {
           property_category: string | null
           property_type: Database["public"]["Enums"]["property_type"]
           rental_units: Json | null
+          sale_documents: string[] | null
           sale_price: number | null
           state: string | null
           status: Database["public"]["Enums"]["property_status"]
@@ -544,6 +586,7 @@ export type Database = {
           property_category?: string | null
           property_type?: Database["public"]["Enums"]["property_type"]
           rental_units?: Json | null
+          sale_documents?: string[] | null
           sale_price?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["property_status"]
@@ -572,6 +615,7 @@ export type Database = {
           property_category?: string | null
           property_type?: Database["public"]["Enums"]["property_type"]
           rental_units?: Json | null
+          sale_documents?: string[] | null
           sale_price?: number | null
           state?: string | null
           status?: Database["public"]["Enums"]["property_status"]

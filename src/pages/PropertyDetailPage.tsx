@@ -22,6 +22,7 @@ import {
 import { PropertyDetailSkeleton } from '@/components/skeletons/PropertyDetailSkeleton';
 import MortgageCalculator from '@/components/MortgageCalculator';
 import { PropertyReviewsSection, PropertyReviewsSummary } from '@/components/PropertyReviews';
+import { SaleDocumentsCard } from '@/components/SaleDocumentsCard';
 import { cn } from '@/lib/utils';
 import { getOptimizedImageUrl, IMAGE_SIZES } from '@/lib/imageUtils';
 
@@ -68,7 +69,7 @@ const PropertyDetailPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('properties')
-        .select('id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,landlord_id,latitude,longitude,created_at,updated_at,status,rental_units')
+        .select('id,title,description,address,city,state,country,price,sale_price,monthly_rent,nightly_rate,property_type,property_category,bedrooms,bathrooms,area_sqft,images,amenities,views_count,landlord_id,latitude,longitude,created_at,updated_at,status,rental_units,sale_documents')
         .eq('id', id)
         .eq('status', 'approved')
         .maybeSingle();
@@ -503,7 +504,14 @@ const PropertyDetailPage = () => {
                     <MortgageCalculator salePrice={property.salePrice} />
                   )}
 
-                  {/* Agent Card */}
+                  {/* Sale Verification Documents */}
+                  {dbProperty && dbProperty.property_type === 'sale' && (dbProperty as any).sale_documents?.length > 0 && (
+                    <SaleDocumentsCard
+                      propertyId={dbProperty.id}
+                      saleDocuments={(dbProperty as any).sale_documents}
+                    />
+                  )}
+
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex items-center gap-4 mb-4">
