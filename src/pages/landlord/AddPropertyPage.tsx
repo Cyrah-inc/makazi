@@ -243,6 +243,7 @@ export default function AddPropertyPage() {
       amenities: formData.amenities,
       images: formData.images,
       rental_units: rentalUnitsJson as any,
+      sale_documents: formData.forSale ? formData.saleDocuments.filter(Boolean) : [],
       status: 'pending',
     });
 
