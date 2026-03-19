@@ -496,15 +496,90 @@ export default function AddPropertyPage() {
                   </div>
                 </div>
                 {formData.forSale && (
-                  <div className="mt-4 ml-0 sm:ml-7">
-                    <Label htmlFor="salePrice">Sale Price (KES) *</Label>
-                    <Input
-                      id="salePrice"
-                      type="number"
-                      value={formData.salePrice}
-                      onChange={(e) => setFormData(prev => ({ ...prev, salePrice: e.target.value }))}
-                      placeholder="e.g., 15000000"
-                    />
+                  <div className="mt-4 ml-0 sm:ml-7 space-y-4">
+                    <div>
+                      <Label htmlFor="salePrice">Sale Price (KES) *</Label>
+                      <Input
+                        id="salePrice"
+                        type="number"
+                        value={formData.salePrice}
+                        onChange={(e) => setFormData(prev => ({ ...prev, salePrice: e.target.value }))}
+                        placeholder="e.g., 15000000"
+                      />
+                    </div>
+
+                    {/* Verification Documents */}
+                    <div className="border border-border rounded-lg p-4 bg-muted/30">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FileCheck className="w-4 h-4 text-primary" />
+                        <Label className="text-base font-medium">Verification Documents</Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Upload property ownership documents to verify your listing. These are required for sale listings and will be reviewed by our admin team.
+                      </p>
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Title Deed *</Label>
+                          <SingleDocumentUpload
+                            label="Upload Title Deed"
+                            value={formData.saleDocuments[0]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[0] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Land Search Certificate *</Label>
+                          <SingleDocumentUpload
+                            label="Upload Land Search Certificate"
+                            value={formData.saleDocuments[1]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[1] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Additional Document (optional)</Label>
+                          <SingleDocumentUpload
+                            label="Upload Additional Document"
+                            value={formData.saleDocuments[2]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[2] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Additional Document (optional)</Label>
+                          <SingleDocumentUpload
+                            label="Upload Additional Document"
+                            value={formData.saleDocuments[3]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[3] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Additional Document (optional)</Label>
+                          <SingleDocumentUpload
+                            label="Upload Additional Document"
+                            value={formData.saleDocuments[4]}
+                            onChange={(url) => setFormData(prev => {
+                              const docs = [...prev.saleDocuments];
+                              docs[4] = url;
+                              return { ...prev, saleDocuments: docs };
+                            })}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
