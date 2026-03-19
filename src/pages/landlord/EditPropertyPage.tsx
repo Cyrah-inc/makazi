@@ -70,27 +70,23 @@ export default function EditPropertyPage() {
     title: '',
     description: '',
     property_category: 'apartment',
-    // Listing purposes
     forSale: false,
     forRent: false,
     forAirbnb: false,
-    // Individual prices
     salePrice: '',
     monthlyRent: '',
     nightlyRate: '',
-    // Details
     bedrooms: '1',
     bathrooms: '1',
     area_sqft: '',
-    // Location
     address: '',
     city: '',
     state: '',
     latitude: null as number | null,
     longitude: null as number | null,
-    // Features
     amenities: [] as string[],
     images: [] as string[],
+    saleDocuments: [null, null, null, null, null] as (string | null)[],
   });
 
   const [isMultiUnit, setIsMultiUnit] = useState(false);
