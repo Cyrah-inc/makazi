@@ -11,6 +11,8 @@ import { InlineChatInput } from '@/components/chat/InlineChatInput';
 import { WhatsAppButton } from '@/components/chat/WhatsAppButton';
 import { PropertyMap } from '@/components/PropertyMap';
 import { BookingDialog } from '@/components/booking/BookingDialog';
+import { RentalBookingDialog } from '@/components/booking/RentalBookingDialog';
+import { LazySection } from '@/components/LazySection';
 import { formatFullPrice, formatRelativeDate } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
