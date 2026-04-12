@@ -3,7 +3,7 @@ import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Heart, MapPin, Bed, Bath, Maximize, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatPrice } from '@/lib/formatters';
+import { formatPrice, formatPriceRange } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';
@@ -65,6 +65,17 @@ const PropertyCard = ({
       return { price: formatPrice(property.salePrice), label: '' };
     }
     if (property.purposes.includes('rent') && property.monthlyRent) {
+      // Show price range for multi-unit properties
+      if (property.rentalUnits && property.rentalUnits.length > 1) {
+        const rents = property.rentalUnits.map((u: any) => Number(u.rent)).filter((r: number) => r > 0);
+        if (rents.length > 1) {
+          const min = Math.min(...rents);
+          const max = Math.max(...rents);
+          if (min !== max) {
+            return { price: formatPriceRange(min, max), label: '/mo' };
+          }
+        }
+      }
       return { price: formatPrice(property.monthlyRent), label: '/mo' };
     }
     if (property.purposes.includes('airbnb') && property.nightlyRate) {

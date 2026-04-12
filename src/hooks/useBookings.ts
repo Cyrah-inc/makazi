@@ -191,9 +191,12 @@ export function useCreateBooking() {
       nightlyRate: number;
       paymentMethod: 'mpesa' | 'stripe';
       guestPhone?: string;
+      bookingType?: 'airbnb' | 'rental';
     }) => {
+      const bookingType = params.bookingType || 'airbnb';
+      const feeRate = bookingType === 'rental' ? 0.30 : SERVICE_FEE_RATE;
       const totalAmount = params.nights * params.nightlyRate;
-      const serviceFee = Math.round(totalAmount * SERVICE_FEE_RATE);
+      const serviceFee = Math.round(totalAmount * feeRate);
 
       const { data, error } = await supabase
         .from('bookings')
@@ -210,6 +213,7 @@ export function useCreateBooking() {
           payment_method: params.paymentMethod,
           guest_phone: params.guestPhone || null,
           status: 'pending_payment',
+          booking_type: bookingType,
         })
         .select()
         .single();

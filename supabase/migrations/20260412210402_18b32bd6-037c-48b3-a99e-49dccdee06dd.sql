@@ -1,0 +1,1 @@
+ALTER TABLE public.bookings ADD COLUMN booking_type text NOT NULL DEFAULT 'airbnb';
