@@ -3,7 +3,7 @@ import { Property } from '@/types/property';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Heart, MapPin, Bed, Bath, Maximize, Star, ImageOff, ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatPrice } from '@/lib/formatters';
+import { formatPrice, formatPriceRange } from '@/lib/formatters';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useFavoritesContext } from '@/contexts/FavoritesContext';

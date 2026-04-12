@@ -411,23 +411,25 @@ const PropertyDetailPage = () => {
 
                 {/* Location Map */}
                 {property.latitude && property.longitude && (
-                  <div>
-                    <h2 className="font-heading text-xl font-semibold mb-4">Location</h2>
-                    <div className="w-[calc(100%+2rem)] -mx-4 sm:w-full sm:mx-0">
-                      <PropertyMap
-                        latitude={property.latitude}
-                        longitude={property.longitude}
-                        title={property.title}
-                        address={property.address}
-                        height="clamp(400px, 85vw, 600px)"
-                        showDirections
-                      />
+                  <LazySection rootMargin="300px" minHeight="400px">
+                    <div>
+                      <h2 className="font-heading text-xl font-semibold mb-4">Location</h2>
+                      <div className="w-[calc(100%+2rem)] -mx-4 sm:w-full sm:mx-0">
+                        <PropertyMap
+                          latitude={property.latitude}
+                          longitude={property.longitude}
+                          title={property.title}
+                          address={property.address}
+                          height="clamp(400px, 85vw, 600px)"
+                          showDirections
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {property.address}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {property.address}
-                    </p>
-                  </div>
+                  </LazySection>
                 )}
               </div>
 
@@ -491,9 +493,22 @@ const PropertyDetailPage = () => {
                           >
                             <Button variant="accent" size="lg" className="w-full gap-2">
                               <Calendar className="h-5 w-5" />
-                              Book Now
+                              Book Stay
                             </Button>
                           </BookingDialog>
+                        )}
+                        {property.purposes.includes('rent') && property.monthlyRent && (
+                          <RentalBookingDialog
+                            propertyId={property.id}
+                            landlordId={property.landlordId}
+                            monthlyRent={property.monthlyRent}
+                            propertyTitle={property.title}
+                          >
+                            <Button variant="default" size="lg" className="w-full gap-2">
+                              <Calendar className="h-5 w-5" />
+                              Reserve Now
+                            </Button>
+                          </RentalBookingDialog>
                         )}
                       </div>
                     </CardContent>
