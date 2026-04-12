@@ -10,6 +10,11 @@ export const formatPrice = (price: number): string => {
   return `KES ${price.toLocaleString()}`;
 };
 
+export const formatPriceRange = (min: number, max: number): string => {
+  if (min === max) return formatPrice(min);
+  return `${formatPrice(min)} - ${formatPrice(max)}`;
+};
+
 export const formatCurrency = (price: number): string => {
   return `KES ${price.toLocaleString()}`;
 };
