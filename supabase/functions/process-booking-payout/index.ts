@@ -77,8 +77,13 @@ serve(async (req) => {
       });
     }
 
-    // Calculate payout amount (total minus service fee)
-    const payoutAmount = booking.total_amount - booking.service_fee;
+    // Calculate payout amount based on booking type
+    // Rental bookings: 70% to landlord, 30% platform fee
+    // Airbnb bookings: total minus service_fee (90% to landlord)
+    const bookingType = booking.booking_type || 'airbnb';
+    const payoutAmount = bookingType === 'rental'
+      ? Math.round(booking.total_amount * 0.70)
+      : booking.total_amount - booking.service_fee;
     const simulatedConversationId = `B2C-SIM-${Date.now()}`;
     const simulatedReceipt = `RCPT-SIM-${Date.now()}`;
 
