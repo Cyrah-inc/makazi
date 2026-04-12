@@ -453,11 +453,23 @@ const PropertyDetailPage = () => {
                       {property.monthlyRent && (
                         <div className="mb-4">
                           <div className="text-sm text-muted-foreground mb-1">Monthly Rent</div>
-                          <div className="text-3xl font-heading font-bold text-rent">
-                            {formatFullPrice(property.monthlyRent)}
-                            <span className="text-base font-normal text-muted-foreground">/month</span>
-                          </div>
+                          {property.rentalUnits && property.rentalUnits.length > 1 ? (
+                            <div className="space-y-1">
+                              {property.rentalUnits.map((unit: any, i: number) => (
+                                <div key={i} className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">{unit.type} ({unit.count} units)</span>
+                                  <span className="font-semibold">{formatFullPrice(unit.rent)}/mo</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-3xl font-heading font-bold text-rent">
+                              {formatFullPrice(property.monthlyRent)}
+                              <span className="text-base font-normal text-muted-foreground">/month</span>
+                            </div>
+                          )}
                         </div>
+                      )}
                       )}
                       
                       {property.nightlyRate && (
