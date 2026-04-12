@@ -74,7 +74,6 @@ export function RentalBookingDialog({
         await mpesaStkPush.mutateAsync({
           bookingId: booking.id,
           phoneNumber: phone,
-          amount: total,
         });
         toast({ title: 'M-Pesa prompt sent', description: 'Enter your PIN on your phone to complete payment.' });
       }
@@ -154,9 +153,9 @@ export function RentalBookingDialog({
         {step === 'payment' && (
           <div className="space-y-4">
             <PaymentMethodSelector
-              selectedMethod={paymentMethod}
-              onMethodSelect={setPaymentMethod}
-              mpesaPhone={phone}
+              selected={paymentMethod}
+              onSelect={setPaymentMethod}
+              phoneNumber={phone}
               onPhoneChange={setPhone}
             />
             <div className="flex gap-2">
