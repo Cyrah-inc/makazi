@@ -469,8 +469,7 @@ const PropertyDetailPage = () => {
                             </div>
                           )}
                         </div>
-                      )}
-                      )}
+                      )
                       
                       {property.nightlyRate && (
                         <div className="mb-4">
