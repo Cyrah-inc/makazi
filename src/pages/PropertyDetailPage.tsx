@@ -533,10 +533,10 @@ const PropertyDetailPage = () => {
                   )}
 
                   {/* Sale Verification Documents */}
-                  {dbProperty && dbProperty.property_type === 'sale' && (dbProperty as any).sale_documents?.length > 0 && (
+                  {dbProperty && dbProperty.property_type === 'sale' && (
                     <SaleDocumentsCard
                       propertyId={dbProperty.id}
-                      saleDocuments={(dbProperty as any).sale_documents}
+                      saleDocuments={(dbProperty as any).sale_documents || []}
                     />
                   )}
 
