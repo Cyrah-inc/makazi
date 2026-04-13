@@ -25,6 +25,8 @@ export function SaleDocumentsCard({ propertyId, saleDocuments }: SaleDocumentsCa
   const [isProcessing, setIsProcessing] = useState(false);
   const [signedUrls, setSignedUrls] = useState<Record<number, string>>({});
 
+  const hasDocuments = saleDocuments.length > 0;
+
   // Check if user has a completed purchase
   const { data: hasPurchased, isLoading: checkingPurchase } = useQuery({
     queryKey: ['document-purchase', propertyId, user?.id],
@@ -38,7 +40,7 @@ export function SaleDocumentsCard({ propertyId, saleDocuments }: SaleDocumentsCa
         .maybeSingle();
       return !!data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && hasDocuments,
   });
 
   // Generate signed URLs when purchased
@@ -55,14 +57,13 @@ export function SaleDocumentsCard({ propertyId, saleDocuments }: SaleDocumentsCa
     setSignedUrls(urls);
   };
 
-  // Load URLs when purchased
   useQuery({
     queryKey: ['sale-doc-urls', propertyId],
     queryFn: async () => {
       await loadSignedUrls();
       return true;
     },
-    enabled: !!hasPurchased && saleDocuments.length > 0,
+    enabled: !!hasPurchased && hasDocuments,
   });
 
   const handlePurchase = async () => {
@@ -94,7 +95,6 @@ export function SaleDocumentsCard({ propertyId, saleDocuments }: SaleDocumentsCa
         description: 'Enter your M-Pesa PIN to complete the payment of KES 1,500',
       });
 
-      // Poll for completion
       const purchaseId = data.purchase_id;
       let attempts = 0;
       const poll = setInterval(async () => {
@@ -126,11 +126,9 @@ export function SaleDocumentsCard({ propertyId, saleDocuments }: SaleDocumentsCa
     }
   };
 
-  const getFileName = (path: string, index: number) => {
+  const getFileName = (_path: string, index: number) => {
     return DOC_LABELS[index] || `Document ${index + 1}`;
   };
-
-  const hasDocuments = saleDocuments.length > 0;
 
   return (
     <Card>
@@ -143,78 +141,88 @@ export function SaleDocumentsCard({ propertyId, saleDocuments }: SaleDocumentsCa
           Access verified property documents including the title deed and land search certificate to confirm ownership and legitimacy.
         </p>
 
-        {/* Document list */}
-        <div className="space-y-2 mb-4">
-          {saleDocuments.map((doc, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center gap-3">
-                <FileText className={`w-5 h-5 ${hasPurchased ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span className={`text-sm font-medium ${hasPurchased ? '' : 'text-muted-foreground'}`}>
-                  {getFileName(doc, idx)}
-                </span>
-              </div>
-              {hasPurchased && signedUrls[idx] ? (
-                <a href={signedUrls[idx]} target="_blank" rel="noopener noreferrer" download>
-                  <Button variant="ghost" size="sm" className="gap-1.5">
-                    <Download className="w-4 h-4" />
-                    Download
-                  </Button>
-                </a>
-              ) : (
-                <Badge variant="secondary" className="text-xs">
-                  <Lock className="w-3 h-3 mr-1" />
-                  Locked
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {checkingPurchase ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : hasPurchased ? (
-          <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 p-3 rounded-lg">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>You have access to all verification documents</span>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
-              <p className="text-sm font-medium mb-1">Access all documents for KES 1,500</p>
-              <p className="text-xs text-muted-foreground">
-                One-time payment via M-Pesa. Only serious buyers should proceed.
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="doc-phone" className="text-sm">M-Pesa Phone Number</Label>
-              <div className="flex gap-2 mt-1">
-                <div className="relative flex-1">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="doc-phone"
-                    type="tel"
-                    placeholder="0712345678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="pl-9"
-                    disabled={isProcessing}
-                  />
-                </div>
-                <Button
-                  onClick={handlePurchase}
-                  disabled={isProcessing || !phone}
-                  className="shrink-0"
-                >
-                  {isProcessing ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Processing...</>
+        {hasDocuments ? (
+          <>
+            <div className="space-y-2 mb-4">
+              {saleDocuments.map((doc, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <FileText className={`w-5 h-5 ${hasPurchased ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className={`text-sm font-medium ${hasPurchased ? '' : 'text-muted-foreground'}`}>
+                      {getFileName(doc, idx)}
+                    </span>
+                  </div>
+                  {hasPurchased && signedUrls[idx] ? (
+                    <a href={signedUrls[idx]} target="_blank" rel="noopener noreferrer" download>
+                      <Button variant="ghost" size="sm" className="gap-1.5">
+                        <Download className="w-4 h-4" />
+                        Download
+                      </Button>
+                    </a>
                   ) : (
-                    'Pay KES 1,500'
+                    <Badge variant="secondary" className="text-xs">
+                      <Lock className="w-3 h-3 mr-1" />
+                      Locked
+                    </Badge>
                   )}
-                </Button>
-              </div>
+                </div>
+              ))}
             </div>
+
+            {checkingPurchase ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : hasPurchased ? (
+              <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 p-3 rounded-lg">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>You have access to all verification documents</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
+                  <p className="text-sm font-medium mb-1">Access all documents for KES 1,500</p>
+                  <p className="text-xs text-muted-foreground">
+                    One-time payment via M-Pesa. Only serious buyers should proceed.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="doc-phone" className="text-sm">M-Pesa Phone Number</Label>
+                  <div className="flex gap-2 mt-1">
+                    <div className="relative flex-1">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="doc-phone"
+                        type="tel"
+                        placeholder="0712345678"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="pl-9"
+                        disabled={isProcessing}
+                      />
+                    </div>
+                    <Button
+                      onClick={handlePurchase}
+                      disabled={isProcessing || !phone}
+                      className="shrink-0"
+                    >
+                      {isProcessing ? (
+                        <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Processing...</>
+                      ) : (
+                        'Pay KES 1,500'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center gap-3 p-4 rounded-lg border border-dashed border-border bg-muted/20">
+            <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              The landlord has not yet uploaded verification documents for this property. Documents such as the title deed and land search certificate will appear here once uploaded.
+            </p>
           </div>
         )}
       </CardContent>
