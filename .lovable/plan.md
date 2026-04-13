@@ -1,29 +1,25 @@
 
 
-## Implemented Features
+## Plan: Show Sale Documents Section on All Buy Listings
 
-### 1. Sale Document Verification & Paid Downloads (Completed)
-- Landlords upload Title Deed + Land Search for sale listings
-- Buyers pay KES 1,500 via M-Pesa to access documents
-- Enhanced admin property preview modal with full details
+### Problem
+The `SaleDocumentsCard` only renders when `sale_documents` has entries. Since no landlords have uploaded documents yet, the card never appears on any buy listing. Buyers don't know this feature exists.
 
-### 2. Rental Booking System with 70/30 Split (Completed)
-- `RentalBookingDialog` for reserving rental properties (1-12 months)
-- 30% platform fee on rental bookings (vs 10% for Airbnb)
-- `booking_type` column distinguishes `airbnb` vs `rental`
-- Payout edge function applies correct split per booking type
+### Solution
+Show the `SaleDocumentsCard` on ALL sale/buy property listings, regardless of whether documents have been uploaded. When no documents exist, display a message like "Verification documents have not been uploaded yet" instead of hiding the section entirely.
 
-### 3. Centralized Payment Structure (Completed)
-- `src/types/payments.ts` — single source of truth for all fees:
-  - Airbnb commission: 10%
-  - Rental commission: 30%
-  - Landlord subscription: KES 2,000/month
-  - Document access fee: KES 1,500
+### Changes
 
-### 4. Multi-Unit Rental Price Display (Completed)
-- PropertyCard shows price range (e.g., "KES 8K - 15K/mo") for multi-unit properties
-- PropertyDetailPage sidebar shows per-unit-type breakdown
+**`src/pages/PropertyDetailPage.tsx`**
+- Remove the `sale_documents?.length > 0` condition on line 536 so the card renders for all sale properties
 
-### 5. Performance Optimizations (Completed)
-- PropertyMap lazy-loaded via `LazySection` (defers Google Maps SDK)
-- RentPage carousels wrapped in `LazySection` (defers below-fold queries)
+**`src/components/SaleDocumentsCard.tsx`**
+- Remove the early `if (saleDocuments.length === 0) return null` guard
+- When no documents exist, show an informational state: "The landlord has not yet uploaded verification documents for this property. Documents such as title deed and land search certificate will appear here once uploaded."
+- Keep the existing paid-download flow for when documents ARE present
+
+### Technical Details
+- Line 536 condition changes from `dbProperty.property_type === 'sale' && (dbProperty as any).sale_documents?.length > 0` to just `dbProperty.property_type === 'sale'`
+- Pass `saleDocuments={(dbProperty as any).sale_documents || []}` to handle null
+- In `SaleDocumentsCard`, replace the `return null` with an empty-state UI showing a shield/info icon and explanatory text
+
