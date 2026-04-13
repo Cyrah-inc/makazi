@@ -130,7 +130,7 @@ export function SaleDocumentsCard({ propertyId, saleDocuments }: SaleDocumentsCa
     return DOC_LABELS[index] || `Document ${index + 1}`;
   };
 
-  if (saleDocuments.length === 0) return null;
+  const hasDocuments = saleDocuments.length > 0;
 
   return (
     <Card>
