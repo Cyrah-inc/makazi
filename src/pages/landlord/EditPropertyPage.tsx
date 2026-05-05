@@ -225,8 +225,8 @@ export default function EditPropertyPage() {
       toast({ title: 'Error', description: 'Please enter a sale price', variant: 'destructive' });
       return;
     }
-    if (formData.forSale && (!formData.saleDocuments[0] || !formData.saleDocuments[1])) {
-      toast({ title: 'Error', description: 'Please upload both the Title Deed and Land Search Certificate for sale listings', variant: 'destructive' });
+    if (formData.forSale && !formData.saleDocuments[0]) {
+      toast({ title: 'Error', description: 'Please upload the Title Deed for sale listings', variant: 'destructive' });
       return;
     }
     if (formData.forRent && !isMultiUnit && !formData.monthlyRent) {
@@ -580,7 +580,7 @@ export default function EditPropertyPage() {
                           />
                         </div>
                         <div>
-                          <Label className="text-sm font-medium">Land Search Certificate *</Label>
+                          <Label className="text-sm font-medium">Land Search Certificate (optional)</Label>
                           <SingleDocumentUpload
                             label="Upload Land Search Certificate"
                             value={formData.saleDocuments[1]}
