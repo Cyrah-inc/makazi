@@ -14,19 +14,18 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!openaiKey) {
-      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
+    if (!lovableApiKey) {
+      return new Response(JSON.stringify({ error: 'AI service is not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+      return new Response(JSON.stringify({ error: 'Please sign in to use AI descriptions' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -38,13 +37,12 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await anonClient.auth.getUser();
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: 'Please sign in to use AI descriptions' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Check subscription server-side
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
     const { data: sub } = await adminClient
       .from('subscriptions')
@@ -54,7 +52,7 @@ Deno.serve(async (req) => {
 
     const hasActiveSub = sub?.status === 'active' && sub?.expires_at && new Date(sub.expires_at) > new Date();
     if (!hasActiveSub) {
-      return new Response(JSON.stringify({ error: 'Active subscription required to use AI descriptions' }), {
+      return new Response(JSON.stringify({ error: 'An active Makazi Pro subscription is required to use AI descriptions' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -67,9 +65,7 @@ Deno.serve(async (req) => {
       friendly: 'Use a warm, approachable tone.',
       luxury: 'Use a refined, elegant tone.',
     };
-
     const toneGuide = toneInstructions[tone] || toneInstructions.professional;
-
     const customInstruction = customPrompt
       ? `\n\nThe landlord's specific vision: "${customPrompt}". Incorporate this naturally.`
       : '';
@@ -98,33 +94,43 @@ Rules:
 
 Write a single captivating paragraph description for this property.`;
 
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiKey}`,
+        Authorization: `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 500,
-        temperature: 0.7,
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errText = await openaiResponse.text();
-      console.error('OpenAI error:', openaiResponse.status, errText);
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error('Lovable AI error:', aiResponse.status, errText);
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: 'Too many requests. Please wait a moment and try again.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add credits in Lovable workspace settings.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       return new Response(JSON.stringify({ error: 'Failed to generate description. Please try again.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const result = await openaiResponse.json();
+    const result = await aiResponse.json();
     const description = result.choices?.[0]?.message?.content?.trim() || '';
 
     return new Response(JSON.stringify({ description }), {
