@@ -16,14 +16,13 @@ serve(async (req) => {
   }
 
   try {
-    // Optional secret validation
     const callbackSecret = Deno.env.get('MPESA_CALLBACK_SECRET');
-    if (callbackSecret) {
-      const url = new URL(req.url);
-      const secret = url.searchParams.get('secret');
-      if (secret !== callbackSecret) {
-        return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: 'Unauthorized' }), { status: 401, headers: corsHeaders });
-      }
+    if (!callbackSecret) {
+      return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: 'Callback secret not configured' }), { status: 503, headers: corsHeaders });
+    }
+    const url = new URL(req.url);
+    if (url.searchParams.get('secret') !== callbackSecret) {
+      return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: 'Unauthorized' }), { status: 401, headers: corsHeaders });
     }
 
     const body = await req.json();

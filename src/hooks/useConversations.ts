@@ -43,7 +43,7 @@ export const useConversations = () => {
 
       // Parallel fetch profiles, properties, unread counts
       const [profilesRes, propertiesRes, unreadRes] = await Promise.all([
-        supabase.rpc('get_public_profiles', { user_ids: Array.from(otherUserIds) }) as unknown as { data: { user_id: string; full_name: string; avatar_url: string; email: string }[] | null },
+        supabase.rpc('get_public_profiles', { user_ids: Array.from(otherUserIds) }) as unknown as { data: { user_id: string; full_name: string; avatar_url: string }[] | null },
         propertyIds.size > 0
           ? supabase.from('properties').select('id, title, images, price, property_type, city').in('id', Array.from(propertyIds))
           : Promise.resolve({ data: [] }),

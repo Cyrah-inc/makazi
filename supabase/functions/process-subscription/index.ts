@@ -73,18 +73,19 @@ Deno.serve(async (req) => {
 
     console.log(`Creating subscription: method=${payment_method}, ref=${paymentRef}, expires=${expiresAt.toISOString()}`);
 
-    // Upsert subscription
+    // SECURITY: Do NOT mark as active here — payment must be verified by the
+    // M-Pesa callback or Stripe webhook before activation. Insert as pending only.
     const { data: sub, error: subError } = await adminClient
       .from('subscriptions')
       .upsert({
         user_id: user.id,
-        status: 'active',
+        status: 'pending',
         plan: 'basic',
         amount: 2000,
         payment_method,
         payment_reference: paymentRef,
-        starts_at: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
+        starts_at: null,
+        expires_at: null,
       }, {
         onConflict: 'user_id',
       })

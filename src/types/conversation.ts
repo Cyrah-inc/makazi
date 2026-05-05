@@ -11,7 +11,7 @@ export interface Conversation {
     user_id: string;
     full_name: string | null;
     avatar_url: string | null;
-    email: string | null;
+    email?: string | null;
   };
   property?: {
     id: string;

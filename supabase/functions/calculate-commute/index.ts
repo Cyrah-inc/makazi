@@ -68,9 +68,39 @@ serve(async (req) => {
 
     const { destination, mode, properties }: CommuteRequest = await req.json();
 
-    if (!destination || !properties || properties.length === 0) {
+    if (!destination || typeof destination !== 'string' || destination.trim().length === 0 || destination.length > 300) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: destination, properties' }),
+        JSON.stringify({ error: 'Invalid destination' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!Array.isArray(properties) || properties.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Missing properties' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const MAX_PROPERTIES = 100;
+    if (properties.length > MAX_PROPERTIES) {
+      return new Response(
+        JSON.stringify({ error: `Maximum ${MAX_PROPERTIES} properties allowed per request` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    for (const p of properties) {
+      if (
+        typeof p.latitude !== 'number' || typeof p.longitude !== 'number' ||
+        p.latitude < -90 || p.latitude > 90 || p.longitude < -180 || p.longitude > 180
+      ) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid coordinates' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    if (!['driving', 'transit', 'walking'].includes(mode)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid mode' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
