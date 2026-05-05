@@ -16,18 +16,21 @@ serve(async (req) => {
       return new Response('Method not allowed', { status: 405 });
     }
 
-    // Optional: verify shared secret if configured
     const callbackSecret = Deno.env.get('MPESA_CALLBACK_SECRET');
-    if (callbackSecret) {
-      const url = new URL(req.url);
-      const token = url.searchParams.get('secret');
-      if (token !== callbackSecret) {
-        console.warn('mpesa-b2c-callback: Invalid callback secret');
-        return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    if (!callbackSecret) {
+      console.error('mpesa-b2c-callback: MPESA_CALLBACK_SECRET not configured — rejecting request');
+      return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: 'Callback secret not configured' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const url = new URL(req.url);
+    if (url.searchParams.get('secret') !== callbackSecret) {
+      console.warn('mpesa-b2c-callback: Invalid callback secret');
+      return new Response(JSON.stringify({ ResultCode: 1, ResultDesc: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const supabase = createClient(
