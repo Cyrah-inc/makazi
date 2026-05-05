@@ -531,7 +531,7 @@ export default function AddPropertyPage() {
                           />
                         </div>
                         <div>
-                          <Label className="text-sm font-medium">Land Search Certificate *</Label>
+                          <Label className="text-sm font-medium">Land Search Certificate (optional)</Label>
                           <SingleDocumentUpload
                             label="Upload Land Search Certificate"
                             value={formData.saleDocuments[1]}
