@@ -1,25 +1,71 @@
+## Plan
 
+### 1. Make only Title Deed mandatory for sale listings
 
-## Plan: Show Sale Documents Section on All Buy Listings
+Currently both Title Deed AND Land Search Certificate are required when a landlord lists a property for sale. Make only the Title Deed mandatory; Land Search and the third slot become optional.
 
-### Problem
-The `SaleDocumentsCard` only renders when `sale_documents` has entries. Since no landlords have uploaded documents yet, the card never appears on any buy listing. Buyers don't know this feature exists.
+**Files**
+- `src/pages/landlord/AddPropertyPage.tsx`
+  - Line ~172: change validation from `!formData.saleDocuments[0] || !formData.saleDocuments[1]` to `!formData.saleDocuments[0]`
+  - Update toast message to "Please upload the Title Deed for sale listings"
+  - Line ~534: change `Land Search Certificate *` label to `Land Search Certificate (optional)`
+- `src/pages/landlord/EditPropertyPage.tsx`
+  - Mirror the same two changes (validation + label)
 
-### Solution
-Show the `SaleDocumentsCard` on ALL sale/buy property listings, regardless of whether documents have been uploaded. When no documents exist, display a message like "Verification documents have not been uploaded yet" instead of hiding the section entirely.
+Admin verification flow and `SaleDocumentsCard` continue to display whatever docs are uploaded — no changes needed there.
 
-### Changes
+### 2. Fix "Generate with AI" description button
 
-**`src/pages/PropertyDetailPage.tsx`**
-- Remove the `sale_documents?.length > 0` condition on line 536 so the card renders for all sale properties
+The button calls the `generate-description` edge function which depends on `OPENAI_API_KEY` and gates by active subscription. Two issues:
+- If OpenAI quota/key is invalid the call fails silently with a generic error.
+- Subscription check blocks testing.
 
-**`src/components/SaleDocumentsCard.tsx`**
-- Remove the early `if (saleDocuments.length === 0) return null` guard
-- When no documents exist, show an informational state: "The landlord has not yet uploaded verification documents for this property. Documents such as title deed and land search certificate will appear here once uploaded."
-- Keep the existing paid-download flow for when documents ARE present
+**Fix**
+- Rewrite `supabase/functions/generate-description/index.ts` to use the **Lovable AI Gateway** (`LOVABLE_API_KEY`, model `google/gemini-2.5-flash`) instead of OpenAI. This gateway is always available in Lovable Cloud, no extra setup.
+- Keep the subscription gate (existing business rule), but return clearer error messages (`401`, `402`, `429` handling) so the toast surfaces the real reason ("Subscription required", "AI credits exhausted", etc.).
+- Keep the same request/response shape so the frontend code is unchanged.
 
-### Technical Details
-- Line 536 condition changes from `dbProperty.property_type === 'sale' && (dbProperty as any).sale_documents?.length > 0` to just `dbProperty.property_type === 'sale'`
-- Pass `saleDocuments={(dbProperty as any).sale_documents || []}` to handle null
-- In `SaleDocumentsCard`, replace the `return null` with an empty-state UI showing a shield/info icon and explanatory text
+```ts
+// new core call
+const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "google/gemini-2.5-flash",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+  }),
+});
+```
 
+### 3. Convert the project into a native mobile app (Capacitor)
+
+Per Lovable's mobile guidance, set up Capacitor so the existing React app can be packaged as a real iOS/Android app published to the App Store / Play Store.
+
+**Steps**
+1. Install: `@capacitor/core`, `@capacitor/cli` (dev), `@capacitor/ios`, `@capacitor/android`.
+2. Create `capacitor.config.ts` at project root:
+   - `appId`: `app.lovable.17432d3a7189414aa058083823c358d5`
+   - `appName`: `makazi`
+   - `webDir`: `dist`
+   - `server.url`: `https://17432d3a-7189-414a-a058-083823c358d5.lovableproject.com?forceHideBadge=true` (hot-reload from sandbox)
+   - `server.cleartext`: `true`
+3. After files land, the user must, on their own machine:
+   - Export project to GitHub → `git pull` locally
+   - `npm install`
+   - `npx cap add ios` and/or `npx cap add android`
+   - `npm run build && npx cap sync`
+   - `npx cap run ios` (Mac + Xcode) or `npx cap run android` (Android Studio)
+
+I will include these instructions clearly after implementation. Reference: https://lovable.dev/blog/2025-03-25-the-complete-guide-to-building-mobile-apps-with-lovable
+
+**Note on PWA**: not enabling vite-plugin-pwa (per Lovable preview iframe constraints). Capacitor alone covers true native deployment.
+
+### Out of scope
+- No changes to admin verification UI or to `SaleDocumentsCard` empty state (already handled).
+- No change to existing fee structure or booking flow.

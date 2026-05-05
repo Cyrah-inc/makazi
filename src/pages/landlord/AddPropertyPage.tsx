@@ -169,10 +169,10 @@ export default function AddPropertyPage() {
       return;
     }
     // Validate sale documents
-    if (formData.forSale && (!formData.saleDocuments[0] || !formData.saleDocuments[1])) {
+    if (formData.forSale && !formData.saleDocuments[0]) {
       toast({
         title: 'Error',
-        description: 'Please upload both the Title Deed and Land Search Certificate for sale listings',
+        description: 'Please upload the Title Deed for sale listings',
         variant: 'destructive',
       });
       return;
