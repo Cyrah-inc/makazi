@@ -794,7 +794,6 @@ export type Database = {
         Args: { user_ids: string[] }
         Returns: {
           avatar_url: string
-          email: string
           full_name: string
           user_id: string
         }[]
