@@ -1,71 +1,79 @@
-## Plan
 
-### 1. Make only Title Deed mandatory for sale listings
+## Goal
+Install Makazi as a real native app on your phone so you can test it.
 
-Currently both Title Deed AND Land Search Certificate are required when a landlord lists a property for sale. Make only the Title Deed mandatory; Land Search and the third slot become optional.
+## Current status
+Capacitor is already configured in this project:
+- `capacitor.config.ts` exists with `appId: app.lovable.17432d3a7189414aa058083823c358d5`, `appName: makazi`, hot-reload `server.url` pointing to your Lovable preview
+- `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android` are installed (v8.3.1)
 
-**Files**
-- `src/pages/landlord/AddPropertyPage.tsx`
-  - Line ~172: change validation from `!formData.saleDocuments[0] || !formData.saleDocuments[1]` to `!formData.saleDocuments[0]`
-  - Update toast message to "Please upload the Title Deed for sale listings"
-  - Line ~534: change `Land Search Certificate *` label to `Land Search Certificate (optional)`
-- `src/pages/landlord/EditPropertyPage.tsx`
-  - Mirror the same two changes (validation + label)
+So nothing more is needed inside Lovable. What's missing is the **local build step** — Lovable's sandbox cannot build iOS/Android binaries; only your computer can. Below is exactly what to do.
 
-Admin verification flow and `SaleDocumentsCard` continue to display whatever docs are uploaded — no changes needed there.
+## What you need on your computer
 
-### 2. Fix "Generate with AI" description button
+Pick the platform you want to install on:
 
-The button calls the `generate-description` edge function which depends on `OPENAI_API_KEY` and gates by active subscription. Two issues:
-- If OpenAI quota/key is invalid the call fails silently with a generic error.
-- Subscription check blocks testing.
+| Phone | You need | OS required |
+|---|---|---|
+| iPhone | Xcode (free, App Store) + an Apple ID | macOS |
+| Android | Android Studio (free) | Windows / macOS / Linux |
+| Android (easiest) | Just a USB cable + "USB debugging" enabled on the phone | any OS |
 
-**Fix**
-- Rewrite `supabase/functions/generate-description/index.ts` to use the **Lovable AI Gateway** (`LOVABLE_API_KEY`, model `google/gemini-2.5-flash`) instead of OpenAI. This gateway is always available in Lovable Cloud, no extra setup.
-- Keep the subscription gate (existing business rule), but return clearer error messages (`401`, `402`, `429` handling) so the toast surfaces the real reason ("Subscription required", "AI credits exhausted", etc.).
-- Keep the same request/response shape so the frontend code is unchanged.
+Plus: Node.js 20+ and Git installed.
 
-```ts
-// new core call
-const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    model: "google/gemini-2.5-flash",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-  }),
-});
+## Step-by-step
+
+### 1. Get the code onto your computer
+1. In Lovable, top right → **GitHub → Connect to GitHub** → create the repo.
+2. On your computer:
+   ```bash
+   git clone https://github.com/<your-username>/<repo-name>.git
+   cd <repo-name>
+   npm install
+   ```
+
+### 2. Add the native platform (one-time)
+```bash
+# For Android:
+npx cap add android
+
+# For iPhone (Mac only):
+npx cap add ios
 ```
 
-### 3. Convert the project into a native mobile app (Capacitor)
+### 3. Build the web bundle and sync it into the native project
+```bash
+npm run build
+npx cap sync
+```
+Run `npx cap sync` again any time you `git pull` new changes from Lovable.
 
-Per Lovable's mobile guidance, set up Capacitor so the existing React app can be packaged as a real iOS/Android app published to the App Store / Play Store.
+### 4. Run on your phone
 
-**Steps**
-1. Install: `@capacitor/core`, `@capacitor/cli` (dev), `@capacitor/ios`, `@capacitor/android`.
-2. Create `capacitor.config.ts` at project root:
-   - `appId`: `app.lovable.17432d3a7189414aa058083823c358d5`
-   - `appName`: `makazi`
-   - `webDir`: `dist`
-   - `server.url`: `https://17432d3a-7189-414a-a058-083823c358d5.lovableproject.com?forceHideBadge=true` (hot-reload from sandbox)
-   - `server.cleartext`: `true`
-3. After files land, the user must, on their own machine:
-   - Export project to GitHub → `git pull` locally
-   - `npm install`
-   - `npx cap add ios` and/or `npx cap add android`
-   - `npm run build && npx cap sync`
-   - `npx cap run ios` (Mac + Xcode) or `npx cap run android` (Android Studio)
+**Android (recommended for first try — much simpler):**
+1. On the phone: Settings → About phone → tap "Build number" 7 times to unlock Developer options → enable **USB debugging**.
+2. Plug the phone into your computer with USB.
+3. ```bash
+   npx cap run android
+   ```
+4. Approve the "Allow USB debugging?" prompt on the phone. The app installs and launches.
 
-I will include these instructions clearly after implementation. Reference: https://lovable.dev/blog/2025-03-25-the-complete-guide-to-building-mobile-apps-with-lovable
+Alternative (no Android Studio at all): after `npx cap sync`, the APK is at `android/app/build/outputs/apk/debug/app-debug.apk`. Email/AirDrop it to yourself, open it on the phone, allow "Install from unknown sources", install.
 
-**Note on PWA**: not enabling vite-plugin-pwa (per Lovable preview iframe constraints). Capacitor alone covers true native deployment.
+**iPhone:**
+1. Open the project in Xcode: `npx cap open ios`
+2. In Xcode, select your iPhone from the device dropdown (top bar). Plug it in via USB and trust the computer.
+3. Under **Signing & Capabilities**, sign in with your Apple ID and pick your personal team.
+4. Click the ▶ Play button. The app installs on your phone.
+5. On the phone: Settings → General → VPN & Device Management → trust your developer certificate.
 
-### Out of scope
-- No changes to admin verification UI or to `SaleDocumentsCard` empty state (already handled).
-- No change to existing fee structure or booking flow.
+## What you'll see
+Because `capacitor.config.ts` has a `server.url` pointing to your Lovable preview, the installed app **loads live from Lovable** — every change you make in Lovable shows up instantly in the app on your phone (just refresh). No rebuild required for normal UI/code changes.
+
+If you instead want a fully offline app that ships its own bundled HTML/JS (for App Store / Play Store distribution), that's a follow-up step — let me know after you've got it running.
+
+## Technical notes
+- Capacitor 8 requires Node 20+.
+- For Android: Android Studio is only needed if `npx cap run android` complains about missing SDK; the GUI is otherwise optional.
+- The hot-reload `server.url` is fine for personal testing; it must be removed before App Store / Play Store submission so the binary is self-contained.
+- Helpful reference: https://lovable.dev/blog/2025-03-25-the-complete-guide-to-building-mobile-apps-with-lovable
